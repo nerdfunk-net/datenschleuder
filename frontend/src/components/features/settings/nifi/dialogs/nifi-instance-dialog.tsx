@@ -91,8 +91,23 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
 
   const watchedAttribute = form.watch('hierarchy_attribute')
   const watchedAuthMethod = form.watch('authMethod')
+  const watchedHierarchyValue = form.watch('hierarchy_value')
 
   const { data: valuesData } = useNifiHierarchyValuesQuery(watchedAttribute)
+
+  // Debug logging
+  useEffect(() => {
+    if (open) {
+      console.log('[NifiInstanceDialog] Form state:', {
+        isEdit,
+        instanceData: instance,
+        watchedAttribute,
+        watchedHierarchyValue,
+        valuesData,
+        hierarchyValueOptions: valuesData?.values || []
+      })
+    }
+  }, [open, isEdit, instance, watchedAttribute, watchedHierarchyValue, valuesData])
 
   // Reset form when dialog opens/closes or instance changes
   useEffect(() => {
@@ -264,27 +279,35 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Hierarchy Value</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={isEdit || !watchedAttribute}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select value" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {hierarchyValueOptions.map(v => (
-                          <SelectItem key={v} value={v}>{v}</SelectItem>
-                        ))}
-                        {hierarchyValueOptions.length === 0 && (
-                          <SelectItem value="_none" disabled>
-                            {watchedAttribute ? 'No values defined' : 'Select attribute first'}
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
+                    {isEdit ? (
+                      <Input
+                        value={field.value}
+                        disabled
+                        className="bg-slate-50"
+                      />
+                    ) : (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={!watchedAttribute}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select value" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {hierarchyValueOptions.map(v => (
+                            <SelectItem key={v} value={v}>{v}</SelectItem>
+                          ))}
+                          {hierarchyValueOptions.length === 0 && (
+                            <SelectItem value="_none" disabled>
+                              {watchedAttribute ? 'No values defined' : 'Select attribute first'}
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

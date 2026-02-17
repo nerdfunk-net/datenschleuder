@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useEffect, useMemo, useCallback } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -35,7 +35,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ChevronDown } from 'lucide-react'
-import { useNifiHierarchyValuesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
+import { useNifiHierarchyValuesQuery, useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
+import { useParameterContextsQuery } from '../hooks/use-parameter-contexts-query'
 import type { NifiFlow, RegistryFlow, FlowFormValues } from '../types'
 import type { HierarchyAttribute } from '@/components/features/settings/nifi/types'
 
@@ -89,6 +90,11 @@ function HierarchyCombobox({ attributeName, value, onChange, disabled }: Hierarc
   const { data } = useNifiHierarchyValuesQuery(attributeName)
   const savedValues = data?.values ?? []
 
+  const handleChange = useCallback((newValue: string) => {
+    console.log(`[HierarchyCombobox] ${attributeName} changed:`, { oldValue: value, newValue })
+    onChange(newValue)
+  }, [attributeName, value, onChange])
+
   return (
     <div className="flex h-9">
       <DropdownMenu>
@@ -104,7 +110,7 @@ function HierarchyCombobox({ attributeName, value, onChange, disabled }: Hierarc
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="max-h-48 overflow-y-auto">
           {savedValues.map(v => (
-            <DropdownMenuItem key={v} onSelect={() => onChange(v)}>
+            <DropdownMenuItem key={v} onSelect={() => handleChange(v)}>
               {v}
             </DropdownMenuItem>
           ))}
@@ -112,12 +118,74 @@ function HierarchyCombobox({ attributeName, value, onChange, disabled }: Hierarc
       </DropdownMenu>
       <Input
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={e => handleChange(e.target.value)}
         placeholder={`Select or type ${attributeName}`}
         disabled={disabled}
         className="rounded-l-none h-9 min-w-0"
       />
     </div>
+  )
+}
+
+// ─── Parameter context select (fetches contexts from the matched NiFi instance) ─
+
+interface ParameterContextSelectProps {
+  instanceId: number | null
+  value: string
+  onChange: (value: string) => void
+  disabled?: boolean
+  isInstanceLoading?: boolean
+}
+
+function ParameterContextSelect({ 
+  instanceId, 
+  value, 
+  onChange, 
+  disabled,
+  isInstanceLoading = false 
+}: ParameterContextSelectProps) {
+  const { data, isFetching } = useParameterContextsQuery(instanceId)
+  const contexts = data?.parameter_contexts ?? []
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[ParameterContextSelect]', { instanceId, isFetching, contextsCount: contexts.length, data })
+  }, [instanceId, isFetching, contexts.length, data])
+
+  if (!instanceId) {
+    const placeholderText = isInstanceLoading 
+      ? 'Loading instances...'
+      : 'Select a hierarchy value first'
+    
+    return (
+      <Input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholderText}
+        disabled
+        className="h-9"
+      />
+    )
+  }
+
+  return (
+    <Select
+      disabled={disabled || isFetching}
+      value={value || NONE_VALUE}
+      onValueChange={val => onChange(val === NONE_VALUE ? '' : val)}
+    >
+      <SelectTrigger className="h-9">
+        <SelectValue placeholder={isFetching ? 'Loading…' : '-- Select Parameter Context --'} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NONE_VALUE}>— None —</SelectItem>
+        {contexts.map(ctx => (
+          <SelectItem key={ctx.id} value={ctx.name}>
+            {ctx.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 
@@ -128,11 +196,21 @@ interface FlowSectionProps {
   hierarchy: HierarchyAttribute[]
   registryFlows: RegistryFlow[]
   viewOnly: boolean
+  instanceId: number | null
+  isInstanceLoading?: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   control: any
 }
 
-function FlowSection({ side, hierarchy, registryFlows, viewOnly, control }: FlowSectionProps) {
+function FlowSection({ 
+  side, 
+  hierarchy, 
+  registryFlows, 
+  viewOnly, 
+  instanceId, 
+  isInstanceLoading = false,
+  control 
+}: FlowSectionProps) {
   const isSrc = side === 'source'
   const sectionLabel = isSrc ? 'Source' : 'Destination'
   const paramField = isSrc ? 'src_connection_param' : 'dest_connection_param'
@@ -187,18 +265,18 @@ function FlowSection({ side, hierarchy, registryFlows, viewOnly, control }: Flow
         <FormField
           control={control}
           name={paramField as any}
-          rules={{ required: 'Required' }}
           render={({ field }) => (
             <FormItem className="space-y-1">
               <FormLabel className="text-xs font-semibold text-slate-600">
                 {sectionLabel} Parameter Context
               </FormLabel>
               <FormControl>
-                <Input
-                  {...field}
+                <ParameterContextSelect
+                  instanceId={instanceId}
+                  value={field.value}
+                  onChange={field.onChange}
                   disabled={viewOnly}
-                  placeholder="Enter parameter context"
-                  className="h-9"
+                  isInstanceLoading={isInstanceLoading}
                 />
               </FormControl>
               <FormMessage />
@@ -263,6 +341,127 @@ export function FlowDialog({
     }
   }, [open, flow, hierarchy, form])
 
+  // Derive instance IDs by checking the FIRST (top) hierarchy attribute only
+  // This matches the old Vue implementation behavior
+  const { data: instances = [], isLoading: isInstancesLoading, error: instancesError } = useNifiInstancesQuery()
+
+  // Debug: Log instances query result
+  useEffect(() => {
+    console.log('[FlowDialog] NiFi instances query result:', {
+      isLoading: isInstancesLoading,
+      error: instancesError,
+      instancesCount: instances.length,
+      instances: instances
+    })
+  }, [instances, isInstancesLoading, instancesError])
+
+  // Use useWatch instead of form.watch for better reactivity with nested fields
+  const hierarchyValues = useWatch({
+    control: form.control,
+    name: 'hierarchy_values',
+  })
+
+  // Debug: Log form value changes
+  useEffect(() => {
+    const topAttr = hierarchy[0]
+    if (!topAttr) return
+    
+    console.log('[FlowDialog] Form values changed:', {
+      hierarchyValues,
+      topAttrName: topAttr.name,
+      srcValue: hierarchyValues?.[topAttr.name]?.source,
+      destValue: hierarchyValues?.[topAttr.name]?.destination,
+    })
+  }, [hierarchyValues, hierarchy])
+
+  // Compute instance ID for source - check ONLY the first hierarchy attribute
+  const srcInstanceId = useMemo(() => {
+    if (!hierarchyValues || !instances.length || !hierarchy.length) {
+      console.log('[FlowDialog] Source: Missing data', { 
+        hasHierarchyValues: !!hierarchyValues,
+        instancesCount: instances.length,
+        hierarchyCount: hierarchy.length 
+      })
+      return null
+    }
+    
+    // Get the FIRST (top) hierarchy attribute - this determines which NiFi instance to use
+    const topAttr = hierarchy[0]
+    if (!topAttr) {
+      console.log('[FlowDialog] Source: No top hierarchy attribute')
+      return null
+    }
+    
+    const srcValue = hierarchyValues[topAttr.name]?.source
+    
+    if (!srcValue) {
+      console.log(`[FlowDialog] Source: No value for top attribute ${topAttr.name}`)
+      return null
+    }
+    
+    const instance = instances.find(
+      i => i.hierarchy_attribute === topAttr.name && i.hierarchy_value === srcValue
+    )
+    
+    if (instance) {
+      console.log(`[FlowDialog] Source: Found instance ${instance.id} for ${topAttr.name}=${srcValue}`)
+      return instance.id
+    }
+    
+    console.log(`[FlowDialog] Source: No instance found for ${topAttr.name}=${srcValue}`, { 
+      instances: instances.map(i => ({ 
+        id: i.id, 
+        attr: i.hierarchy_attribute, 
+        value: i.hierarchy_value 
+      }))
+    })
+    return null
+  }, [hierarchyValues, instances, hierarchy])
+
+  // Compute instance ID for destination - check ONLY the first hierarchy attribute
+  const destInstanceId = useMemo(() => {
+    if (!hierarchyValues || !instances.length || !hierarchy.length) {
+      console.log('[FlowDialog] Destination: Missing data', { 
+        hasHierarchyValues: !!hierarchyValues,
+        instancesCount: instances.length,
+        hierarchyCount: hierarchy.length 
+      })
+      return null
+    }
+    
+    // Get the FIRST (top) hierarchy attribute - this determines which NiFi instance to use
+    const topAttr = hierarchy[0]
+    if (!topAttr) {
+      console.log('[FlowDialog] Destination: No top hierarchy attribute')
+      return null
+    }
+    
+    const destValue = hierarchyValues[topAttr.name]?.destination
+    
+    if (!destValue) {
+      console.log(`[FlowDialog] Destination: No value for top attribute ${topAttr.name}`)
+      return null
+    }
+    
+    const instance = instances.find(
+      i => i.hierarchy_attribute === topAttr.name && i.hierarchy_value === destValue
+    )
+    
+    if (instance) {
+      console.log(`[FlowDialog] Destination: Found instance ${instance.id} for ${topAttr.name}=${destValue}`)
+      return instance.id
+    }
+    
+    console.log(`[FlowDialog] Destination: No instance found for ${topAttr.name}=${destValue}`, { 
+      instances: instances.map(i => ({ 
+        id: i.id, 
+        attr: i.hierarchy_attribute, 
+        value: i.hierarchy_value 
+      }))
+    })
+    return null
+  }, [hierarchyValues, instances, hierarchy])
+
   function handleSubmit(values: FlowFormValues) {
     onSubmit(values, flow?.id)
   }
@@ -285,6 +484,8 @@ export function FlowDialog({
               hierarchy={hierarchy}
               registryFlows={registryFlows}
               viewOnly={viewOnly}
+              instanceId={srcInstanceId}
+              isInstanceLoading={isInstancesLoading}
               control={form.control}
             />
 
@@ -294,6 +495,8 @@ export function FlowDialog({
               hierarchy={hierarchy}
               registryFlows={registryFlows}
               viewOnly={viewOnly}
+              instanceId={destInstanceId}
+              isInstanceLoading={isInstancesLoading}
               control={form.control}
             />
 

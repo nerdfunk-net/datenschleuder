@@ -1,16 +1,37 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, UseQueryResult } from '@tanstack/react-query'
 import { useApi } from '@/hooks/use-api'
 import { queryKeys } from '@/lib/query-keys'
 import type { NifiInstance, HierarchyAttribute, Certificate, OidcProvider } from '../types'
 
-export function useNifiInstancesQuery() {
+export function useNifiInstancesQuery(): UseQueryResult<NifiInstance[]> {
   const { apiCall } = useApi()
 
-  return useQuery<NifiInstance[]>({
+  const query = useQuery<NifiInstance[]>({
     queryKey: queryKeys.nifi.instances(),
-    queryFn: () => apiCall('nifi/instances/'),
+    queryFn: async () => {
+      console.log('[useNifiInstancesQuery] Fetching NiFi instances...')
+      try {
+        const result = await apiCall('nifi/instances/') as NifiInstance[]
+        console.log('[useNifiInstancesQuery] Received instances:', result)
+        return result
+      } catch (error) {
+        console.error('[useNifiInstancesQuery] Error fetching instances:', error)
+        throw error
+      }
+    },
     staleTime: 30 * 1000,
   })
+
+  console.log('[useNifiInstancesQuery] Query state:', {
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isError: query.isError,
+    error: query.error,
+    dataCount: Array.isArray(query.data) ? query.data.length : 'not-array',
+    data: query.data
+  })
+
+  return query
 }
 
 export function useNifiHierarchyQuery() {

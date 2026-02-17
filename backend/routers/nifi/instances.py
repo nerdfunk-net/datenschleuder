@@ -42,7 +42,17 @@ async def list_nifi_instances(
     user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Get all NiFi instances."""
-    return instance_service.list_instances()
+    instances = instance_service.list_instances()
+    logger.info(
+        "Returning %d NiFi instances. Sample: %s",
+        len(instances),
+        {
+            "id": instances[0].id,
+            "hierarchy_attribute": instances[0].hierarchy_attribute,
+            "hierarchy_value": instances[0].hierarchy_value,
+        } if instances else None
+    )
+    return instances
 
 
 @router.get("/{instance_id}", response_model=NifiInstanceResponse)
