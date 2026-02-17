@@ -8,7 +8,8 @@ Supports three authentication methods (in priority order):
 
 import ssl
 import logging
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 import nipyapi
 from nipyapi import config, security
@@ -97,6 +98,16 @@ class NifiConnectionService:
     ) -> None:
         """Configure nipyapi for testing (without saving to database)."""
         nifi_url = nifi_url.rstrip("/")
+
+        # Normalize URL: ensure it ends with /nifi-api
+        if not nifi_url.endswith("/nifi-api"):
+            nifi_url = "%s/nifi-api" % nifi_url
+
+        logger.debug(
+            "Configuring test connection: url=%s verify_ssl=%s check_hostname=%s",
+            nifi_url, verify_ssl, check_hostname,
+        )
+
         config.nifi_config.host = nifi_url
         config.nifi_config.verify_ssl = verify_ssl
 
@@ -105,11 +116,13 @@ class NifiConnectionService:
 
         # Priority 1: OIDC Authentication
         if oidc_provider_id and oidc_provider_id.strip():
+            logger.debug("Using OIDC authentication with provider: %s", oidc_provider_id)
             self._configure_oidc_auth(oidc_provider_id, verify_ssl)
             return
 
         # Priority 2: Certificate Authentication
         if certificate_name and certificate_name.strip():
+            logger.debug("Using certificate authentication: %s", certificate_name)
             self._configure_certificate_auth(
                 certificate_name, verify_ssl, check_hostname
             )
@@ -117,9 +130,17 @@ class NifiConnectionService:
 
         # Priority 3: Username/Password Authentication
         if username and password:
+            logger.debug("Using username/password authentication for user: %s", username)
             config.nifi_config.username = username
             config.nifi_config.password = password
-            security.service_login(service="nifi", username=username, password=password)
+            try:
+                security.service_login(service="nifi", username=username, password=password)
+            except Exception as e:
+                logger.error(
+                    "Authentication failed for user '%s' at %s: %s",
+                    username, nifi_url, str(e),
+                )
+                raise
             return
 
         logger.warning("No authentication method configured for test connection")
@@ -158,12 +179,31 @@ class NifiConnectionService:
                 "OIDC provider '%s' missing client_id or client_secret" % provider_id
             )
 
+        # Resolve ca_cert_path for the OIDC token request.
+        # requests.post(verify=...) accepts a CA bundle path string as well as a bool,
+        # so we pass the resolved path directly when verify_ssl=True and a cert is configured.
+        ssl_verify: Union[bool, str] = verify_ssl
+        ca_cert_path = provider_config.get("ca_cert_path")
+        if verify_ssl and ca_cert_path:
+            workspace_root = Path(__file__).parent.parent.parent.parent
+            resolved = workspace_root / ca_cert_path
+            if resolved.exists():
+                ssl_verify = str(resolved)
+                logger.debug(
+                    "Using CA cert for OIDC provider '%s': %s", provider_id, ssl_verify
+                )
+            else:
+                logger.warning(
+                    "CA cert configured for OIDC provider '%s' but file not found: %s",
+                    provider_id, resolved,
+                )
+
         security.service_login_oidc(
             service="nifi",
             oidc_token_endpoint=token_endpoint,
             client_id=client_id,
             client_secret=client_secret,
-            verify_ssl=verify_ssl,
+            verify_ssl=ssl_verify,
         )
 
         logger.info("Successfully authenticated with OIDC provider: %s", provider_id)

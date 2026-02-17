@@ -51,7 +51,7 @@ export function useOidcProvidersQuery() {
     queryKey: queryKeys.nifi.oidcProviders(),
     queryFn: async () => {
       try {
-        return await apiCall('auth/oidc/providers')
+        return await apiCall('nifi/instances/oidc-providers')
       } catch {
         return { providers: [] }
       }

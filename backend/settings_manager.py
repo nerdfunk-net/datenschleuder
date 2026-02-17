@@ -601,13 +601,16 @@ class SettingsManager:
         return config.get("providers", {})
 
     def get_enabled_oidc_providers(self) -> List[Dict[str, Any]]:
-        """Get list of enabled OIDC providers sorted by display_order"""
+        """Get list of enabled user-facing OIDC providers sorted by display_order.
+
+        Providers marked with backend: true are excluded — those are used for
+        machine-to-machine auth (e.g. NiFi) and must not appear on the login page.
+        """
         providers = self.get_oidc_providers()
 
         enabled_providers = []
         for provider_id, provider_config in providers.items():
-            if provider_config.get("enabled", False):
-                # Add provider_id to the config for reference
+            if provider_config.get("enabled", False) and not provider_config.get("backend", False):
                 provider_data = provider_config.copy()
                 provider_data["provider_id"] = provider_id
                 enabled_providers.append(provider_data)
@@ -615,8 +618,24 @@ class SettingsManager:
         # Sort by display_order
         enabled_providers.sort(key=lambda p: p.get("display_order", 999))
 
-        logger.info(f"Found {len(enabled_providers)} enabled OIDC provider(s)")
+        logger.info(f"Found {len(enabled_providers)} enabled user-facing OIDC provider(s)")
         return enabled_providers
+
+    def get_nifi_oidc_providers(self) -> List[Dict[str, Any]]:
+        """Get enabled OIDC providers suitable for NiFi backend auth (backend: true only)."""
+        providers = self.get_oidc_providers()
+
+        nifi_providers = []
+        for provider_id, provider_config in providers.items():
+            if provider_config.get("enabled", False) and provider_config.get("backend", False):
+                provider_data = provider_config.copy()
+                provider_data["provider_id"] = provider_id
+                nifi_providers.append(provider_data)
+
+        nifi_providers.sort(key=lambda p: p.get("display_order", 999))
+
+        logger.info(f"Found {len(nifi_providers)} enabled NiFi backend OIDC provider(s)")
+        return nifi_providers
 
     def get_oidc_provider(self, provider_id: str) -> Optional[Dict[str, Any]]:
         """Get specific OIDC provider configuration by ID"""

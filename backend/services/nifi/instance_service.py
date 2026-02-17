@@ -84,6 +84,9 @@ def test_instance_connection(instance_id: int) -> dict:
     if not instance:
         raise ValueError("NiFi instance with ID %d not found" % instance_id)
 
+    logger.debug(
+        "Testing saved NiFi instance id=%d url=%s", instance_id, instance.nifi_url
+    )
     nifi_connection_service.configure_from_instance(instance)
     result = test_connection()
     result["nifi_url"] = instance.nifi_url
@@ -100,6 +103,10 @@ def test_new_connection(
     oidc_provider_id: Optional[str] = None,
 ) -> dict:
     """Test connection with provided credentials (without saving)."""
+    logger.debug(
+        "Testing new NiFi connection: url=%s username=%s verify_ssl=%s",
+        nifi_url, username, verify_ssl,
+    )
     nifi_connection_service.configure_test(
         nifi_url=nifi_url,
         username=username,

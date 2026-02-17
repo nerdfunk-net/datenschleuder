@@ -159,6 +159,18 @@ export const queryKeys = {
         : ([...queryKeys.registryFlows.all, 'list'] as const),
   },
 
+  // NiFi Flows (managed flows in DB)
+  flows: {
+    all: ['flows'] as const,
+    list: () => [...queryKeys.flows.all, 'list'] as const,
+  },
+
+  // Flow Views (saved column configurations)
+  flowViews: {
+    all: ['flowViews'] as const,
+    list: () => [...queryKeys.flowViews.all, 'list'] as const,
+  },
+
   // NiFi
   nifi: {
     all: ['nifi'] as const,

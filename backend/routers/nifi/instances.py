@@ -12,10 +12,29 @@ from models.nifi_instance import (
     NifiInstanceTestConnection,
 )
 from services.nifi import instance_service
+from settings_manager import settings_manager
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/nifi/instances", tags=["nifi-instances"])
+
+
+@router.get("/oidc-providers")
+async def list_nifi_oidc_providers(
+    user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Get OIDC providers available for NiFi backend authentication (backend: true only)."""
+    providers = settings_manager.get_nifi_oidc_providers()
+    return {
+        "providers": [
+            {
+                "provider_id": p["provider_id"],
+                "name": p.get("name", p["provider_id"]),
+                "description": p.get("description", ""),
+            }
+            for p in providers
+        ]
+    }
 
 
 @router.get("/", response_model=List[NifiInstanceResponse])
@@ -105,6 +124,10 @@ async def test_nifi_connection(
     user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Test connection with provided NiFi credentials (without saving)."""
+    logger.debug(
+        "Test connection request: url=%s username=%s verify_ssl=%s",
+        data.nifi_url, data.username, data.verify_ssl,
+    )
     try:
         result = instance_service.test_new_connection(
             nifi_url=data.nifi_url,
@@ -115,12 +138,14 @@ async def test_nifi_connection(
             check_hostname=data.check_hostname,
             oidc_provider_id=data.oidc_provider_id,
         )
+        logger.info("Test connection succeeded for url=%s", data.nifi_url)
         return {
             "status": "success",
             "message": "Successfully connected to NiFi",
             "details": result,
         }
     except Exception as e:
+        logger.error("Test connection failed for url=%s: %s", data.nifi_url, str(e))
         return {
             "status": "error",
             "message": "Connection failed: %s" % str(e),
@@ -134,8 +159,10 @@ async def test_instance_connection(
     user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Test connection for a specific NiFi instance."""
+    logger.debug("Test connection request for instance id=%d", instance_id)
     try:
         result = instance_service.test_instance_connection(instance_id)
+        logger.info("Test connection succeeded for instance id=%d", instance_id)
         return {
             "status": "success",
             "message": "Successfully connected to NiFi",
@@ -147,6 +174,7 @@ async def test_instance_connection(
             detail=str(e),
         )
     except Exception as e:
+        logger.error("Test connection failed for instance id=%d: %s", instance_id, str(e))
         return {
             "status": "error",
             "message": "Connection failed: %s" % str(e),
