@@ -72,13 +72,26 @@ export function DeploymentWizard() {
   const [isResolvingConflict, setIsResolvingConflict] = useState(false)
 
   // Mutation hooks
-  const { deployFlow, deleteProcessGroup, updateProcessGroupVersion } = useDeployMutations()
+  const { deployFlow, deleteProcessGroup, updateProcessGroupVersion, saveSettings } = useDeployMutations()
 
   // Fetch required data
   const { data: flows = EMPTY_FLOWS, isLoading: isLoadingFlows, error: flowsError } = useFlowsQuery()
   const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
   const { data: registryFlows = [] } = useRegistryFlowsQuery()
   const { data: deploymentSettings } = useDeploymentSettingsQuery()
+
+  // Local state for settings (allows immediate checkbox updates)
+  const [localSettings, setLocalSettings] = useState<DeploymentSettings | undefined>(undefined)
+
+  // Use local settings if available, otherwise fall back to query data
+  const effectiveSettings = localSettings || deploymentSettings
+
+  // Sync local settings when query data changes
+  useEffect(() => {
+    if (deploymentSettings && !localSettings) {
+      setLocalSettings(deploymentSettings)
+    }
+  }, [deploymentSettings, localSettings])
   const { data: hierarchyData } = useQuery({
     queryKey: queryKeys.nifi.hierarchy(),
     queryFn: async () => apiCall('nifi/hierarchy'),
@@ -208,16 +221,16 @@ export function DeploymentWizard() {
             if (!config.instanceId) return config
 
             const paths = pathsCache[config.instanceId.toString()] || []
-            const suggestedPath = deploymentSettings ? getSuggestedPath(config, deploymentSettings) : null
-            const autoSelectedId = deploymentSettings
-              ? autoSelectProcessGroup(config, deploymentSettings, hierarchyAttributes)
+            const suggestedPath = effectiveSettings ? getSuggestedPath(config, effectiveSettings) : null
+            const autoSelectedId = effectiveSettings
+              ? autoSelectProcessGroup(config, effectiveSettings, hierarchyAttributes)
               : null
 
             // Generate process group name
             const selectedFlow = flows.find((f) => f.id === config.flowId)
-            const processGroupName = deploymentSettings && selectedFlow
+            const processGroupName = effectiveSettings && selectedFlow
               ? generateProcessGroupName(
-                  deploymentSettings.global.process_group_name_template,
+                  effectiveSettings.global.process_group_name_template,
                   config,
                   selectedFlow,
                   hierarchyAttributes
@@ -240,7 +253,7 @@ export function DeploymentWizard() {
 
       loadPaths()
     }
-  }, [currentStepIndex, deploymentConfigs.length, deploymentSettings, hierarchyAttributes, flows])
+  }, [currentStepIndex, deploymentConfigs.length, effectiveSettings, hierarchyAttributes, flows, apiCall])
 
   // Step 3: Update process group selection
   const handleUpdateProcessGroup = useCallback((configKey: string, processGroupId: string) => {
@@ -260,18 +273,27 @@ export function DeploymentWizard() {
         setIsLoadingVersions(true)
         console.log('[DeploymentWizard] Loading flow versions')
 
-        // Load versions for each config with registryId/bucketId/flowId
+        // Load versions for each config with registryId/bucketId/flowIdRegistry
         const updatedConfigs = await Promise.all(
           deploymentConfigs.map(async (config) => {
-            if (config.registryId && config.bucketId && config.flowIdRegistry) {
+            // Need instance, registry, bucket, and flow info to fetch versions
+            if (config.instanceId && config.registryId && config.bucketId && config.flowIdRegistry) {
               try {
-                const data = await apiCall(
-                  `nifi/registry-flows/${config.registryId}/buckets/${config.bucketId}/flows/${config.flowIdRegistry}/versions`
+                console.log(
+                  `[DeploymentWizard] Loading versions for ${config.flowName} (${config.target}): instance=${config.instanceId}, registry=${config.registryId}, bucket=${config.bucketId}, flow=${config.flowIdRegistry}`
                 )
+                const data = await apiCall(
+                  `nifi/instances/${config.instanceId}/ops/registries/${config.registryId}/buckets/${config.bucketId}/flows/${config.flowIdRegistry}/versions`
+                )
+                console.log(`[DeploymentWizard] Loaded ${data.versions?.length || 0} versions for ${config.flowName}`)
                 return { ...config, availableVersions: data.versions || [] }
               } catch (error) {
-                console.error(`Failed to load versions for ${config.flowName}:`, error)
+                console.error(`Failed to load versions for ${config.flowName} (${config.target}):`, error)
               }
+            } else {
+              console.warn(
+                `[DeploymentWizard] Missing registry info for ${config.flowName} (${config.target}): instanceId=${config.instanceId}, registryId=${config.registryId}, bucketId=${config.bucketId}, flowIdRegistry=${config.flowIdRegistry}`
+              )
             }
             return config
           })
@@ -297,10 +319,12 @@ export function DeploymentWizard() {
 
   // Step 4: Update deployment settings
   const handleUpdateSettings = useCallback((updatedSettings: DeploymentSettings) => {
-    // In a real app, you'd call a mutation to save settings
     console.log('[DeploymentWizard] Settings updated:', updatedSettings)
-    // For now, settings are managed by the query hook
-  }, [])
+    // Update local state immediately for responsive UI
+    setLocalSettings(updatedSettings)
+    // Save to backend
+    saveSettings.mutate(updatedSettings)
+  }, [saveSettings])
 
   // Step 5: Deploy all flows
   const handleDeploy = useCallback(async () => {
@@ -331,23 +355,23 @@ export function DeploymentWizard() {
         console.log(`[DeploymentWizard] Deploying ${config.flowName} to ${config.hierarchyValue}`)
 
         const deploymentRequest = {
-          instance_id: config.instanceId,
-          process_group_id: config.selectedProcessGroupId,
-          registry_id: config.registryId,
+          template_id: config.templateId,
           bucket_id: config.bucketId,
-          flow_id: config.flowId,
-          flow_name: config.flowName,
-          flow_description: '',
+          flow_id: config.flowIdRegistry,
+          registry_client_id: config.registryId,
+          parent_process_group_id: config.selectedProcessGroupId,
+          process_group_name: config.processGroupName,
           version: config.selectedVersion || undefined,
           parameter_context_name: config.parameterContextName || undefined,
-          process_group_name: config.processGroupName,
-          process_group_x: 0,
-          process_group_y: 0,
-          settings: deploymentSettings?.global,
+          x_position: 0,
+          y_position: 0,
+          stop_versioning_after_deploy: effectiveSettings?.global.stop_versioning_after_deploy || false,
+          disable_after_deploy: effectiveSettings?.global.disable_after_deploy || false,
+          start_after_deploy: effectiveSettings?.global.start_after_deploy || false,
         }
 
         await new Promise((resolve, reject) => {
-          deployFlow.mutate(deploymentRequest, {
+          deployFlow.mutate({ instanceId: config.instanceId!, request: deploymentRequest }, {
             onSuccess: (response) => {
               console.log(`[DeploymentWizard] Successfully deployed ${config.flowName}`)
               results.successful.push({
@@ -401,7 +425,10 @@ export function DeploymentWizard() {
                       processGroupId: conflictInfo.existing_process_group.id,
                     })
                     // Retry deployment
-                    const response = await deployFlow.mutateAsync(deploymentRequest)
+                    const response = await deployFlow.mutateAsync({
+                      instanceId: config.instanceId!,
+                      request: deploymentRequest,
+                    })
                     results.successful.push({
                       config,
                       success: true,
@@ -587,7 +614,7 @@ export function DeploymentWizard() {
           {currentStepIndex === 3 && (
             <Step4Settings
               deploymentConfigs={deploymentConfigs}
-              deploymentSettings={deploymentSettings}
+              deploymentSettings={effectiveSettings}
               onUpdateVersion={handleUpdateVersion}
               onUpdateSettings={handleUpdateSettings}
               isLoadingVersions={isLoadingVersions}
@@ -598,7 +625,7 @@ export function DeploymentWizard() {
           {currentStepIndex === 4 && (
             <Step5Review
               deploymentConfigs={deploymentConfigs}
-              deploymentSettings={deploymentSettings}
+              deploymentSettings={effectiveSettings}
               onDeploy={handleDeploy}
               isDeploying={isDeploying}
             />

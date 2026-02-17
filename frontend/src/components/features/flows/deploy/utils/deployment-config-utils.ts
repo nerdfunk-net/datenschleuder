@@ -87,12 +87,13 @@ function buildSingleConfig(
     console.warn(`[buildSingleConfig] Found instance:`, instance.id, instance.name)
   }
 
-  // Get template ID
+  // Get template ID based on target
   const templateId = target === 'source' ? flow.src_template_id : flow.dest_template_id
   if (!templateId) return null
 
-  // Find registry flow info
-  const registryFlow = registryFlows.find((rf) => rf.nifi_flow_id === flow.id)
+  // Find registry flow info for this template
+  // The template ID is the registry_flows.id
+  const registryFlow = registryFlows.find((rf) => rf.id === templateId)
 
   return {
     key: `${flow.id}-${target}`,
