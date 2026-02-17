@@ -1,0 +1,76 @@
+[tool.pytest.ini_options]
+# Pytest configuration for Cockpit-NG backend tests
+
+# Test discovery
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Output options
+addopts = [
+    "-v",                          # Verbose output
+    "--strict-markers",            # Strict marker validation
+    "--tb=short",                  # Short traceback format
+    "--cov=services",              # Coverage for services
+    "--cov=models",                # Coverage for models
+    "--cov=tasks",                 # Coverage for tasks
+    "--cov=utils",                 # Coverage for utils
+    "--cov-report=term-missing",   # Show missing lines in terminal
+    "--cov-report=html",           # Generate HTML coverage report
+    "--cov-report=xml",            # Generate XML coverage report for CI
+]
+
+# Async testing mode
+asyncio_mode = "auto"
+
+# Markers (registered to avoid warnings)
+markers = [
+    "unit: Unit tests (fast, no external dependencies)",
+    "integration: Integration tests (may use real external systems or mocked externals)",
+    "e2e: End-to-end tests (real systems, manual only)",
+    "nautobot: Tests involving Nautobot integration",
+    "checkmk: Tests involving CheckMK integration",
+    "snmp: Tests involving SNMP configuration and detection",
+    "celery: Tests that require Celery",
+    "slow: Tests that take >5 seconds",
+    "asyncio: Async tests using pytest-asyncio",
+    "real_nautobot: Tests that connect to real Nautobot instance (requires .env.test)",
+]
+
+# Ignore warnings from third-party libraries
+filterwarnings = [
+    # Ignore passlib's crypt deprecation (third-party library issue)
+    "ignore:.*'crypt' is deprecated.*:DeprecationWarning",
+    # Ignore starlette multipart deprecation
+    "ignore:.*import python_multipart.*:PendingDeprecationWarning",
+]
+
+# Console output style
+console_output_style = "progress"
+
+# Coverage settings
+[tool.coverage.run]
+source = ["services", "models", "tasks", "utils"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/migrations/*",
+    "*/venv/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
