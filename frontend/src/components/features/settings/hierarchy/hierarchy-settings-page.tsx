@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
-import { useHierarchyQuery } from './hooks/use-hierarchy-query'
+import { useHierarchyQuery, useHierarchyFlowCountQuery } from './hooks/use-hierarchy-query'
 import { useHierarchyMutations } from './hooks/use-hierarchy-mutations'
 import { AttributeValuesDialog } from './dialogs/attribute-values-dialog'
 import type { HierarchyAttributeEditing, HierarchyAttribute } from './types'
@@ -36,7 +36,10 @@ export function HierarchySettingsPage() {
   const canWrite = hasPermission(user, 'nifi.settings', 'write')
 
   const { data, isLoading } = useHierarchyQuery()
+  const { data: flowCountData } = useHierarchyFlowCountQuery()
   const { saveConfig } = useHierarchyMutations()
+
+  const existingFlowCount = flowCountData?.count ?? 0
 
   // Local editable copy of hierarchy
   const [attrs, setAttrs] = useState<HierarchyAttributeEditing[]>([])
@@ -349,9 +352,16 @@ export function HierarchySettingsPage() {
                   Changing the hierarchy format will affect all NiFi flows and instances
                   that depend on hierarchy attribute/value mappings.
                 </p>
-                <p className="font-semibold text-slate-700">
-                  Existing flow entries may be invalidated. This action cannot be undone.
-                </p>
+                {existingFlowCount > 0 ? (
+                  <p className="font-semibold text-red-600">
+                    {existingFlowCount} existing flow{existingFlowCount !== 1 ? 's' : ''} will
+                    be permanently deleted. This action cannot be undone.
+                  </p>
+                ) : (
+                  <p className="font-semibold text-slate-700">
+                    This action cannot be undone.
+                  </p>
+                )}
                 <p>Are you sure you want to proceed?</p>
               </div>
             </AlertDialogDescription>

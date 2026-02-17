@@ -195,6 +195,16 @@ async def startup_services():
         logger.error(f"Failed to initialize database tables: {e}")
         raise
 
+    # Ensure nifi_flows dynamic table exists (created from hierarchy config)
+    try:
+        from services.nifi.hierarchy_service import ensure_nifi_flows_table
+
+        ensure_nifi_flows_table()
+        logger.info("nifi_flows table ensured")
+    except Exception as e:
+        logger.error(f"Failed to ensure nifi_flows table: {e}")
+        # Don't raise - flows will degrade gracefully if table is missing
+
     # Ensure built-in Celery queues exist
     try:
         from settings_manager import settings_manager

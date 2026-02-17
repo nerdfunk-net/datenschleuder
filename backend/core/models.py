@@ -919,34 +919,8 @@ class HierarchyValue(Base):
     )
 
 
-class NifiFlow(Base):
-    """NiFi flow with hierarchy values stored as JSON."""
-
-    __tablename__ = "nifi_flows"
-
-    id = Column(Integer, primary_key=True, index=True)
-    hierarchy_values = Column(JSON, nullable=False)
-    name = Column(String(255), nullable=True)
-    contact = Column(String(255), nullable=True)
-    src_connection_param = Column(String(500), nullable=False)
-    dest_connection_param = Column(String(500), nullable=False)
-    src_template_id = Column(Integer, nullable=True)
-    dest_template_id = Column(Integer, nullable=True)
-    active = Column(Boolean, nullable=False, default=True)
-    description = Column(Text, nullable=True)
-    creator_name = Column(String(255), nullable=True)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
-
-    __table_args__ = (
-        Index("idx_nifi_flows_active", "active"),
-    )
+# NifiFlow is intentionally NOT defined here as a static ORM model.
+# The nifi_flows table is dynamic — its columns are generated from the hierarchy
+# configuration. It is created/replaced by hierarchy_service.create_nifi_flows_table().
 
 

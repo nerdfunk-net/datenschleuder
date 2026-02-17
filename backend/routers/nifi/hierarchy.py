@@ -20,16 +20,28 @@ async def get_hierarchy_config(
     return hierarchy_service.get_hierarchy_config()
 
 
+@router.get("/flow-count")
+async def get_flow_count(
+    user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Return the number of existing nifi_flows rows."""
+    count = hierarchy_service.get_flow_count()
+    return {"count": count}
+
+
 @router.post("/")
 async def save_hierarchy_config(
     settings: HierarchyConfig,
     user: dict = Depends(require_permission("nifi.settings", "write")),
 ):
-    """Save hierarchical data format settings."""
+    """Save hierarchical data format settings and delete all existing flows."""
     try:
         hierarchy_data = [attr.model_dump() for attr in settings.hierarchy]
-        hierarchy_service.save_hierarchy_config(hierarchy_data)
-        return {"message": "Hierarchy settings saved successfully"}
+        deleted_flows_count = hierarchy_service.save_hierarchy_config(hierarchy_data)
+        return {
+            "message": "Hierarchy settings saved successfully",
+            "deleted_flows_count": deleted_flows_count,
+        }
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

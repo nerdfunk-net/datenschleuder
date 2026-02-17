@@ -163,6 +163,7 @@ export const queryKeys = {
   flows: {
     all: ['flows'] as const,
     list: () => [...queryKeys.flows.all, 'list'] as const,
+    columns: () => [...queryKeys.flows.all, 'columns'] as const,
   },
 
   // Flow Views (saved column configurations)
@@ -178,6 +179,7 @@ export const queryKeys = {
     instance: (id: number) => [...queryKeys.nifi.all, 'instance', id] as const,
     hierarchy: () => [...queryKeys.nifi.all, 'hierarchy'] as const,
     hierarchyValues: (attribute: string) => [...queryKeys.nifi.hierarchy(), 'values', attribute] as const,
+    hierarchyFlowCount: () => [...queryKeys.nifi.hierarchy(), 'flow-count'] as const,
     certificates: () => [...queryKeys.nifi.all, 'certificates'] as const,
     oidcProviders: () => [...queryKeys.nifi.all, 'oidc-providers'] as const,
   },

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -48,7 +48,7 @@ import {
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
 import { useNifiHierarchyQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
-import { useFlowsQuery, useRegistryFlowsQuery } from './hooks/use-flows-query'
+import { useFlowsQuery, useRegistryFlowsQuery, useFlowColumnsQuery } from './hooks/use-flows-query'
 import { useFlowsMutations } from './hooks/use-flows-mutations'
 import { useFlowViewsQuery } from './hooks/use-flow-views-query'
 import { useFlowViewsMutations } from './hooks/use-flow-views-mutations'
@@ -58,33 +58,13 @@ import type { NifiFlow, FlowView, FlowColumn, FlowFormValues, RegistryFlow } fro
 import type { HierarchyAttribute } from '@/components/features/settings/nifi/types'
 import type { FlowPayload } from './hooks/use-flows-mutations'
 
+const EMPTY_COLUMNS: FlowColumn[] = []
+const EMPTY_FLOWS: NifiFlow[] = []
+const EMPTY_VIEWS: FlowView[] = []
+const EMPTY_REGISTRY: RegistryFlow[] = []
+const EMPTY_HIERARCHY: HierarchyAttribute[] = []
+
 const ITEMS_PER_PAGE = 10
-
-// ─── Column helpers ────────────────────────────────────────────────────────────
-
-function buildAllColumns(hierarchy: HierarchyAttribute[]): FlowColumn[] {
-  const dynamic: FlowColumn[] = []
-  for (const attr of hierarchy) {
-    const key = attr.name.toLowerCase()
-    dynamic.push(
-      { key: `src_${key}`, label: `Src ${attr.label}` },
-      { key: `dest_${key}`, label: `Dest ${attr.label}` },
-    )
-  }
-  return [
-    ...dynamic,
-    { key: 'name', label: 'Name' },
-    { key: 'contact', label: 'Contact' },
-    { key: 'active', label: 'Active' },
-    { key: 'src_connection_param', label: 'Src Param Context' },
-    { key: 'dest_connection_param', label: 'Dest Param Context' },
-    { key: 'src_template', label: 'Src Template' },
-    { key: 'dest_template', label: 'Dest Template' },
-    { key: 'description', label: 'Description' },
-    { key: 'creator_name', label: 'Creator' },
-    { key: 'created_at', label: 'Created' },
-  ]
-}
 
 function getFlowCellValue(
   flow: NifiFlow,
@@ -140,13 +120,16 @@ export function FlowsManagePage() {
   const canDelete = hasPermission(user, 'nifi', 'delete')
 
   // Data
-  const { data: flows = [], isLoading: flowsLoading } = useFlowsQuery()
-  const { data: registryFlows = [] } = useRegistryFlowsQuery()
+  const { data: flows = EMPTY_FLOWS, isLoading: flowsLoading } = useFlowsQuery()
+  const { data: registryFlows = EMPTY_REGISTRY } = useRegistryFlowsQuery()
+  const { data: columnsData } = useFlowColumnsQuery()
   const { data: hierarchyData } = useNifiHierarchyQuery()
-  const { data: flowViews = [] } = useFlowViewsQuery()
+  const { data: flowViews = EMPTY_VIEWS } = useFlowViewsQuery()
 
+  // Hierarchy is needed by getFlowCellValue and FlowDialog to map column keys
+  // (e.g. src_cn) back to flow.hierarchy_values["CN"].source
   const hierarchy: HierarchyAttribute[] = useMemo(
-    () => hierarchyData?.hierarchy ?? [],
+    () => hierarchyData?.hierarchy ?? EMPTY_HIERARCHY,
     [hierarchyData],
   )
 
@@ -154,16 +137,21 @@ export function FlowsManagePage() {
   const { createFlow, updateFlow, deleteFlow, copyFlow } = useFlowsMutations()
   const { createView, updateView, deleteView, setDefaultView } = useFlowViewsMutations()
 
-  // Column state
-  const allColumns = useMemo(() => buildAllColumns(hierarchy), [hierarchy])
+  // Column state — driven by the backend column list
+  const allColumns = useMemo(
+    () => columnsData?.columns ?? EMPTY_COLUMNS,
+    [columnsData],
+  )
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>([])
+  const columnsInitialized = useRef(false)
 
-  // Initialize visible columns when allColumns is ready
+  // Initialize visible columns once when the column list first arrives
   useEffect(() => {
-    if (allColumns.length > 0 && visibleColumnKeys.length === 0) {
+    if (!columnsInitialized.current && allColumns.length > 0) {
+      columnsInitialized.current = true
       setVisibleColumnKeys(allColumns.map(c => c.key))
     }
-  }, [allColumns, visibleColumnKeys.length])
+  }, [allColumns])
 
   // Apply default view on load
   const [defaultViewApplied, setDefaultViewApplied] = useState(false)
@@ -284,6 +272,11 @@ export function FlowsManagePage() {
     setActiveViewId(null)
   }, [allColumns])
 
+  const handleDeselectAllColumns = useCallback(() => {
+    setVisibleColumnKeys([])
+    setActiveViewId(null)
+  }, [])
+
   // Views
   const [saveViewOpen, setSaveViewOpen] = useState(false)
   const [savingViewId, setSavingViewId] = useState<number | null>(null)
@@ -398,13 +391,15 @@ export function FlowsManagePage() {
             <DropdownMenuContent align="end" className="w-56 max-h-80 overflow-y-auto">
               <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleShowAllColumns}>Show all</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShowAllColumns}>Select All</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDeselectAllColumns}>Deselect All</DropdownMenuItem>
               <DropdownMenuSeparator />
               {allColumns.map(col => (
                 <DropdownMenuCheckboxItem
                   key={col.key}
                   checked={visibleColumnKeys.includes(col.key)}
                   onCheckedChange={() => handleToggleColumn(col.key)}
+                  onSelect={e => e.preventDefault()}
                 >
                   {col.label}
                 </DropdownMenuCheckboxItem>

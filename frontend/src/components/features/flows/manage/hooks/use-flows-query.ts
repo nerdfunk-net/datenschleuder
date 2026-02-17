@@ -1,7 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
 import { useApi } from '@/hooks/use-api'
 import { queryKeys } from '@/lib/query-keys'
-import type { NifiFlow, RegistryFlow } from '../types'
+import type { NifiFlow, RegistryFlow, FlowColumn } from '../types'
+
+export function useFlowColumnsQuery() {
+  const { apiCall } = useApi()
+
+  return useQuery<{ columns: FlowColumn[] }>({
+    queryKey: queryKeys.flows.columns(),
+    queryFn: () => apiCall('nifi/flows/columns'),
+    staleTime: 5 * 60 * 1000,
+  })
+}
 
 export function useFlowsQuery() {
   const { apiCall } = useApi()

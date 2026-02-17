@@ -13,6 +13,16 @@ export function useHierarchyQuery() {
   })
 }
 
+export function useHierarchyFlowCountQuery() {
+  const { apiCall } = useApi()
+
+  return useQuery<{ count: number }>({
+    queryKey: queryKeys.nifi.hierarchyFlowCount(),
+    queryFn: () => apiCall('nifi/hierarchy/flow-count'),
+    staleTime: 30 * 1000,
+  })
+}
+
 export function useHierarchyValuesQuery(attributeName: string) {
   const { apiCall } = useApi()
 

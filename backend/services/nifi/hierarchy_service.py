@@ -2,10 +2,13 @@
 
 import json
 import logging
-from typing import List, Optional
+from typing import List
+
+from sqlalchemy import Table, Column, Integer, String, Boolean, DateTime, Text, MetaData, inspect, text
+from sqlalchemy.sql import func
 
 from core.models import Setting, HierarchyValue
-from core.database import get_db_session
+from core.database import get_db_session, engine
 from repositories.nifi.hierarchy_repository import HierarchyValueRepository
 
 logger = logging.getLogger(__name__)
@@ -32,11 +35,101 @@ def get_hierarchy_config() -> dict:
         db.close()
 
 
-def save_hierarchy_config(hierarchy: list) -> None:
-    """Save hierarchy configuration."""
+def get_flow_count() -> int:
+    """Return the number of existing nifi_flows rows, or 0 if the table does not exist."""
+    inspector = inspect(engine)
+    if not inspector.has_table("nifi_flows"):
+        return 0
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT COUNT(*) FROM nifi_flows"))
+        return result.scalar() or 0
+
+
+def create_nifi_flows_table(hierarchy: list) -> dict:
+    """Drop nifi_flows (if it exists) and recreate it with columns derived from hierarchy.
+
+    Each hierarchy attribute contributes two columns: src_<name> and dest_<name>.
+    Returns a summary dict with table_name, hierarchy_columns, and total_columns.
+    """
+    hierarchy = sorted(hierarchy, key=lambda x: x.get("order", 0))
+
+    inspector = inspect(engine)
+    if inspector.has_table("nifi_flows"):
+        with engine.connect() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS nifi_flows"))
+            conn.commit()
+
+    metadata = MetaData()
+
+    columns = [
+        Column("id", Integer, primary_key=True, index=True),
+    ]
+
+    for attr in hierarchy:
+        attr_name = attr["name"].lower()
+        columns.append(Column(f"src_{attr_name}", String, nullable=False, index=True))
+        columns.append(Column(f"dest_{attr_name}", String, nullable=False, index=True))
+
+    columns.extend([
+        Column("name", String, nullable=True),
+        Column("contact", String, nullable=True),
+        Column("src_connection_param", String, nullable=False),
+        Column("dest_connection_param", String, nullable=False),
+        Column("src_template_id", Integer, nullable=True),
+        Column("dest_template_id", Integer, nullable=True),
+        Column("active", Boolean, nullable=False, default=True),
+        Column("description", Text, nullable=True),
+        Column("creator_name", String, nullable=True),
+        Column("created_at", DateTime(timezone=True), server_default=func.now()),
+        Column("updated_at", DateTime(timezone=True), server_default=func.now(), onupdate=func.now()),
+    ])
+
+    Table("nifi_flows", metadata, *columns)
+    metadata.create_all(engine)
+
+    hierarchy_columns = [
+        {
+            "name": attr["name"],
+            "src_column": f"src_{attr['name'].lower()}",
+            "dest_column": f"dest_{attr['name'].lower()}",
+        }
+        for attr in hierarchy
+    ]
+
+    logger.info("Recreated nifi_flows table with %d hierarchy columns", len(hierarchy_columns))
+    return {
+        "table_name": "nifi_flows",
+        "hierarchy_columns": hierarchy_columns,
+        "total_columns": len(columns),
+    }
+
+
+def ensure_nifi_flows_table() -> None:
+    """Create nifi_flows table from the current hierarchy config if it does not yet exist.
+
+    Called at application startup so the table is always present before any request.
+    """
+    inspector = inspect(engine)
+    if not inspector.has_table("nifi_flows"):
+        config = get_hierarchy_config()
+        hierarchy = config.get("hierarchy", DEFAULT_HIERARCHY)
+        create_nifi_flows_table(hierarchy)
+        logger.info("nifi_flows table created at startup from current hierarchy config")
+    else:
+        logger.debug("nifi_flows table already exists — skipping creation")
+
+
+def save_hierarchy_config(hierarchy: list) -> int:
+    """Drop and recreate nifi_flows from the new hierarchy, then persist the config.
+
+    Returns the number of flow rows that existed before the table was dropped.
+    """
     orders = [attr["order"] for attr in hierarchy]
     if sorted(orders) != list(range(len(orders))):
         raise ValueError("Order values must be sequential starting from 0")
+
+    deleted_count = get_flow_count()
+    create_nifi_flows_table(hierarchy)
 
     db = get_db_session()
     try:
@@ -56,6 +149,8 @@ def save_hierarchy_config(hierarchy: list) -> None:
         db.commit()
     finally:
         db.close()
+
+    return deleted_count
 
 
 def get_attribute_values(attribute_name: str) -> List[str]:

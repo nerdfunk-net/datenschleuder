@@ -1,38 +1,6 @@
-"""Repository for NiFi flow data access."""
+"""NiFi flow repository — superseded by raw SQL in nifi_flow_service.
 
-from typing import List
-from core.database import get_db_session
-from core.models import NifiFlow
-from repositories.base import BaseRepository
-
-
-class NifiFlowRepository(BaseRepository[NifiFlow]):
-    """Repository for NiFi flow CRUD operations."""
-
-    def __init__(self):
-        super().__init__(NifiFlow)
-
-    def get_active(self) -> List[NifiFlow]:
-        """Get all active flows."""
-        db = get_db_session()
-        try:
-            return (
-                db.query(NifiFlow)
-                .filter(NifiFlow.active == True)  # noqa: E712
-                .order_by(NifiFlow.created_at.desc())
-                .all()
-            )
-        finally:
-            db.close()
-
-    def get_all_ordered(self) -> List[NifiFlow]:
-        """Get all flows ordered by creation date."""
-        db = get_db_session()
-        try:
-            return (
-                db.query(NifiFlow)
-                .order_by(NifiFlow.created_at.desc())
-                .all()
-            )
-        finally:
-            db.close()
+The nifi_flows table is dynamically structured (columns depend on hierarchy),
+so the ORM-based repository pattern does not apply here.  All flow data access
+is handled directly in services/nifi/nifi_flow_service.py via SQLAlchemy core.
+"""

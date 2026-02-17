@@ -13,6 +13,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/nifi/flows", tags=["nifi-flows"])
 
 
+@router.get("/columns")
+async def get_flow_columns(
+    user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Return the column list for the nifi_flows table with human-readable labels."""
+    return {"columns": nifi_flow_service.get_flow_columns()}
+
+
 @router.get("/", response_model=List[NifiFlowResponse])
 async def list_flows(
     user: dict = Depends(require_permission("nifi", "read")),

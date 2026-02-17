@@ -14,12 +14,18 @@ export function useHierarchyMutations() {
       apiCall('nifi/hierarchy/', {
         method: 'POST',
         body: JSON.stringify(config),
-      }),
-    onSuccess: () => {
+      }) as Promise<{ message: string; deleted_flows_count: number }>,
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.nifi.hierarchy() })
-      // Also invalidate instance queries since hierarchy affects them
       queryClient.invalidateQueries({ queryKey: queryKeys.nifi.instances() })
-      toast({ title: 'Success', description: 'Hierarchy settings saved successfully.' })
+      queryClient.invalidateQueries({ queryKey: queryKeys.nifi.hierarchyFlowCount() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.flows.list() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.flows.columns() })
+      const n = data.deleted_flows_count
+      const description = n > 0
+        ? `Hierarchy saved. ${n} existing flow${n !== 1 ? 's were' : ' was'} removed.`
+        : 'Hierarchy settings saved successfully.'
+      toast({ title: 'Success', description })
     },
     onError: (error: Error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' })
