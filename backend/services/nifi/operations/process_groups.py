@@ -249,3 +249,66 @@ def stop_versioning(process_group_id: str) -> bool:
 
     versioning.stop_flow_ver(pg, refresh=True)
     return True
+
+
+def get_all_process_group_paths(start_pg_id: str = "root") -> List[Dict[str, Any]]:
+    """
+    Recursively get all process groups with their paths.
+    
+    Returns a flat list of process groups with:
+    - id: Process group ID
+    - name: Process group name
+    - path: Full path (e.g., "/Parent/Child")
+    - level: Depth in hierarchy (0 for root)
+    - formatted_path: Display-friendly path (e.g., "Parent → Child")
+    """
+    result = []
+    
+    def _traverse(pg_id: str, parent_path: str, level: int):
+        """Recursively traverse process groups."""
+        try:
+            pg_api = ProcessGroupsApi()
+            pg = pg_api.get_process_group(id=pg_id)
+            
+            if not pg or not hasattr(pg, "component"):
+                return
+            
+            # Get process group name
+            pg_name = pg.component.name if hasattr(pg.component, "name") else "Unknown"
+            
+            # Build path
+            if level == 0:
+                # Root process group
+                current_path = "/"
+                formatted_path = "%s (root)" % pg_name
+            else:
+                current_path = "%s/%s" % (parent_path.rstrip("/"), pg_name)
+                # Format with arrows for display
+                path_parts = current_path.strip("/").split("/")
+                formatted_path = " → ".join(path_parts)
+            
+            # Add to result
+            result.append({
+                "id": pg.id,
+                "name": pg_name,
+                "path": current_path,
+                "level": level,
+                "formatted_path": formatted_path,
+            })
+            
+            # Get children
+            try:
+                children_response = pg_api.get_process_groups(id=pg_id)
+                if hasattr(children_response, "process_groups") and children_response.process_groups:
+                    for child in children_response.process_groups:
+                        _traverse(child.id, current_path, level + 1)
+            except Exception as child_error:
+                logger.warning("Failed to get children of process group %s: %s", pg_id, child_error)
+        
+        except Exception as e:
+            logger.error("Failed to traverse process group %s: %s", pg_id, e)
+    
+    # Start traversal from specified process group (default is root)
+    _traverse(start_pg_id, "", 0)
+    
+    return result

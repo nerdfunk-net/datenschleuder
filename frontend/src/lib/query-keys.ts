@@ -148,6 +148,10 @@ export const queryKeys = {
   deploy: {
     all: ['deploy'] as const,
     settings: () => [...queryKeys.deploy.all, 'settings'] as const,
+    processGroups: (instanceId: number, hierarchyValue: string) =>
+      [...queryKeys.deploy.all, 'process-groups', instanceId, hierarchyValue] as const,
+    versions: (instanceId: number, registryId: string, bucketId: string, flowId: string) =>
+      [...queryKeys.deploy.all, 'versions', instanceId, registryId, bucketId, flowId] as const,
   },
 
   // Registry Flows (DB-backed)

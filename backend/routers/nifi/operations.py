@@ -320,6 +320,31 @@ async def list_child_process_groups(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
+@router.get("/{instance_id}/ops/process-groups/all-paths")
+async def get_all_process_group_paths(
+    instance_id: int,
+    start_pg_id: str = "root",
+    user: dict = Depends(require_permission("nifi", "read")),
+):
+    """
+    Get all process groups recursively with their full paths.
+    
+    Returns a flat list of all process groups in the NiFi instance with:
+    - id: Process group ID
+    - name: Process group name
+    - path: Full path (e.g., "/Parent/Child")
+    - level: Depth in hierarchy (0 for root)
+    - formatted_path: Display-friendly path (e.g., "Parent → Child")
+    """
+    _setup_instance(instance_id)
+    try:
+        paths = pg_ops.get_all_process_group_paths(start_pg_id)
+        return {"status": "success", "process_groups": paths, "count": len(paths)}
+    except Exception as e:
+        logger.error("Failed to get all process group paths for instance %d: %s", instance_id, e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
 @router.get("/{instance_id}/ops/process-groups/{pg_id}/output-ports")
 async def get_output_ports(
     instance_id: int,
