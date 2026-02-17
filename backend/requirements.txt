@@ -11,15 +11,11 @@ python-dotenv
 gitpython
 jinja2
 cryptography>=42.0.0
-textfsm
-netmiko
-ntc-templates
-napalm
 pyyaml
 sqlalchemy
 psycopg2-binary
 python-jose[cryptography]
-pysnmp>=7.0.0
+nipyapi==1.5.0
 
 # Celery and Redis
 celery>=5.4.0

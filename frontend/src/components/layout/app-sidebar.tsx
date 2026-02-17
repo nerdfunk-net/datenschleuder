@@ -24,6 +24,14 @@ import {
   History,
   Server,
   HelpCircle,
+  Activity,
+  SlidersHorizontal,
+  HardDrive,
+  GitFork,
+  Layers,
+  Rocket,
+  Network,
+  Upload,
 } from 'lucide-react'
 
 interface NavItem {
@@ -47,6 +55,21 @@ const navigationSections: NavSection[] = [
     ],
   },
   {
+    title: 'NiFi',
+    items: [
+      { label: 'Monitoring', href: '/nifi/monitoring', icon: Activity },
+      { label: 'Parameter', href: '/nifi/parameter', icon: SlidersHorizontal },
+      { label: 'Install', href: '/nifi/install', icon: HardDrive },
+    ],
+  },
+  {
+    title: 'Flows',
+    items: [
+      { label: 'Manage', href: '/flows/manage', icon: Network },
+      { label: 'Deploy', href: '/flows/deploy', icon: Upload },
+    ],
+  },
+  {
     title: 'Jobs',
     items: [
       { label: 'Job Templates', href: '/jobs/templates', icon: FileText },
@@ -59,6 +82,10 @@ const navigationSections: NavSection[] = [
     items: [
       { label: 'Common', href: '/settings/common', icon: Settings },
       { label: 'Git Management', href: '/settings/git', icon: GitBranch },
+      { label: 'NiFi', href: '/settings/nifi', icon: Server },
+      { label: 'Registry', href: '/settings/registry', icon: GitFork },
+      { label: 'Hierarchy', href: '/settings/hierarchy', icon: Layers },
+      { label: 'Deploy', href: '/settings/deploy', icon: Rocket },
       { label: 'Cache', href: '/settings/cache', icon: Zap },
       { label: 'Celery', href: '/settings/celery', icon: Server },
       { label: 'Credentials', href: '/settings/credentials', icon: Key },

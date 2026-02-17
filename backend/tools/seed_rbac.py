@@ -208,6 +208,22 @@ def seed_permissions(verbose: bool = True):
         ("jobs.schedules", "delete", "Delete job schedules"),
         ("jobs.runs", "read", "View job execution history"),
         ("jobs.runs", "execute", "Execute jobs manually"),
+        # NiFi permissions
+        ("nifi", "read", "View NiFi instances, flows, and monitoring"),
+        ("nifi", "write", "Create/modify NiFi instances and flows"),
+        ("nifi", "delete", "Delete NiFi instances and flows"),
+        ("nifi", "execute", "Execute NiFi operations (deploy, start, stop)"),
+        ("nifi.settings", "read", "View NiFi configuration settings"),
+        ("nifi.settings", "write", "Modify NiFi configuration settings"),
+        # Registry permissions
+        ("registry", "read", "View NiFi Registry repositories and flows"),
+        ("registry", "write", "Create/modify NiFi Registry entries"),
+        ("registry", "delete", "Delete NiFi Registry entries"),
+        # Flows permissions
+        ("flows", "read", "View NiFi flows and process groups"),
+        ("flows", "write", "Create/modify NiFi flows"),
+        ("flows", "delete", "Delete NiFi flows"),
+        ("flows", "deploy", "Deploy NiFi flows to target instances"),
     ]
 
     created_count = 0
@@ -306,6 +322,21 @@ def assign_permissions_to_roles(roles, verbose: bool = True):
         "jobs.schedules:delete",
         "jobs.runs:read",
         "jobs.runs:execute",
+        # NiFi (full access)
+        "nifi:read",
+        "nifi:write",
+        "nifi:delete",
+        "nifi:execute",
+        "nifi.settings:read",
+        # Registry (full access)
+        "registry:read",
+        "registry:write",
+        "registry:delete",
+        # Flows (full access)
+        "flows:read",
+        "flows:write",
+        "flows:delete",
+        "flows:deploy",
     ]
     operator_count = 0
     for perm_key in operator_perms:
@@ -350,6 +381,13 @@ def assign_permissions_to_roles(roles, verbose: bool = True):
         # RBAC (read-only)
         "rbac.roles:read",
         "rbac.permissions:read",
+        # NiFi (read-only)
+        "nifi:read",
+        "nifi.settings:read",
+        # Registry (read-only)
+        "registry:read",
+        # Flows (read-only)
+        "flows:read",
     ]
     viewer_count = 0
     for perm_key in viewer_perms:

@@ -144,6 +144,32 @@ export const queryKeys = {
     permissions: () => [...queryKeys.rbac.all, 'permissions'] as const,
   },
 
+  // Deploy Settings
+  deploy: {
+    all: ['deploy'] as const,
+    settings: () => [...queryKeys.deploy.all, 'settings'] as const,
+  },
+
+  // Registry Flows (DB-backed)
+  registryFlows: {
+    all: ['registryFlows'] as const,
+    list: (instanceId?: number) =>
+      instanceId !== undefined
+        ? ([...queryKeys.registryFlows.all, 'list', instanceId] as const)
+        : ([...queryKeys.registryFlows.all, 'list'] as const),
+  },
+
+  // NiFi
+  nifi: {
+    all: ['nifi'] as const,
+    instances: () => [...queryKeys.nifi.all, 'instances'] as const,
+    instance: (id: number) => [...queryKeys.nifi.all, 'instance', id] as const,
+    hierarchy: () => [...queryKeys.nifi.all, 'hierarchy'] as const,
+    hierarchyValues: (attribute: string) => [...queryKeys.nifi.hierarchy(), 'values', attribute] as const,
+    certificates: () => [...queryKeys.nifi.all, 'certificates'] as const,
+    oidcProviders: () => [...queryKeys.nifi.all, 'oidc-providers'] as const,
+  },
+
   // Templates
   templates: {
     all: ['templates'] as const,
