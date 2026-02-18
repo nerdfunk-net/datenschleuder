@@ -11,15 +11,15 @@ import { useSidebar } from './sidebar-context'
 import {
   Home,
   FileText,
-  GitBranch,
-  Zap,
+  // GitBranch, // NOTE: Hidden menu item - kept for re-enabling (Settings / Git Management)
+  // Zap,       // NOTE: Hidden menu item - kept for re-enabling (Settings / Cache)
   Key,
   Menu,
   Shield,
   ChevronDown,
   ChevronRight,
   LogOut,
-  Settings,
+  // Settings, // NOTE: Hidden menu item - kept for re-enabling (Settings / Common)
   Calendar,
   History,
   Server,
@@ -80,14 +80,15 @@ const navigationSections: NavSection[] = [
   {
     title: 'Settings',
     items: [
-      { label: 'Common', href: '/settings/common', icon: Settings },
-      { label: 'Git Management', href: '/settings/git', icon: GitBranch },
+      // NOTE: The following menu items are intentionally hidden (code kept for re-enabling):
+      // { label: 'Common', href: '/settings/common', icon: Settings },
+      // { label: 'Git Management', href: '/settings/git', icon: GitBranch },
       { label: 'NiFi', href: '/settings/nifi', icon: Server },
       { label: 'Registry', href: '/settings/registry', icon: GitFork },
       { label: 'Hierarchy', href: '/settings/hierarchy', icon: Layers },
       { label: 'Deploy', href: '/settings/deploy', icon: Rocket },
-      { label: 'Cache', href: '/settings/cache', icon: Zap },
-      { label: 'Celery', href: '/settings/celery', icon: Server },
+      // { label: 'Cache', href: '/settings/cache', icon: Zap },
+      // { label: 'Celery', href: '/settings/celery', icon: Server },
       { label: 'Credentials', href: '/settings/credentials', icon: Key },
       { label: 'Users & Permissions', href: '/settings/permissions', icon: Shield },
     ],
@@ -322,7 +323,7 @@ export function AppSidebar({ className }: AppSidebarProps) {
           {!isCollapsed && (
             <div className="pt-4 border-t border-slate-100">
               <p className="text-xs text-slate-400 text-center leading-relaxed">
-                © 2026 Cockpit Dashboard
+                © 2026 Datenschleuder
                 <br />
                 <span className="text-slate-300">Network Management</span>
               </p>

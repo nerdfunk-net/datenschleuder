@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useCallback } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
+import type { Path } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -38,7 +39,9 @@ import { ChevronDown } from 'lucide-react'
 import { useNifiHierarchyValuesQuery, useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
 import { useParameterContextsQuery } from '../hooks/use-parameter-contexts-query'
 import type { NifiFlow, RegistryFlow, FlowFormValues } from '../types'
-import type { HierarchyAttribute } from '@/components/features/settings/nifi/types'
+import type { HierarchyAttribute, NifiInstance } from '@/components/features/settings/nifi/types'
+
+const EMPTY_INSTANCES: NifiInstance[] = []
 
 interface FlowDialogProps {
   open: boolean
@@ -91,9 +94,8 @@ function HierarchyCombobox({ attributeName, value, onChange, disabled }: Hierarc
   const savedValues = data?.values ?? []
 
   const handleChange = useCallback((newValue: string) => {
-    console.log(`[HierarchyCombobox] ${attributeName} changed:`, { oldValue: value, newValue })
     onChange(newValue)
-  }, [attributeName, value, onChange])
+  }, [onChange])
 
   return (
     <div className="flex h-9">
@@ -146,11 +148,6 @@ function ParameterContextSelect({
 }: ParameterContextSelectProps) {
   const { data, isFetching } = useParameterContextsQuery(instanceId)
   const contexts = data?.parameter_contexts ?? []
-
-  // Debug logging
-  useEffect(() => {
-    console.log('[ParameterContextSelect]', { instanceId, isFetching, contextsCount: contexts.length, data })
-  }, [instanceId, isFetching, contexts.length, data])
 
   if (!instanceId) {
     const placeholderText = isInstanceLoading 
@@ -238,7 +235,7 @@ function FlowSection({
             <FormField
               key={attr.name}
               control={control}
-              name={`hierarchy_values.${attr.name}.${hierarchySide}` as any}
+              name={`hierarchy_values.${attr.name}.${hierarchySide}` as Path<FlowFormValues>}
               render={({ field }) => (
                 <FormItem className="space-y-1">
                   <FormLabel className="text-xs font-semibold text-slate-600">
@@ -264,7 +261,7 @@ function FlowSection({
       <div className="grid grid-cols-2 gap-3">
         <FormField
           control={control}
-          name={paramField as any}
+          name={paramField as Path<FlowFormValues>}
           render={({ field }) => (
             <FormItem className="space-y-1">
               <FormLabel className="text-xs font-semibold text-slate-600">
@@ -285,7 +282,7 @@ function FlowSection({
         />
         <FormField
           control={control}
-          name={templateField as any}
+          name={templateField as Path<FlowFormValues>}
           render={({ field }) => (
             <FormItem className="space-y-1">
               <FormLabel className="text-xs font-semibold text-slate-600">
@@ -343,7 +340,7 @@ export function FlowDialog({
 
   // Derive instance IDs by checking the FIRST (top) hierarchy attribute only
   // This matches the old Vue implementation behavior
-  const { data: instances = [], isLoading: isInstancesLoading, error: instancesError } = useNifiInstancesQuery()
+  const { data: instances = EMPTY_INSTANCES, isLoading: isInstancesLoading, error: instancesError } = useNifiInstancesQuery()
 
   // Debug: Log instances query result
   useEffect(() => {

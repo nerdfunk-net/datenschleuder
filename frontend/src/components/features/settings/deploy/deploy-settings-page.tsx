@@ -13,6 +13,7 @@ import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
 import { useApi } from '@/hooks/use-api'
 import { useNifiInstancesQuery } from '../nifi/hooks/use-nifi-instances-query'
+import type { NifiInstance } from '../nifi/types'
 import { useHierarchyQuery } from '../hierarchy/hooks/use-hierarchy-query'
 import { useDeploySettingsQuery } from './hooks/use-deploy-settings-query'
 import { useDeploySettingsMutations } from './hooks/use-deploy-settings-mutations'
@@ -26,6 +27,8 @@ function buildPathString(pathArr: Array<{ id: string; name: string }>) {
   return pathArr.map(p => p.name).reverse().join(' / ')
 }
 
+const EMPTY_INSTANCES: NifiInstance[] = []
+
 // ---- main component --------------------------------------------------------
 
 export function DeploySettingsPage() {
@@ -34,7 +37,7 @@ export function DeploySettingsPage() {
   const { apiCall } = useApi()
 
   const { data: hierarchyData } = useHierarchyQuery()
-  const { data: instances = [], isLoading: loadingInstances } = useNifiInstancesQuery()
+  const { data: instances = EMPTY_INSTANCES, isLoading: loadingInstances } = useNifiInstancesQuery()
   const { data: remoteSettings, isLoading: loadingSettings } = useDeploySettingsQuery()
   const { saveSettings } = useDeploySettingsMutations()
 
@@ -224,7 +227,7 @@ export function DeploySettingsPage() {
                     Disable flow after deployment
                   </label>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    DISABLES the deployed process group after deployment (beyond NiFi's default STOPPED state), preventing accidental starting.
+                    DISABLES the deployed process group after deployment (beyond NiFi&apos;s default STOPPED state), preventing accidental starting.
                   </p>
                 </div>
               </div>

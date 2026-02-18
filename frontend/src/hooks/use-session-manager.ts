@@ -255,7 +255,7 @@ export function useSessionManager(config: SessionConfig = EMPTY_CONFIG) {
       
       // Check if cookies were cleared externally
       const cookieToken = typeof window !== 'undefined' ?
-        document.cookie.split(';').find(row => row.trim().startsWith('cockpit_auth_token=')) : null
+        document.cookie.split(';').find(row => row.trim().startsWith('datenschleuder_auth_token=')) : null
 
       if (currentToken && !cookieToken) {
         console.warn('Session Manager: Cookies cleared externally, logging out')

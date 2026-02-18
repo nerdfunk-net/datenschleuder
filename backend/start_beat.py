@@ -39,7 +39,7 @@ except ImportError:
 def main():
     """Start the Celery Beat scheduler."""
     print("=" * 70)
-    print("Starting Cockpit-NG Celery Beat Scheduler")
+    print("Starting Datenschleuder Celery Beat Scheduler")
     print("=" * 70)
     print(f"Broker: {settings.celery_broker_url}")
     print(f"Backend: {settings.celery_result_backend}")

@@ -17,7 +17,7 @@ const geistMono = {
 };
 
 export const metadata: Metadata = {
-  title: "Cockpit Network Management",
+  title: "Datenschleuder",
   description: "Modern network management dashboard for network engineers and NetDevOps teams",
 };
 

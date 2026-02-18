@@ -26,7 +26,7 @@ export const DEFAULT_FORM_DATA: RepositoryFormValues = {
 // Repository categories
 export const REPOSITORY_CATEGORIES = [
   { value: 'device_configs', label: 'Device Configs' },
-  { value: 'cockpit_configs', label: 'Cockpit Configs' },
+  { value: 'datenschleuder_configs', label: 'Datenschleuder Configs' },
   { value: 'templates', label: 'Templates' },
   { value: 'agent', label: 'Agents' },
 ] as const

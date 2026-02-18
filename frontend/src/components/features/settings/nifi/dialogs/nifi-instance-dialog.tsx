@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
@@ -89,9 +89,9 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
     },
   })
 
-  const watchedAttribute = form.watch('hierarchy_attribute')
-  const watchedAuthMethod = form.watch('authMethod')
-  const watchedHierarchyValue = form.watch('hierarchy_value')
+  const watchedAttribute = useWatch({ control: form.control, name: 'hierarchy_attribute' })
+  const watchedAuthMethod = useWatch({ control: form.control, name: 'authMethod' })
+  const watchedHierarchyValue = useWatch({ control: form.control, name: 'hierarchy_value' })
 
   const { data: valuesData } = useNifiHierarchyValuesQuery(watchedAttribute)
 

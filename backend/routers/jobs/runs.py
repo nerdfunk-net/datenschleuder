@@ -376,7 +376,7 @@ async def get_job_progress(
 
         # Get progress from Redis
         redis_client = celery_app.backend.client
-        progress_key = f"cockpit-ng:job-progress:{run_id}"
+        progress_key = f"datenschleuder:job-progress:{run_id}"
         completed = redis_client.get(progress_key)
 
         if completed is None:

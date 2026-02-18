@@ -85,6 +85,12 @@ export interface ConflictInfo {
   }
 }
 
+export interface DeploymentError {
+  status?: number
+  message?: string
+  conflictInfo?: ConflictInfo
+}
+
 export interface ConflictDeployment {
   config: DeploymentConfig
   conflictInfo: ConflictInfo

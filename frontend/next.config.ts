@@ -90,7 +90,7 @@ const nextConfig: NextConfig = {
           // Remove server information
           {
             key: 'Server',
-            value: 'Cockpit-NG',
+            value: 'Datenschleuder',
           },
         ],
       },

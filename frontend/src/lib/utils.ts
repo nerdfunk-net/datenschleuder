@@ -11,7 +11,7 @@ const EMPTY_INIT: RequestInit = {}
 export async function apiRequest(endpoint: string, options: RequestInit = EMPTY_INIT) {
   if (typeof window === 'undefined') return null
   
-  const token = localStorage.getItem('cockpit-auth')
+  const token = localStorage.getItem('datenschleuder-auth')
   const authData = token ? JSON.parse(token) : null
   
   const config: RequestInit = {
@@ -32,7 +32,7 @@ export async function apiRequest(endpoint: string, options: RequestInit = EMPTY_
 
   if (response.status === 401) {
     // Token expired, redirect to login
-    localStorage.removeItem('cockpit-auth')
+    localStorage.removeItem('datenschleuder-auth')
     window.location.href = '/login'
     return
   }

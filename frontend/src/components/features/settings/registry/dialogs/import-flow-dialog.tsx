@@ -15,6 +15,8 @@ import { useNifiInstancesQuery } from '../../nifi/hooks/use-nifi-instances-query
 import type { NifiInstance } from '../../nifi/types'
 import type { Bucket, RemoteFlow, RegistryClient } from '../types'
 
+const EMPTY_INSTANCES: NifiInstance[] = []
+
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -25,7 +27,7 @@ export function ImportFlowDialog({ open, onOpenChange }: Props) {
   const { token } = useAuthStore()
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { data: instances = [] } = useNifiInstancesQuery()
+  const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [instance, setInstance] = useState<NifiInstance | null>(null)

@@ -54,8 +54,8 @@ def set_git_author(repository: Dict, repo: Repo):
     # Set new values from repository config or use defaults
     config_writer = repo.config_writer()
     try:
-        author_name = repository.get("git_author_name") or "Cockpit-NG Automation"
-        author_email = repository.get("git_author_email") or "noreply@cockpit-ng.local"
+        author_name = repository.get("git_author_name") or "Datenschleuder Automation"
+        author_email = repository.get("git_author_email") or "noreply@datenschleuder.local"
 
         config_writer.set_value("user", "name", author_name)
         config_writer.set_value("user", "email", author_email)

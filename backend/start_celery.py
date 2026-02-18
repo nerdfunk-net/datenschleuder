@@ -249,7 +249,7 @@ def main():
             hostname_prefix = "worker"
 
     print("=" * 70)
-    print(f"Starting Cockpit-NG Celery Worker - {worker_type}")
+    print(f"Starting Datenschleuder Celery Worker - {worker_type}")
     print("=" * 70)
     print(f"Platform: {system_name} ({platform.machine()})")
     print(f"Pool Type: {pool_type}")

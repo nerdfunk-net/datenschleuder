@@ -17,7 +17,7 @@ import { Step4Settings } from './components/step-4-settings'
 import { Step5Review } from './components/step-5-review'
 import { ConflictResolutionDialog } from './dialogs/conflict-resolution-dialog'
 import { DeploymentResultsDialog } from './dialogs/deployment-results-dialog'
-import { STEPS, type DeploymentConfig, type NifiInstance, type ConflictInfo, type DeploymentResults, type DeploymentSettings } from './types'
+import { STEPS, type DeploymentConfig, type NifiInstance, type RegistryFlow, type ProcessGroupPath, type FlowVersion, type ConflictInfo, type DeploymentError, type DeploymentResponse, type DeploymentResults, type DeploymentSettings } from './types'
 import { useDeployMutations } from './hooks/use-deploy-mutations'
 import { sortDeploymentConfigs } from './utils/deployment-config-utils'
 import type { NifiFlow } from '@/components/features/flows/manage/types'
@@ -35,6 +35,7 @@ const EMPTY_TARGETS: Record<number, 'source' | 'destination' | 'both'> = {}
 const EMPTY_CONFIGS: DeploymentConfig[] = []
 const EMPTY_INSTANCES: NifiInstance[] = []
 const EMPTY_HIERARCHY: { name: string; label: string; order: number }[] = []
+const EMPTY_REGISTRY_FLOWS: RegistryFlow[] = []
 
 export function DeploymentWizard() {
   const { apiCall } = useApi()
@@ -77,7 +78,7 @@ export function DeploymentWizard() {
   // Fetch required data
   const { data: flows = EMPTY_FLOWS, isLoading: isLoadingFlows, error: flowsError } = useFlowsQuery()
   const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
-  const { data: registryFlows = [] } = useRegistryFlowsQuery()
+  const { data: registryFlows = EMPTY_REGISTRY_FLOWS } = useRegistryFlowsQuery()
   const { data: deploymentSettings } = useDeploymentSettingsQuery()
 
   // Local state for settings (allows immediate checkbox updates)
@@ -94,7 +95,7 @@ export function DeploymentWizard() {
   }, [deploymentSettings, localSettings])
   const { data: hierarchyData } = useQuery({
     queryKey: queryKeys.nifi.hierarchy(),
-    queryFn: async () => apiCall('nifi/hierarchy'),
+    queryFn: async () => apiCall('nifi/hierarchy') as Promise<{ hierarchy?: { name: string; label: string; order: number }[] }>,
   })
 
   // Get hierarchy from API
@@ -158,7 +159,7 @@ export function DeploymentWizard() {
         flows,
         selectedFlowIds,
         deploymentTargets,
-        instances,
+        instances as unknown as NifiInstance[],
         registryFlows,
         hierarchyAttributes
       )
@@ -179,12 +180,12 @@ export function DeploymentWizard() {
           new Set(deploymentConfigs.map((c) => c.instanceId).filter((id): id is number => id !== null))
         )
 
-        const pathsCache: Record<string, any[]> = {}
+        const pathsCache: Record<string, ProcessGroupPath[]> = {}
 
         for (const instanceId of uniqueInstanceIds) {
           try {
-            const data = await apiCall(`nifi/instances/${instanceId}/ops/process-groups/all-paths`)
-            
+            const data = await apiCall(`nifi/instances/${instanceId}/ops/process-groups/all-paths`) as { process_groups?: ProcessGroupPath[] }
+
             if (data?.process_groups) {
               pathsCache[instanceId.toString()] = data.process_groups
             } else {
@@ -253,7 +254,7 @@ export function DeploymentWizard() {
 
       loadPaths()
     }
-  }, [currentStepIndex, deploymentConfigs.length, effectiveSettings, hierarchyAttributes, flows, apiCall])
+  }, [currentStepIndex, deploymentConfigs, effectiveSettings, hierarchyAttributes, flows, apiCall])
 
   // Step 3: Update process group selection
   const handleUpdateProcessGroup = useCallback((configKey: string, processGroupId: string) => {
@@ -284,7 +285,7 @@ export function DeploymentWizard() {
                 )
                 const data = await apiCall(
                   `nifi/instances/${config.instanceId}/ops/registries/${config.registryId}/buckets/${config.bucketId}/flows/${config.flowIdRegistry}/versions`
-                )
+                ) as { versions?: FlowVersion[] }
                 console.log(`[DeploymentWizard] Loaded ${data.versions?.length || 0} versions for ${config.flowName}`)
                 return { ...config, availableVersions: data.versions || [] }
               } catch (error) {
@@ -306,10 +307,10 @@ export function DeploymentWizard() {
 
       loadVersions()
     }
-  }, [currentStepIndex, deploymentConfigs.length, apiCall])
+  }, [currentStepIndex, deploymentConfigs, apiCall])
 
   // Step 4: Update version selection
-  const handleUpdateVersion = useCallback((configKey: string, version: string | null) => {
+  const handleUpdateVersion = useCallback((configKey: string, version: number | null) => {
     setDeploymentConfigs((prev) =>
       prev.map((config) =>
         config.key === configKey ? { ...config, selectedVersion: version } : config
@@ -361,7 +362,7 @@ export function DeploymentWizard() {
           registry_client_id: config.registryId,
           parent_process_group_id: config.selectedProcessGroupId,
           process_group_name: config.processGroupName,
-          version: config.selectedVersion || undefined,
+          version: config.selectedVersion ?? null,
           parameter_context_name: config.parameterContextName || undefined,
           x_position: 0,
           y_position: 0,
@@ -382,7 +383,7 @@ export function DeploymentWizard() {
               results.successCount++
               resolve(response)
             },
-            onError: async (error: any) => {
+            onError: async (error: DeploymentError) => {
               console.error(`[DeploymentWizard] Failed to deploy ${config.flowName}:`, error)
 
               // Check for 409 conflict
@@ -435,11 +436,11 @@ export function DeploymentWizard() {
                       response,
                     })
                     results.successCount++
-                  } catch (retryError: any) {
+                  } catch (retryError: unknown) {
                     results.failed.push({
                       config,
                       success: false,
-                      error: retryError.message || 'Failed to delete and redeploy',
+                      error: retryError instanceof Error ? retryError.message : 'Failed to delete and redeploy',
                     })
                     results.failureCount++
                   }
@@ -448,19 +449,19 @@ export function DeploymentWizard() {
                     const response = await updateProcessGroupVersion.mutateAsync({
                       instanceId: config.instanceId!,
                       processGroupId: conflictInfo.existing_process_group.id,
-                      version: config.selectedVersion || undefined,
-                    })
+                      version: config.selectedVersion ?? 0,
+                    }) as DeploymentResponse
                     results.successful.push({
                       config,
                       success: true,
                       response,
                     })
                     results.successCount++
-                  } catch (updateError: any) {
+                  } catch (updateError: unknown) {
                     results.failed.push({
                       config,
                       success: false,
-                      error: updateError.message || 'Failed to update version',
+                      error: updateError instanceof Error ? updateError.message : 'Failed to update version',
                     })
                     results.failureCount++
                   }
@@ -482,7 +483,7 @@ export function DeploymentWizard() {
             },
           })
         })
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Catch-all for any unhandled errors
         console.error(`[DeploymentWizard] Unhandled error deploying ${config.flowName}:`, error)
       }
@@ -492,7 +493,7 @@ export function DeploymentWizard() {
     setDeploymentResults(results)
     setShowResultsDialog(true)
     setIsDeploying(false)
-  }, [deploymentConfigs, deploymentSettings, deployFlow, deleteProcessGroup, updateProcessGroupVersion])
+  }, [deploymentConfigs, effectiveSettings, deployFlow, deleteProcessGroup, updateProcessGroupVersion])
 
   // Conflict resolution handlers
   const handleSkipConflict = useCallback(() => {
@@ -535,7 +536,7 @@ export function DeploymentWizard() {
       default:
         return false
     }
-  }, [currentStepIndex, selectedFlowIds, deploymentTargets, deploymentConfigs])
+  }, [currentStepIndex, selectedFlowIds, deploymentTargets, deploymentConfigs, isDeploying])
 
   return (
     <div className="space-y-6">

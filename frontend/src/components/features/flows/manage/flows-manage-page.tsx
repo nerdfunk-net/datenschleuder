@@ -153,6 +153,8 @@ export function FlowsManagePage() {
     }
   }, [allColumns])
 
+  const [activeViewId, setActiveViewId] = useState<number | null>(null)
+
   // Apply default view on load
   const [defaultViewApplied, setDefaultViewApplied] = useState(false)
   useEffect(() => {
@@ -170,8 +172,6 @@ export function FlowsManagePage() {
     () => allColumns.filter(c => visibleColumnKeys.includes(c.key)),
     [allColumns, visibleColumnKeys],
   )
-
-  const [activeViewId, setActiveViewId] = useState<number | null>(null)
 
   // Filters
   const [filters, setFilters] = useState<Record<string, string>>({})
@@ -317,9 +317,10 @@ export function FlowsManagePage() {
         )
       } else {
         createView.mutate(payload, {
-          onSuccess: (data: any) => {
+          onSuccess: (data: unknown) => {
             setSaveViewOpen(false)
-            if (data?.id) setActiveViewId(data.id)
+            const view = data as FlowView
+            if (view?.id) setActiveViewId(view.id)
           },
         })
       }

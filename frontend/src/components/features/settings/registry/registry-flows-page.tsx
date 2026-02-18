@@ -27,6 +27,10 @@ import { AddFlowDialog } from './dialogs/add-flow-dialog'
 import { ImportFlowDialog } from './dialogs/import-flow-dialog'
 import { FlowVersionsDialog } from './dialogs/flow-versions-dialog'
 import type { RegistryFlow } from './types'
+import type { NifiInstance } from '../nifi/types'
+
+const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_FLOWS: RegistryFlow[] = []
 
 export function RegistryFlowsPage() {
   const { user } = useAuthStore()
@@ -40,8 +44,8 @@ export function RegistryFlowsPage() {
   const [deleteFlow, setDeleteFlow] = useState<RegistryFlow | null>(null)
   const [exportingIds, setExportingIds] = useState<Set<string>>(new Set())
 
-  const { data: instances = [] } = useNifiInstancesQuery()
-  const { data: flows = [], isLoading } = useRegistryFlowsQuery(filterInstanceId)
+  const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
+  const { data: flows = EMPTY_FLOWS, isLoading } = useRegistryFlowsQuery(filterInstanceId)
   const { deleteFlow: deleteFlowMutation, exportFlow } = useRegistryFlowsMutations()
 
   const filterOptions = useMemo(() => [

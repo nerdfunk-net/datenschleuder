@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class RedisCacheService:
     """Redis-based cache service with automatic serialization and TTL support."""
 
-    def __init__(self, redis_url: str, key_prefix: str = "cockpit-cache"):
+    def __init__(self, redis_url: str, key_prefix: str = "datenschleuder-cache"):
         """Initialize Redis cache service.
 
         Args:
@@ -472,7 +472,7 @@ try:
     from config import settings
 
     cache_service = RedisCacheService(
-        redis_url=settings.redis_url, key_prefix="cockpit-cache"
+        redis_url=settings.redis_url, key_prefix="datenschleuder-cache"
     )
     logger.info("Initialized Redis-based cache service")
 except Exception as e:

@@ -15,7 +15,7 @@ print(f"Celery Result Backend: {settings.celery_result_backend}")
 
 # Create Celery application
 celery_app = Celery(
-    "cockpit_ng",
+    "datenschleuder",
     broker=settings.celery_broker_url,  # Redis as message broker
     backend=settings.celery_result_backend,  # Redis as result backend
     include=["tasks"],  # Auto-discover tasks
@@ -156,7 +156,7 @@ celery_app.conf.update(
     # Celery Beat settings
     beat_scheduler="redbeat.RedBeatScheduler",  # Use Redis-based scheduler
     redbeat_redis_url=settings.redis_url,  # Redis URL for beat schedule
-    redbeat_key_prefix="cockpit-ng:beat:",  # Prefix for beat keys in Redis
+    redbeat_key_prefix="datenschleuder:beat:",  # Prefix for beat keys in Redis
     # Queue Configuration - Loaded dynamically from database
     task_queues=task_queues_from_db,
     # Task routing rules - route specific tasks to dedicated queues

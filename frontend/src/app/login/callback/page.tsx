@@ -118,7 +118,7 @@ function OIDCCallbackContent() {
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-apple-lg">
             <Heart className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cockpit</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Datenschleuder</h1>
         </div>
 
         {/* Status Card */}
@@ -190,7 +190,7 @@ export default function OIDCCallbackPage() {
             <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-apple-lg">
               <Heart className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Cockpit</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Datenschleuder</h1>
           </div>
           <Card className="glass backdrop-blur-xl border-white/20 shadow-apple-xl">
             <CardContent className="pt-6 pb-6">

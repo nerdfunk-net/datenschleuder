@@ -64,7 +64,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
-            <p className="text-gray-600">Configure your Cockpit application settings</p>
+            <p className="text-gray-600">Configure your Datenschleuder application settings</p>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -21,35 +21,35 @@ interface Props {
   onClose: () => void
 }
 
+interface ValueEntry { id: number; value: string }
+
 export function AttributeValuesDialog({ attribute, readOnly, onClose }: Props) {
   const open = !!attribute
   const { data, isLoading } = useHierarchyValuesQuery(attribute?.name ?? '')
   const { saveValues } = useHierarchyMutations()
+  const nextId = useRef(0)
 
-  const [localValues, setLocalValues] = useState<string[]>([])
+  const [localValues, setLocalValues] = useState<ValueEntry[]>([])
 
   // Sync local values when data loads or attribute changes
   useEffect(() => {
-    if (data) {
-      setLocalValues(data.values ?? [])
-    } else {
-      setLocalValues([])
-    }
+    const values = data?.values ?? []
+    setLocalValues(values.map(v => ({ id: nextId.current++, value: v })))
   }, [data, attribute?.name])
 
-  const handleAdd = () => setLocalValues(prev => [...prev, ''])
+  const handleAdd = () => setLocalValues(prev => [...prev, { id: nextId.current++, value: '' }])
 
-  const handleChange = (idx: number, value: string) => {
-    setLocalValues(prev => prev.map((v, i) => (i === idx ? value : v)))
+  const handleChange = (id: number, value: string) => {
+    setLocalValues(prev => prev.map(entry => (entry.id === id ? { ...entry, value } : entry)))
   }
 
-  const handleRemove = (idx: number) => {
-    setLocalValues(prev => prev.filter((_, i) => i !== idx))
+  const handleRemove = (id: number) => {
+    setLocalValues(prev => prev.filter(entry => entry.id !== id))
   }
 
   const handleSave = async () => {
     if (!attribute) return
-    const cleaned = localValues.filter(v => v.trim() !== '')
+    const cleaned = localValues.map(e => e.value).filter(v => v.trim() !== '')
     await saveValues.mutateAsync({ attributeName: attribute.name, values: cleaned })
     onClose()
   }
@@ -79,13 +79,13 @@ export function AttributeValuesDialog({ attribute, readOnly, onClose }: Props) {
             <p className="text-center text-sm text-slate-400 py-4">No values defined yet</p>
           )}
 
-          {!isLoading && localValues.map((value, idx) => (
-            <div key={idx} className="flex items-center gap-2">
+          {!isLoading && localValues.map(entry => (
+            <div key={entry.id} className="flex items-center gap-2">
               <Input
-                value={value}
+                value={entry.value}
                 readOnly={readOnly}
                 placeholder="Enter value"
-                onChange={e => handleChange(idx, e.target.value)}
+                onChange={e => handleChange(entry.id, e.target.value)}
                 className="flex-1"
               />
               {!readOnly && (
@@ -93,7 +93,7 @@ export function AttributeValuesDialog({ attribute, readOnly, onClose }: Props) {
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0 text-slate-400 hover:text-red-500"
-                  onClick={() => handleRemove(idx)}
+                  onClick={() => handleRemove(entry.id)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

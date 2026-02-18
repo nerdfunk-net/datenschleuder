@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'NiFi Monitoring - Cockpit',
+  title: 'NiFi Monitoring - Datenschleuder',
   description: 'Monitor NiFi instances and flow status',
 }
 

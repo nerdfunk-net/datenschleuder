@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'NiFi Parameter - Cockpit',
+  title: 'NiFi Parameter - Datenschleuder',
   description: 'Manage NiFi parameter contexts and values',
 }
 

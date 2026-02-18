@@ -47,7 +47,7 @@ import type {
 import {
   EMPTY_GIT_REPOS,
   EMPTY_GIT_FILES,
-  COCKPIT_CONFIGS_CATEGORY
+  DATENSCHLEUDER_CONFIGS_CATEGORY
 } from '../utils/constants'
 
 const importSchema = z.object({
@@ -112,9 +112,9 @@ export function GitImportDialog({
       }>('git-repositories/')
 
       if (response.repositories) {
-        // Filter for cockpit_configs category
+        // Filter for datenschleuder_configs category
         const cockpitRepos = response.repositories.filter(repo =>
-          repo.category?.toLowerCase() === COCKPIT_CONFIGS_CATEGORY && repo.is_active
+          repo.category?.toLowerCase() === DATENSCHLEUDER_CONFIGS_CATEGORY && repo.is_active
         )
         setGitRepos(cockpitRepos)
       }
@@ -332,7 +332,7 @@ export function GitImportDialog({
             <span>Import SNMP Mapping from Git</span>
           </DialogTitle>
           <DialogDescription>
-            {importStep === 'select-repo' && 'Select a Cockpit Configs repository to import from'}
+            {importStep === 'select-repo' && 'Select a Datenschleuder Configs repository to import from'}
             {importStep === 'check-sync' && 'Check repository synchronization status'}
             {importStep === 'select-file' && 'Select a file to import'}
           </DialogDescription>
@@ -347,11 +347,11 @@ export function GitImportDialog({
                 name="repositoryId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Cockpit Configs Repository</FormLabel>
+                    <FormLabel>Datenschleuder Configs Repository</FormLabel>
                     <FormControl>
                       {gitRepos.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                          No Cockpit Configs repositories found. Please add a repository with category &quot;Cockpit Configs&quot; first.
+                          No Datenschleuder Configs repositories found. Please add a repository with category &quot;Datenschleuder Configs&quot; first.
                         </p>
                       ) : (
                         <Select

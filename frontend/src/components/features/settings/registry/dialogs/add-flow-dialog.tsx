@@ -12,6 +12,8 @@ import { useRegistryFlowsMutations } from '../hooks/use-registry-flows-mutations
 import type { NifiInstance } from '../../nifi/types'
 import type { Bucket, RemoteFlow, RegistryClient } from '../types'
 
+const EMPTY_INSTANCES: NifiInstance[] = []
+
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -19,7 +21,7 @@ interface Props {
 
 export function AddFlowDialog({ open, onOpenChange }: Props) {
   const { apiCall } = useApi()
-  const { data: instances = [] } = useNifiInstancesQuery()
+  const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
   const { createFlows } = useRegistryFlowsMutations()
 
   const [selectedInstance, setSelectedInstance] = useState<NifiInstance | null>(null)
@@ -98,7 +100,7 @@ export function AddFlowDialog({ open, onOpenChange }: Props) {
   const toggleFlow = useCallback((id: string) => {
     setSelectedFlowIds(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) { next.delete(id) } else { next.add(id) }
       return next
     })
   }, [])

@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import { HierarchySettingsPage } from '@/components/features/settings/hierarchy/hierarchy-settings-page'
 
 export const metadata: Metadata = {
-  title: 'Hierarchy Settings - Cockpit',
+  title: 'Hierarchy Settings - Datenschleuder',
   description: 'Configure process group hierarchy and structure',
 }
 

@@ -22,12 +22,12 @@ const COOKIE_CONFIG = {
 // Helper functions for cookie operations
 const getCookieToken = (): string | null => {
   if (typeof window === 'undefined') return null
-  return Cookies.get('cockpit_auth_token') || null
+  return Cookies.get('datenschleuder_auth_token') || null
 }
 
 const getCookieUser = (): User | null => {
   if (typeof window === 'undefined') return null
-  const userCookie = Cookies.get('cockpit_user_info')
+  const userCookie = Cookies.get('datenschleuder_user_info')
   if (!userCookie) return null
   
   try {
@@ -39,7 +39,7 @@ const getCookieUser = (): User | null => {
 }
 
 const setCookieToken = (token: string) => {
-  Cookies.set('cockpit_auth_token', token, COOKIE_CONFIG)
+  Cookies.set('datenschleuder_auth_token', token, COOKIE_CONFIG)
 }
 
 const setCookieUser = (user: User) => {
@@ -53,17 +53,17 @@ const setCookieUser = (user: User) => {
     // Omit permissions array - too large for cookies
     // Permissions will be fetched via token refresh on hydration
   }
-  Cookies.set('cockpit_user_info', JSON.stringify(minimalUser), COOKIE_CONFIG)
+  Cookies.set('datenschleuder_user_info', JSON.stringify(minimalUser), COOKIE_CONFIG)
 }
 
 const removeCookies = () => {
-  Cookies.remove('cockpit_auth_token')
-  Cookies.remove('cockpit_user_info')
+  Cookies.remove('datenschleuder_auth_token')
+  Cookies.remove('datenschleuder_user_info')
   // Also clear old localStorage entries for migration
   if (typeof window !== 'undefined') {
     localStorage.removeItem('auth_token')
     localStorage.removeItem('user_info')
-    localStorage.removeItem('cockpit-auth')
+    localStorage.removeItem('datenschleuder-auth')
   }
 }
 

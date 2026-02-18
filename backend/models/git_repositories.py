@@ -12,7 +12,7 @@ class GitCategory(str, Enum):
     """Git repository categories."""
 
     CONFIGS = "device_configs"
-    COCKPIT_CONFIGS = "cockpit_configs"
+    DATENSCHLEUDER_CONFIGS = "datenschleuder_configs"
     TEMPLATES = "templates"
     AGENT = "agent"
 

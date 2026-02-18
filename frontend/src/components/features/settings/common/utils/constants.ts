@@ -17,6 +17,6 @@ export const CACHE_TIME = {
 
 export const MESSAGE_TIMEOUT = 5000 as const
 
-export const COCKPIT_CONFIGS_CATEGORY = 'cockpit_configs' as const
+export const DATENSCHLEUDER_CONFIGS_CATEGORY = 'datenschleuder_configs' as const
 
 export const EMPTY_STRING = ''

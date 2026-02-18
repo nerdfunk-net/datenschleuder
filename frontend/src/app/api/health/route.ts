@@ -6,7 +6,7 @@ export async function GET() {
     return NextResponse.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      service: 'cockpit-ng-frontend',
+      service: 'datenschleuder-frontend',
       version: process.env.npm_package_version || 'unknown'
     })
   } catch (error) {
@@ -15,7 +15,7 @@ export async function GET() {
         status: 'unhealthy',
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString(),
-        service: 'cockpit-ng-frontend'
+        service: 'datenschleuder-frontend'
       },
       { status: 500 }
     )

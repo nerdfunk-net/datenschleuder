@@ -15,7 +15,7 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat() + "Z",
-        "service": "cockpit-ng-backend",
+        "service": "datenschleuder-backend",
         "version": "1.0.0",
         "environment": os.getenv("ENV", "development"),
     }

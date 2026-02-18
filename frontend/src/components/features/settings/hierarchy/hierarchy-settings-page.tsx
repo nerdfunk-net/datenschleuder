@@ -207,7 +207,7 @@ export function HierarchySettingsPage() {
           <div className="space-y-3">
             {attrs.map((attr, index) => (
               <div
-                key={index}
+                key={attr.name || index}
                 className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3"
               >
                 {/* Order badge */}

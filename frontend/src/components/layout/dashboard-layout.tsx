@@ -60,7 +60,7 @@ function DashboardLayoutInner({ children, className }: DashboardLayoutProps) {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-2 border-blue-500 border-t-transparent mx-auto" />
-          <p className="text-slate-600 font-medium">Loading Cockpit Dashboard...</p>
+          <p className="text-slate-600 font-medium">Loading Datenschleuder...</p>
         </div>
       </div>
     )

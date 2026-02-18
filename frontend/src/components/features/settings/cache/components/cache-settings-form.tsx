@@ -11,6 +11,7 @@ import { Save, Loader2 } from 'lucide-react'
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from '@/components/ui/form'
 import { useCacheSettings } from '../hooks/use-cache-queries'
 import { useCacheMutations } from '../hooks/use-cache-mutations'
+import type { CacheSettings } from '../types'
 import { useEffect } from 'react'
 
 const cacheSettingsSchema = z.object({
@@ -44,7 +45,7 @@ export function CacheSettingsForm() {
 
   const handleSubmit = form.handleSubmit((data) => {
     // Send only the two fields, backend will handle defaults for others
-    saveSettings.mutate(data as any)
+    saveSettings.mutate(data as CacheSettings)
   })
 
   if (isLoading) {

@@ -1,5 +1,5 @@
 """
-Main FastAPI application for Cockpit network device management dashboard.
+Main FastAPI application for Datenschleuder network device management dashboard.
 
 This is the refactored main application file that uses modular routers
 for better code organization and maintainability.
@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Cockpit API",
+    title="Datenschleuder API",
     description="Network Device Management Dashboard API",
     version="2.0.0",
     docs_url=None,  # Disable default docs to use custom ones
@@ -145,7 +145,7 @@ async def redoc_html():
 async def root():
     """Root endpoint with basic API information."""
     return {
-        "message": "Cockpit API v2.0 - Network Device Management Dashboard",
+        "message": "Datenschleuder API v2.0 - Network Device Management Dashboard",
         "timestamp": datetime.now().isoformat(),
         "version": "2.0.0",
         "docs_url": "/docs",

@@ -11,11 +11,13 @@ import { InstanceCard } from './components/instance-card'
 import { NifiInstanceDialog } from './dialogs/nifi-instance-dialog'
 import type { NifiInstance } from './types'
 
+const EMPTY_INSTANCES: NifiInstance[] = []
+
 export function NifiInstancesPage() {
   const { user } = useAuthStore()
   const canWrite = hasPermission(user, 'nifi', 'write')
 
-  const { data: instances = [], isLoading, error } = useNifiInstancesQuery()
+  const { data: instances = EMPTY_INSTANCES, isLoading, error } = useNifiInstancesQuery()
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingInstance, setEditingInstance] = useState<NifiInstance | null>(null)

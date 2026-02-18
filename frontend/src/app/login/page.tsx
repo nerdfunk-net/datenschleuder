@@ -182,8 +182,8 @@ export default function LoginPage() {
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-apple-lg">
             <Heart className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Cockpit!</h1>
-          <p className="text-gray-600">Network Management Dashboard</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Datenschleuder!</h1>
+          <p className="text-gray-600">NiFi Deployment Dashboard</p>
         </div>
 
         {/* Login Form */}
@@ -338,7 +338,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          <p>© 2025 Cockpit Network Management</p>
+          <p>© 2025 Datenschleuder</p>
         </div>
       </div>
     </div>

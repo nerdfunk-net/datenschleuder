@@ -88,9 +88,9 @@ class Settings:
             return os.getenv("REDIS_URL")
 
         # Build from components
-        redis_host = os.getenv("COCKPIT_REDIS_HOST", "localhost")
-        redis_port = os.getenv("COCKPIT_REDIS_PORT", "6379")
-        redis_password = os.getenv("COCKPIT_REDIS_PASSWORD", "")
+        redis_host = os.getenv("DATENSCHLEUDER_REDIS_HOST", "localhost")
+        redis_port = os.getenv("DATENSCHLEUDER_REDIS_PORT", "6379")
+        redis_password = os.getenv("DATENSCHLEUDER_REDIS_PASSWORD", "")
 
         # Format: redis://[:password@]host:port/db
         if redis_password:
@@ -111,12 +111,12 @@ class Settings:
     celery_max_workers: int = int(os.getenv("CELERY_MAX_WORKERS", "4"))
 
     # PostgreSQL Database Configuration
-    database_host: str = os.getenv("COCKPIT_DATABASE_HOST", "localhost")
-    database_port: int = int(os.getenv("COCKPIT_DATABASE_PORT", "5432"))
-    database_name: str = os.getenv("COCKPIT_DATABASE_NAME", "cockpit")
-    database_username: str = os.getenv("COCKPIT_DATABASE_USERNAME", "postgres")
-    database_password: str = os.getenv("COCKPIT_DATABASE_PASSWORD", "postgres")
-    database_ssl: bool = get_env_bool("COCKPIT_DATABASE_SSL", False)
+    database_host: str = os.getenv("DATENSCHLEUDER_DATABASE_HOST", "localhost")
+    database_port: int = int(os.getenv("DATENSCHLEUDER_DATABASE_PORT", "5432"))
+    database_name: str = os.getenv("DATENSCHLEUDER_DATABASE_NAME", "datenschleuder")
+    database_username: str = os.getenv("DATENSCHLEUDER_DATABASE_USERNAME", "postgres")
+    database_password: str = os.getenv("DATENSCHLEUDER_DATABASE_PASSWORD", "postgres")
+    database_ssl: bool = get_env_bool("DATENSCHLEUDER_DATABASE_SSL", False)
 
     @property
     def database_url(self) -> str:
@@ -135,7 +135,7 @@ class Settings:
 settings = Settings()
 
 if __name__ == "__main__":
-    print("Cockpit Backend Configuration:")
+    print("Datenschleuder Backend Configuration:")
     print(f"  Server: http://{settings.host}:{settings.port}")
     print(f"  Log Level: {settings.log_level}")
     print(f"  Nautobot URL: {settings.nautobot_url}")

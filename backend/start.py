@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Cockpit Backend Startup Script
+Datenschleuder Backend Startup Script
 Loads configuration and starts the FastAPI server.
 """
 
@@ -42,7 +42,7 @@ def main():
     logger.debug(f"DEBUG: Environment LOG_LEVEL = {os.getenv('LOG_LEVEL', 'not set')}")
 
     # Log startup information
-    logger.info("Starting Cockpit Backend Server")
+    logger.info("Starting Datenschleuder Backend Server")
     logger.info(f"Server: {settings.host}:{settings.port}")
     logger.info(f"Log Level: {settings.log_level}")
     logger.info(f"Data Directory: {settings.data_directory}")

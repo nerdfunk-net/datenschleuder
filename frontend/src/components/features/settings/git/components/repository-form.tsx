@@ -206,7 +206,7 @@ export function RepositoryForm({
             className="border-2 border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
             disabled={isSubmitting}
           />
-          <p className="text-xs text-gray-600">Name used for git commits (defaults to &quot;Cockpit-NG Automation&quot;)</p>
+          <p className="text-xs text-gray-600">Name used for git commits (defaults to &quot;Datenschleuder Automation&quot;)</p>
         </div>
 
         {/* Git Author Email */}
@@ -225,7 +225,7 @@ export function RepositoryForm({
           {errors.git_author_email && (
             <p className="text-xs text-destructive">{errors.git_author_email.message}</p>
           )}
-          <p className="text-xs text-gray-600">Email used for git commits (defaults to &quot;noreply@cockpit-ng.local&quot;)</p>
+          <p className="text-xs text-gray-600">Email used for git commits (defaults to &quot;noreply@datenschleuder.local&quot;)</p>
         </div>
       </div>
 

@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import CredentialsManagement from '@/components/features/settings/credentials/credentials-management'
 
 export const metadata: Metadata = {
-  title: 'Credentials - Cockpit',
+  title: 'Credentials - Datenschleuder',
   description: 'Manage stored credentials for device access',
 }
 

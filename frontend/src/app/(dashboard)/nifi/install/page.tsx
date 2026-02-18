@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'NiFi Install - Cockpit',
+  title: 'NiFi Install - Datenschleuder',
   description: 'Install and manage NiFi instances',
 }
 

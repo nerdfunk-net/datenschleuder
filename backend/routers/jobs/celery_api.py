@@ -690,11 +690,11 @@ async def beat_status(
     r = redis.from_url(settings.redis_url)
 
     # Check for the lock key that beat holds when running
-    beat_lock_key = "cockpit-ng:beat::lock"
+    beat_lock_key = "datenschleuder:beat::lock"
     lock_exists = r.exists(beat_lock_key)
 
     # Also check for schedule key
-    beat_schedule_key = "cockpit-ng:beat::schedule"
+    beat_schedule_key = "datenschleuder:beat::schedule"
     schedule_exists = r.exists(beat_schedule_key)
 
     # Beat is running if either key exists (lock is most reliable)
@@ -740,7 +740,7 @@ async def celery_status(
     try:
         r = redis.from_url(settings.redis_url)
         # Check for the lock key that beat holds when running
-        beat_lock_key = "cockpit-ng:beat::lock"
+        beat_lock_key = "datenschleuder:beat::lock"
         beat_running = bool(r.exists(beat_lock_key))
     except Exception:
         beat_running = False
@@ -768,9 +768,9 @@ async def get_celery_config(
     import os
 
     # Get Redis configuration (mask password for security)
-    redis_host = os.getenv("COCKPIT_REDIS_HOST", "localhost")
-    redis_port = os.getenv("COCKPIT_REDIS_PORT", "6379")
-    redis_password = os.getenv("COCKPIT_REDIS_PASSWORD", "")
+    redis_host = os.getenv("DATENSCHLEUDER_REDIS_HOST", "localhost")
+    redis_port = os.getenv("DATENSCHLEUDER_REDIS_PORT", "6379")
+    redis_password = os.getenv("DATENSCHLEUDER_REDIS_PASSWORD", "")
     has_password = bool(redis_password)
 
     # Get Celery configuration from celery_app
