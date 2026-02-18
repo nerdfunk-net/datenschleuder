@@ -44,18 +44,24 @@ import {
   Trash2,
   Star,
   Workflow,
+  Filter,
+  ArrowRightCircle,
+  ArrowLeftCircle,
+  Loader2,
 } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
-import { useNifiHierarchyQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
+import { useNifiHierarchyQuery, useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
 import { useFlowsQuery, useRegistryFlowsQuery, useFlowColumnsQuery } from './hooks/use-flows-query'
 import { useFlowsMutations } from './hooks/use-flows-mutations'
 import { useFlowViewsQuery } from './hooks/use-flow-views-query'
 import { useFlowViewsMutations } from './hooks/use-flow-views-mutations'
 import { FlowDialog } from './dialogs/flow-dialog'
 import { SaveViewDialog } from './dialogs/save-view-dialog'
+import { ConflictResolutionDialog } from '@/components/features/flows/deploy/dialogs/conflict-resolution-dialog'
+import { useQuickDeploy } from '@/components/features/flows/deploy/hooks/use-quick-deploy'
 import type { NifiFlow, FlowView, FlowColumn, FlowFormValues, RegistryFlow } from './types'
-import type { HierarchyAttribute } from '@/components/features/settings/nifi/types'
+import type { HierarchyAttribute, NifiInstance } from '@/components/features/settings/nifi/types'
 import type { FlowPayload } from './hooks/use-flows-mutations'
 
 const EMPTY_COLUMNS: FlowColumn[] = []
@@ -63,6 +69,7 @@ const EMPTY_FLOWS: NifiFlow[] = []
 const EMPTY_VIEWS: FlowView[] = []
 const EMPTY_REGISTRY: RegistryFlow[] = []
 const EMPTY_HIERARCHY: HierarchyAttribute[] = []
+const EMPTY_INSTANCES: NifiInstance[] = []
 
 const ITEMS_PER_PAGE = 10
 
@@ -125,11 +132,22 @@ export function FlowsManagePage() {
   const { data: columnsData } = useFlowColumnsQuery()
   const { data: hierarchyData } = useNifiHierarchyQuery()
   const { data: flowViews = EMPTY_VIEWS } = useFlowViewsQuery()
+  const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
 
   // Hierarchy is needed by getFlowCellValue and FlowDialog to map column keys
   // (e.g. src_cn) back to flow.hierarchy_values["CN"].source
   const hierarchy: HierarchyAttribute[] = useMemo(
     () => hierarchyData?.hierarchy ?? EMPTY_HIERARCHY,
+    [hierarchyData],
+  )
+
+  // hierarchyAttributes with order field for deploy utilities
+  const hierAttrsForDeploy = useMemo(
+    () => (hierarchyData?.hierarchy ?? []).map((a: { name: string; label: string }, i: number) => ({
+      name: a.name,
+      label: a.label,
+      order: i,
+    })),
     [hierarchyData],
   )
 
@@ -349,6 +367,25 @@ export function FlowsManagePage() {
     [setDefaultView],
   )
 
+  // Quick deploy — calls the backend directly without going through the wizard
+  const {
+    quickDeploy,
+    deployingFlows,
+    showConflictDialog,
+    setShowConflictDialog,
+    currentConflict,
+    isResolvingConflict,
+    handleSkipConflict,
+    handleDeleteConflict,
+    handleUpdateConflict,
+  } = useQuickDeploy({
+    instances: instances as unknown as Parameters<typeof useQuickDeploy>[0]['instances'],
+    registryFlows,
+    hierarchyAttributes: hierAttrsForDeploy,
+  })
+
+  const hasActiveFilters = Object.values(filters).some(v => v !== '')
+
   // ─── Loading skeleton ───────────────────────────────────────────────────────
   if (flowsLoading) {
     return (
@@ -371,20 +408,15 @@ export function FlowsManagePage() {
 
   return (
     <div className="p-6 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Flows</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {flows.length} flow{flows.length !== 1 ? 's' : ''} configured
-          </p>
-        </div>
+      {/* Gradient banner header */}
+      <div className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-5 flex items-center justify-between flex-wrap gap-3">
+        <h2 className="text-xl font-bold text-white">Flow Management</h2>
 
         <div className="flex items-center gap-2">
           {/* Column visibility */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
                 <Columns className="mr-2 h-4 w-4" />
                 Columns
               </Button>
@@ -411,7 +443,7 @@ export function FlowsManagePage() {
           {/* Views */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
                 <BookmarkCheck className="mr-2 h-4 w-4" />
                 Views
                 {activeView && (
@@ -444,10 +476,7 @@ export function FlowsManagePage() {
               )}
               {flowViews.map(view => (
                 <div key={view.id} className="flex items-center group">
-                  <DropdownMenuItem
-                    className="flex-1"
-                    onClick={() => handleLoadView(view)}
-                  >
+                  <DropdownMenuItem className="flex-1" onClick={() => handleLoadView(view)}>
                     {view.is_default && <Star className="mr-1.5 h-3 w-3 text-amber-400" />}
                     <span className={activeViewId === view.id ? 'font-semibold' : ''}>
                       {view.name}
@@ -485,13 +514,46 @@ export function FlowsManagePage() {
           </DropdownMenu>
 
           {canWrite && (
-            <Button size="sm" onClick={handleAdd}>
+            <Button size="sm" onClick={handleAdd} className="bg-green-600 text-white hover:bg-green-700 border-0">
               <Plus className="mr-2 h-4 w-4" />
               Add Flow
             </Button>
           )}
         </div>
       </div>
+
+      {/* Filters section */}
+      {flows.length > 0 && displayedColumns.length > 0 && (
+        <div className="rounded-lg border bg-white px-5 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <Filter className="h-4 w-4" />
+              Filters
+            </div>
+            {hasActiveFilters && (
+              <button
+                className="text-sm text-teal-600 hover:text-teal-700"
+                onClick={() => setFilters({})}
+              >
+                Clear All
+              </button>
+            )}
+          </div>
+          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(displayedColumns.length, 4)}, 1fr)` }}>
+            {displayedColumns.map(col => (
+              <div key={col.key}>
+                <label className="mb-1 block text-xs font-medium text-slate-500">{col.label}</label>
+                <Input
+                  className="h-8 text-sm"
+                  placeholder={`Filter ${col.label}`}
+                  value={filters[col.key] ?? ''}
+                  onChange={e => handleFilterChange(col.key, e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Empty state */}
       {flows.length === 0 && (
@@ -512,37 +574,24 @@ export function FlowsManagePage() {
 
       {/* Table */}
       {flows.length > 0 && (
-        <div className="rounded-lg border border-slate-200 overflow-x-auto">
+        <div className="rounded-lg border border-slate-200 overflow-x-auto bg-white">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-slate-50">
+                <TableHead className="w-16 font-bold text-slate-600 uppercase text-xs tracking-wide">ID</TableHead>
                 {displayedColumns.map(col => (
-                  <TableHead key={col.key} className="min-w-[120px]">
+                  <TableHead key={col.key} className="min-w-[120px] font-bold text-slate-600 uppercase text-xs tracking-wide">
                     {col.label}
                   </TableHead>
                 ))}
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-              {/* Filter row */}
-              <TableRow>
-                {displayedColumns.map(col => (
-                  <TableHead key={col.key} className="py-1 px-2">
-                    <Input
-                      className="h-7 text-xs"
-                      placeholder={`Filter…`}
-                      value={filters[col.key] ?? ''}
-                      onChange={e => handleFilterChange(col.key, e.target.value)}
-                    />
-                  </TableHead>
-                ))}
-                <TableHead />
+                <TableHead className="text-right font-bold text-slate-600 uppercase text-xs tracking-wide">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedFlows.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={displayedColumns.length + 1}
+                    colSpan={displayedColumns.length + 2}
                     className="text-center text-slate-500 py-8"
                   >
                     No flows match the current filters.
@@ -550,7 +599,8 @@ export function FlowsManagePage() {
                 </TableRow>
               ) : (
                 paginatedFlows.map(flow => (
-                  <TableRow key={flow.id}>
+                  <TableRow key={flow.id} className="hover:bg-slate-50">
+                    <TableCell className="text-slate-500 text-sm">{flow.id}</TableCell>
                     {displayedColumns.map(col => {
                       const value = getFlowCellValue(flow, col.key, hierarchy, registryFlows)
                       return (
@@ -567,41 +617,78 @@ export function FlowsManagePage() {
                     })}
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {/* Deploy to Source */}
+                        {flow.src_template_id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="Deploy to Source"
+                            className="h-8 w-8 p-0 text-amber-500 border-amber-200 hover:bg-amber-50 hover:text-amber-600"
+                            disabled={!!deployingFlows[`${flow.id}-source`]}
+                            onClick={() => quickDeploy(flow, 'source')}
+                          >
+                            {deployingFlows[`${flow.id}-source`]
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <ArrowRightCircle className="h-4 w-4" />}
+                          </Button>
+                        )}
+                        {/* Deploy to Destination */}
+                        {flow.dest_template_id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="Deploy to Destination"
+                            className="h-8 w-8 p-0 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                            disabled={!!deployingFlows[`${flow.id}-destination`]}
+                            onClick={() => quickDeploy(flow, 'destination')}
+                          >
+                            {deployingFlows[`${flow.id}-destination`]
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <ArrowLeftCircle className="h-4 w-4" />}
+                          </Button>
+                        )}
+                        {/* Edit */}
+                        {canWrite && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="Edit"
+                            className="h-8 w-8 p-0 text-teal-600 border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+                            onClick={() => handleEdit(flow)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {/* View */}
                         <Button
                           size="sm"
-                          variant="ghost"
+                          variant="outline"
                           title="View"
+                          className="h-8 w-8 p-0 text-teal-600 border-teal-200 hover:bg-teal-50 hover:text-teal-700"
                           onClick={() => handleView(flow)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        {/* Copy */}
                         {canWrite && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              title="Edit"
-                              onClick={() => handleEdit(flow)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              title="Copy"
-                              disabled={copyFlow.isPending}
-                              onClick={() => copyFlow.mutate(flow.id)}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="Copy"
+                            className="h-8 w-8 p-0 text-teal-600 border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+                            disabled={copyFlow.isPending}
+                            onClick={() => copyFlow.mutate(flow.id)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
                         )}
+                        {/* Delete */}
                         {canDelete && (
                           <Button
                             size="sm"
-                            variant="ghost"
+                            variant="outline"
                             title="Delete"
-                            className="text-red-500 hover:text-red-600"
+                            className="h-8 w-8 p-0 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
                             onClick={() => setDeleteFlowId(flow.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -614,37 +701,37 @@ export function FlowsManagePage() {
               )}
             </TableBody>
           </Table>
-        </div>
-      )}
 
-      {/* Pagination */}
-      {filteredFlows.length > ITEMS_PER_PAGE && (
-        <div className="flex items-center justify-between text-sm text-slate-500">
-          <span>
-            Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
-            {Math.min(currentPage * ITEMS_PER_PAGE, filteredFlows.length)} of{' '}
-            {filteredFlows.length}
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage(p => p - 1)}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="px-2">
-              {currentPage} / {totalPages}
+          {/* Pagination inside table card */}
+          <div className="flex items-center justify-between border-t px-4 py-3 text-sm text-slate-500">
+            <span>
+              Showing {filteredFlows.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1} to{' '}
+              {Math.min(currentPage * ITEMS_PER_PAGE, filteredFlows.length)} of{' '}
+              {filteredFlows.length} flow{filteredFlows.length !== 1 ? 's' : ''}
             </span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage(p => p + 1)}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Previous
+              </Button>
+              <span className="px-3 font-medium">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+              >
+                Next
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -670,6 +757,18 @@ export function FlowsManagePage() {
         existingIsDefault={savingViewId ? activeView?.is_default : false}
         onSave={handleSaveView}
         isSaving={isSavingView}
+      />
+
+      {/* Quick deploy conflict resolution */}
+      <ConflictResolutionDialog
+        open={showConflictDialog}
+        onOpenChange={setShowConflictDialog}
+        conflictInfo={currentConflict?.conflictInfo ?? null}
+        deploymentConfig={currentConflict?.config ?? null}
+        onSkip={handleSkipConflict}
+        onDelete={handleDeleteConflict}
+        onUpdateVersion={handleUpdateConflict}
+        isResolving={isResolvingConflict}
       />
 
       {/* Delete confirmation */}

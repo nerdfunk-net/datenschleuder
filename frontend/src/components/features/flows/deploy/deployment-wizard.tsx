@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { useApi } from '@/hooks/use-api'
@@ -39,6 +40,7 @@ const EMPTY_REGISTRY_FLOWS: RegistryFlow[] = []
 
 export function DeploymentWizard() {
   const { apiCall } = useApi()
+  const router = useRouter()
   
   // Current step (0-4)
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
@@ -170,7 +172,16 @@ export function DeploymentWizard() {
 
   // Step 3: Load process group paths for each config
   useEffect(() => {
-    if (currentStepIndex === 2 && deploymentConfigs.length > 0) {
+    if (currentStepIndex !== 2 || deploymentConfigs.length === 0) return
+
+    // Exit early if all configs with instances already have paths loaded — prevents infinite loop
+    // (this effect calls setDeploymentConfigs which would otherwise re-trigger itself)
+    const configsNeedingPaths = deploymentConfigs.filter(
+      (c) => c.instanceId !== null && c.availablePaths.length === 0
+    )
+    if (configsNeedingPaths.length === 0) return
+
+    {
       const loadPaths = async () => {
         setIsLoadingPaths(true)
         console.log('[DeploymentWizard] Loading process group paths')
@@ -255,6 +266,8 @@ export function DeploymentWizard() {
       loadPaths()
     }
   }, [currentStepIndex, deploymentConfigs, effectiveSettings, hierarchyAttributes, flows, apiCall])
+  // ^ deploymentConfigs in deps is intentional: the guard above (configsNeedingPaths.length === 0)
+  //   exits early after paths are loaded, preventing the loop.
 
   // Step 3: Update process group selection
   const handleUpdateProcessGroup = useCallback((configKey: string, processGroupId: string) => {
@@ -269,7 +282,15 @@ export function DeploymentWizard() {
 
   // Step 4: Load versions when entering step 4
   useEffect(() => {
-    if (currentStepIndex === 3 && deploymentConfigs.length > 0) {
+    if (currentStepIndex !== 3 || deploymentConfigs.length === 0) return
+
+    // Exit early if versions are already loaded for all configs that have registry info — prevents infinite loop
+    const configsNeedingVersions = deploymentConfigs.filter(
+      (c) => c.instanceId && c.registryId && c.bucketId && c.flowIdRegistry && c.availableVersions.length === 0
+    )
+    if (configsNeedingVersions.length === 0) return
+
+    {
       const loadVersions = async () => {
         setIsLoadingVersions(true)
         console.log('[DeploymentWizard] Loading flow versions')
@@ -308,6 +329,8 @@ export function DeploymentWizard() {
       loadVersions()
     }
   }, [currentStepIndex, deploymentConfigs, apiCall])
+  // ^ deploymentConfigs in deps is intentional: the guard above (configsNeedingVersions.length === 0)
+  //   exits early after versions are loaded, preventing the loop.
 
   // Step 4: Update version selection
   const handleUpdateVersion = useCallback((configKey: string, version: number | null) => {
@@ -539,47 +562,59 @@ export function DeploymentWizard() {
   }, [currentStepIndex, selectedFlowIds, deploymentTargets, deploymentConfigs, isDeploying])
 
   return (
-    <div className="space-y-6">
-      {/* Progress Indicator */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Step Tab Indicators */}
+      <div className="grid grid-cols-5 gap-2">
         {STEPS.map((step, index) => (
-          <div key={step.id} className="flex items-center">
-            <button
-              onClick={() => goToStep(index)}
-              disabled={index > currentStepIndex}
-              className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${
+          <button
+            key={step.id}
+            onClick={() => index <= currentStepIndex && goToStep(index)}
+            disabled={index > currentStepIndex}
+            className={`flex items-center gap-3 rounded-lg border-2 px-4 py-3 text-left transition-colors ${
+              index === currentStepIndex
+                ? 'border-blue-500 bg-white shadow-sm'
+                : index < currentStepIndex
+                  ? 'border-transparent bg-green-50 hover:bg-green-100 cursor-pointer'
+                  : 'border-transparent bg-slate-100 cursor-not-allowed opacity-70'
+            }`}
+          >
+            <div
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
                 index === currentStepIndex
-                  ? 'border-blue-600 bg-blue-600 text-white'
+                  ? 'bg-blue-600 text-white'
                   : index < currentStepIndex
-                    ? 'border-green-600 bg-green-600 text-white hover:bg-green-700'
-                    : 'border-slate-300 bg-white text-slate-400'
-              } ${index <= currentStepIndex ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                    ? 'bg-green-600 text-white'
+                    : 'bg-slate-300 text-slate-500'
+              }`}
             >
-              {index < currentStepIndex ? '✓' : index + 1}
-            </button>
-            {index < STEPS.length - 1 && (
-              <div
-                className={`mx-2 h-0.5 w-12 ${
-                  index < currentStepIndex ? 'bg-green-600' : 'bg-slate-300'
-                }`}
-              />
-            )}
-          </div>
+              {index + 1}
+            </div>
+            <span
+              className={`text-sm font-medium leading-tight ${
+                index === currentStepIndex
+                  ? 'text-slate-900'
+                  : index < currentStepIndex
+                    ? 'text-green-800'
+                    : 'text-slate-500'
+              }`}
+            >
+              {step.title}
+            </span>
+          </button>
         ))}
       </div>
 
       {/* Step Content */}
       <Card>
-        <CardHeader>
-          <CardTitle>
-            {currentStep.title}
-            <span className="ml-2 text-sm font-normal text-slate-500">
-              (Step {currentStepIndex + 1} of {STEPS.length})
-            </span>
-          </CardTitle>
-          <CardDescription>{currentStep.description}</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
+          {/* Step heading */}
+          <div className="mb-6 border-b pb-4">
+            <h2 className="text-xl font-bold text-slate-900">
+              Step {currentStepIndex + 1}: {currentStep.contentTitle}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">{currentStep.description}</p>
+          </div>
+
           {/* Step 1: Select Flows */}
           {currentStepIndex === 0 && (
             <Step1SelectFlows
@@ -631,29 +666,30 @@ export function DeploymentWizard() {
               isDeploying={isDeploying}
             />
           )}
+
         </CardContent>
       </Card>
 
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={goToPreviousStep}
-          disabled={currentStepIndex === 0}
-        >
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Previous
-        </Button>
-
-        <div className="text-sm text-slate-500">
-          {selectedFlowIds.length > 0 && currentStepIndex === 0 && (
-            <span>{selectedFlowIds.length} flows selected</span>
-          )}
-        </div>
+        {currentStepIndex === 0 ? (
+          <Button variant="outline" onClick={() => router.push('/flows/manage')}>
+            Cancel
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={goToPreviousStep}>
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            Back
+          </Button>
+        )}
 
         {currentStepIndex < STEPS.length - 1 ? (
-          <Button onClick={goToNextStep} disabled={!canProceed}>
-            Next
+          <Button
+            onClick={goToNextStep}
+            disabled={!canProceed}
+            className="bg-slate-700 text-white hover:bg-slate-800"
+          >
+            Next: {STEPS[currentStepIndex + 1]?.contentTitle}
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         ) : (

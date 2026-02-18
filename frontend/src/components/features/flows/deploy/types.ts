@@ -50,17 +50,22 @@ export interface DeploymentSettings {
 }
 
 export interface DeploymentRequest {
-  template_id: number | null
-  parent_process_group_id: string
-  process_group_name: string
-  version: number | null // null = latest
-  x_position: number // 0
-  y_position: number // 0
-  stop_versioning_after_deploy: boolean
-  disable_after_deploy: boolean
-  start_after_deploy: boolean
-  hierarchy_attribute?: string
+  template_id?: number | null
+  bucket_id?: string | null
+  flow_id?: string | null
+  registry_client_id?: string | null
+  parent_process_group_id?: string | null
+  parent_process_group_path?: string | null
+  process_group_name?: string | null
+  hierarchy_attribute?: string | null
+  version?: number | string | null
+  x_position?: number
+  y_position?: number
+  parameter_context_id?: string | null
   parameter_context_name?: string | null
+  stop_versioning_after_deploy?: boolean
+  disable_after_deploy?: boolean
+  start_after_deploy?: boolean
 }
 
 export interface DeploymentResponse {
@@ -113,11 +118,16 @@ export interface DeploymentResults {
 
 export interface RegistryFlow {
   id: number
-  nifi_flow_id: number
+  nifi_instance_id: number
+  nifi_instance_name: string
+  nifi_instance_url: string
   registry_id: string
+  registry_name: string
   bucket_id: string
+  bucket_name: string
   flow_id: string
   flow_name: string
+  flow_description: string | null
   created_at: string
   updated_at: string
 }
@@ -142,11 +152,36 @@ export interface NifiInstance {
 
 // Steps
 export const STEPS = [
-  { id: 1, title: 'Select Flows', description: 'Choose flows to deploy' },
-  { id: 2, title: 'Choose Targets', description: 'Select deployment direction' },
-  { id: 3, title: 'Process Groups', description: 'Select target locations' },
-  { id: 4, title: 'Settings', description: 'Configure deployment options' },
-  { id: 5, title: 'Review & Deploy', description: 'Review and execute' },
+  {
+    id: 1,
+    title: 'Select Flows',
+    contentTitle: 'Select Flows to Deploy',
+    description: 'Choose one or more flows from the list below',
+  },
+  {
+    id: 2,
+    title: 'Choose Targets',
+    contentTitle: 'Choose Deployment Targets',
+    description: 'Select whether each flow should be deployed to source, destination, or both',
+  },
+  {
+    id: 3,
+    title: 'Choose Process Groups',
+    contentTitle: 'Choose Process Groups',
+    description: 'Select the target process group location for each deployment',
+  },
+  {
+    id: 4,
+    title: 'Settings',
+    contentTitle: 'Configure Settings',
+    description: 'Configure version selection and deployment options',
+  },
+  {
+    id: 5,
+    title: 'Review & Deploy',
+    contentTitle: 'Review & Deploy',
+    description: 'Review your deployment configuration and execute',
+  },
 ] as const
 
 export type Step = (typeof STEPS)[number]
