@@ -562,3 +562,131 @@ async def stop_process_group_versioning(
         "process_group_id": pg_id,
         "was_versioned": was_versioned,
     }
+
+
+# ---------------------------------------------------------------------------
+# Monitoring endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/{instance_id}/ops/system-diagnostics")
+async def get_system_diagnostics(
+    instance_id: int,
+    user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Get system diagnostics (heap, CPU, threads, storage) for a NiFi instance."""
+    import nipyapi
+
+    _setup_instance(instance_id)
+    try:
+        diagnostics = nipyapi.system.get_system_diagnostics()
+        data = diagnostics.to_dict() if hasattr(diagnostics, "to_dict") else diagnostics
+        return {"status": "success", "instance_id": instance_id, "data": data}
+    except Exception as exc:
+        logger.error("Error getting system diagnostics for instance %d: %s", instance_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get system diagnostics: %s" % str(exc),
+        )
+
+
+@router.get("/{instance_id}/ops/process-groups/{pg_id}/status")
+async def get_process_group_status(
+    instance_id: int,
+    pg_id: str,
+    detail: str = "all",
+    user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Get status of a specific NiFi process group."""
+    import nipyapi
+
+    if detail not in ("names", "all"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="detail must be 'names' or 'all'",
+        )
+    _setup_instance(instance_id)
+    try:
+        pg_status = nipyapi.canvas.get_process_group_status(pg_id=pg_id, detail=detail)
+        data = pg_status.to_dict() if hasattr(pg_status, "to_dict") else pg_status
+        return {
+            "status": "success",
+            "instance_id": instance_id,
+            "process_group_id": pg_id,
+            "detail": detail,
+            "data": data,
+        }
+    except Exception as exc:
+        logger.error(
+            "Error getting process group %s status for instance %d: %s", pg_id, instance_id, exc
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get process group status: %s" % str(exc),
+        )
+
+
+@router.get("/{instance_id}/ops/components")
+async def list_components_by_kind(
+    instance_id: int,
+    kind: str,
+    pg_id: str = "root",
+    descendants: bool = True,
+    user: dict = Depends(require_permission("nifi", "read")),
+):
+    """List all NiFi components of a given kind (e.g. connections, processors)."""
+    from nipyapi import canvas
+
+    _setup_instance(instance_id)
+    try:
+        raw_list = canvas.list_all_by_kind(kind=kind, pg_id=pg_id, descendants=descendants) or []
+    except Exception as exc:
+        logger.error("Failed to list components by kind '%s': %s", kind, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list components by kind: %s" % str(exc),
+        )
+
+    components = []
+    for item in raw_list:
+        comp_data: dict = {}
+        if hasattr(item, "id"):
+            comp_data["id"] = item.id
+        comp = getattr(item, "component", None)
+        if comp:
+            comp_data["name"] = getattr(comp, "name", None)
+            comp_data["parent_group_id"] = getattr(comp, "parent_group_id", None)
+            comp_data["type"] = getattr(comp, "type", None)
+            comp_data["comments"] = getattr(comp, "comments", None)
+            if kind in ("connections", "connection"):
+                for side in ("source", "destination"):
+                    node = getattr(comp, side, None)
+                    if node:
+                        comp_data[side] = {
+                            "id": getattr(node, "id", None),
+                            "name": getattr(node, "name", None),
+                            "type": getattr(node, "type", None),
+                            "group_id": getattr(node, "group_id", None),
+                        }
+        item_status = getattr(item, "status", None)
+        if item_status:
+            snapshot = getattr(item_status, "aggregate_snapshot", None)
+            comp_data["status"] = {
+                "run_status": getattr(item_status, "run_status", None),
+                "aggregate_snapshot": {
+                    "active_thread_count": getattr(snapshot, "active_thread_count", None),
+                    "bytes_in": getattr(snapshot, "bytes_in", None),
+                    "bytes_out": getattr(snapshot, "bytes_out", None),
+                    "flow_files_in": getattr(snapshot, "flow_files_in", None),
+                    "flow_files_out": getattr(snapshot, "flow_files_out", None),
+                    "queued": getattr(snapshot, "queued", None),
+                } if snapshot else {},
+            }
+        components.append(comp_data)
+
+    return {
+        "status": "success",
+        "kind": kind,
+        "pg_id": pg_id,
+        "components": components,
+        "count": len(components),
+    }

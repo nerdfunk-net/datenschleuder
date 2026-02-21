@@ -189,6 +189,10 @@ export const queryKeys = {
       [...queryKeys.nifi.all, 'parameter-contexts', instanceId, contextId] as const,
     certificates: () => [...queryKeys.nifi.all, 'certificates'] as const,
     oidcProviders: () => [...queryKeys.nifi.all, 'oidc-providers'] as const,
+    systemDiagnostics: (instanceId: number) =>
+      [...queryKeys.nifi.all, 'system-diagnostics', instanceId] as const,
+    queues: (instanceId: number) => [...queryKeys.nifi.all, 'queues', instanceId] as const,
+    monitoringFlows: () => [...queryKeys.nifi.all, 'monitoring-flows'] as const,
   },
 
   // NiFi Install
