@@ -31,48 +31,60 @@ export function Step2ChooseTargets({
 
   if (selectedFlows.length === 0) {
     return (
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>No flows selected. Go back to Step 1 to select flows.</AlertDescription>
+      <Alert className="bg-blue-50 border-blue-200">
+        <AlertCircle className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-800">
+          No flows selected. Go back to Step 1 to select flows.
+        </AlertDescription>
       </Alert>
     )
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {selectedFlows.map((flow) => {
         const currentTarget = deploymentTargets[flow.id]
         const hierarchyEntries = Object.entries(flow.hierarchy_values || {})
 
-        // Top hierarchy level and values
         const topHierarchy = hierarchyEntries[0]
-        const hierarchyLabel = topHierarchy?.[0] // e.g. "DC"
-        const sourceValue = topHierarchy?.[1]?.source // e.g. "NET"
-        const destinationValue = topHierarchy?.[1]?.destination // e.g. "NET"
+        const hierarchyLabel = topHierarchy?.[0]
+        const sourceValue = topHierarchy?.[1]?.source
+        const destinationValue = topHierarchy?.[1]?.destination
 
         return (
-          <div key={flow.id} className="rounded-lg border bg-white">
-            {/* Flow header */}
-            <div className="border-b px-5 py-4">
-              <p className="font-semibold text-slate-900">{flow.name || `Flow ${flow.id}`}</p>
-              <ArrowRight className="mt-1 h-4 w-4 text-slate-400" />
+          <div key={flow.id} className="shadow-lg border-0 p-0 bg-white rounded-lg">
+            {/* Flow gradient header */}
+            <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium">{flow.name || `Flow ${flow.id}`}</span>
+              </div>
+              {topHierarchy && (
+                <div className="flex items-center gap-2">
+                  {sourceValue && (
+                    <Badge className="bg-white/20 text-white border-white/30 text-xs">
+                      {hierarchyLabel}: {sourceValue}
+                      {destinationValue && destinationValue !== sourceValue && ` → ${destinationValue}`}
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Hierarchy info + target buttons */}
-            <div className="space-y-4 px-5 py-4">
-              {/* Hierarchy badges */}
+            {/* Content */}
+            <div className="p-6 bg-gradient-to-b from-white to-gray-50 space-y-4">
+              {/* Hierarchy info */}
               {topHierarchy && (
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-slate-700">
+                  <span className="text-sm font-medium text-slate-700">
                     Top Hierarchy ({hierarchyLabel}):
                   </span>
                   {sourceValue && (
-                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                    <Badge className="bg-blue-100 text-blue-800 border-blue-300">
                       Source: {sourceValue}
                     </Badge>
                   )}
                   {destinationValue && (
-                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                    <Badge className="bg-green-100 text-green-800 border-green-300">
                       Dest: {destinationValue}
                     </Badge>
                   )}
@@ -81,7 +93,7 @@ export function Step2ChooseTargets({
 
               {/* Deploy-to buttons */}
               <div>
-                <p className="mb-2 text-sm font-semibold text-slate-700">Deploy to:</p>
+                <p className="mb-2 text-sm font-medium text-slate-700">Deploy to:</p>
                 <div className="grid grid-cols-3 gap-2">
                   <Button
                     variant={currentTarget === 'source' ? 'default' : 'outline'}

@@ -1,6 +1,6 @@
 'use client'
 
-import { Network, Database, Settings, X, CheckCircle2 } from 'lucide-react'
+import { Network, Database, Settings, X, CheckCircle2, FileText } from 'lucide-react'
 import type { DeploymentConfig, DeploymentSettings } from '../types'
 
 interface Step5ReviewProps {
@@ -19,36 +19,59 @@ export function Step5Review({
   const totalInstances = new Set(deploymentConfigs.map((c) => c.instanceId)).size
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Summary stat cards */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-lg border bg-white p-5">
-          <Network className="mb-3 h-7 w-7 text-blue-500" />
-          <p className="text-sm text-slate-500">Total Flows</p>
-          <p className="mt-1 text-3xl font-bold text-slate-900">{totalFlows}</p>
+        <div className="shadow-lg border-0 p-0 bg-white rounded-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 rounded-t-lg">
+            <div className="flex items-center space-x-2">
+              <Network className="h-4 w-4" />
+              <span className="text-sm font-medium">Total Flows</span>
+            </div>
+          </div>
+          <div className="p-5 bg-gradient-to-b from-white to-gray-50 text-center">
+            <p className="text-4xl font-bold text-slate-900">{totalFlows}</p>
+          </div>
         </div>
 
-        <div className="rounded-lg border bg-white p-5">
-          <Database className="mb-3 h-7 w-7 text-blue-500" />
-          <p className="text-sm text-slate-500">Total Deployments</p>
-          <p className="mt-1 text-3xl font-bold text-slate-900">{totalDeployments}</p>
+        <div className="shadow-lg border-0 p-0 bg-white rounded-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 rounded-t-lg">
+            <div className="flex items-center space-x-2">
+              <Database className="h-4 w-4" />
+              <span className="text-sm font-medium">Total Deployments</span>
+            </div>
+          </div>
+          <div className="p-5 bg-gradient-to-b from-white to-gray-50 text-center">
+            <p className="text-4xl font-bold text-slate-900">{totalDeployments}</p>
+          </div>
         </div>
 
-        <div className="rounded-lg border bg-white p-5">
-          <Settings className="mb-3 h-7 w-7 text-blue-500" />
-          <p className="text-sm text-slate-500">Instances Affected</p>
-          <p className="mt-1 text-3xl font-bold text-slate-900">{totalInstances}</p>
+        <div className="shadow-lg border-0 p-0 bg-white rounded-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 rounded-t-lg">
+            <div className="flex items-center space-x-2">
+              <Settings className="h-4 w-4" />
+              <span className="text-sm font-medium">Instances Affected</span>
+            </div>
+          </div>
+          <div className="p-5 bg-gradient-to-b from-white to-gray-50 text-center">
+            <p className="text-4xl font-bold text-slate-900">{totalInstances}</p>
+          </div>
         </div>
       </div>
 
       {/* Deployment Settings */}
       {deploymentSettings && (
-        <div>
-          <h3 className="mb-3 text-base font-bold text-slate-900">Deployment Settings</h3>
-          <div className="rounded-lg border-2 border-blue-400 bg-slate-50 px-5 py-4 space-y-2">
+        <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
+          <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center rounded-t-lg">
+            <div className="flex items-center space-x-2">
+              <Settings className="h-4 w-4" />
+              <span className="text-sm font-medium">Deployment Settings</span>
+            </div>
+          </div>
+          <div className="p-6 bg-gradient-to-b from-white to-gray-50 space-y-2">
             <div className="flex items-baseline gap-2 text-sm">
-              <span className="font-semibold text-slate-700">Process Group Name Template:</span>
-              <code className="font-mono text-blue-600">
+              <span className="font-medium text-slate-700">Process Group Name Template:</span>
+              <code className="font-mono text-sm text-blue-600">
                 {deploymentSettings.global.process_group_name_template}
               </code>
             </div>
@@ -69,18 +92,26 @@ export function Step5Review({
       )}
 
       {/* Deployment Details */}
-      <div>
-        <h3 className="mb-3 text-base font-bold text-slate-900">Deployment Details</h3>
-        <div className="divide-y rounded-lg border bg-white">
+      <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
+        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
+          <div className="flex items-center space-x-2">
+            <FileText className="h-4 w-4" />
+            <span className="text-sm font-medium">Deployment Details</span>
+          </div>
+          <div className="text-xs text-blue-100">
+            {totalDeployments} deployment{totalDeployments !== 1 ? 's' : ''}
+          </div>
+        </div>
+        <div className="bg-gradient-to-b from-white to-gray-50 rounded-b-lg divide-y">
           {deploymentConfigs.map((config) => (
-            <div key={config.key} className="flex items-center justify-between px-5 py-4">
+            <div key={config.key} className="flex items-center justify-between px-6 py-4">
               <div>
-                <p className="font-semibold text-slate-900">{config.hierarchyValue}</p>
+                <p className="font-medium text-slate-900">{config.hierarchyValue}</p>
                 {config.processGroupName && config.processGroupName !== config.hierarchyValue && (
-                  <p className="mt-0.5 text-xs text-slate-500">{config.processGroupName}</p>
+                  <p className="mt-0.5 text-xs text-gray-500">{config.processGroupName}</p>
                 )}
               </div>
-              <span className="text-sm font-semibold tracking-wide text-blue-600 uppercase">
+              <span className="text-xs font-semibold tracking-wide text-blue-600 uppercase bg-blue-50 px-2 py-1 rounded">
                 {config.target}
               </span>
             </div>
@@ -94,16 +125,16 @@ export function Step5Review({
 function SettingRow({ label, value }: { label: string; value: boolean }) {
   return (
     <div className="flex items-center gap-2 text-sm text-slate-700">
-      <span className="font-semibold">{label}</span>
+      <span className="font-medium">{label}</span>
       {value ? (
         <>
-          <CheckCircle2 className="h-4 w-4 text-green-500" />
-          <span>Yes</span>
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <span className="text-green-700">Yes</span>
         </>
       ) : (
         <>
-          <X className="h-4 w-4 text-slate-400" />
-          <span>No</span>
+          <X className="h-4 w-4 text-gray-400" />
+          <span className="text-gray-500">No</span>
         </>
       )}
     </div>

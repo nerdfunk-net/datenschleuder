@@ -251,64 +251,67 @@ def stop_versioning(process_group_id: str) -> bool:
     return True
 
 
-def get_all_process_group_paths(start_pg_id: str = "root") -> List[Dict[str, Any]]:
+def get_all_process_group_paths(start_pg_id: str = "root") -> Dict[str, Any]:
+    """Get all process groups with their full hierarchical paths.
+
+    Returns a dict with:
+    - process_groups: flat list, each entry has:
+        - id: Process group UUID
+        - name: Process group name
+        - parent_group_id: Parent UUID (None for root)
+        - comments: Process group comments
+        - path: list of {id, name, parent_group_id} from leaf to root
+        - depth: Hierarchy depth (0 for root)
+    - root_id: UUID of the root process group
     """
-    Recursively get all process groups with their paths.
-    
-    Returns a flat list of process groups with:
-    - id: Process group ID
-    - name: Process group name
-    - path: Full path (e.g., "/Parent/Child")
-    - level: Depth in hierarchy (0 for root)
-    - formatted_path: Display-friendly path (e.g., "Parent → Child")
-    """
-    result = []
-    
-    def _traverse(pg_id: str, parent_path: str, level: int):
-        """Recursively traverse process groups."""
-        try:
-            pg_api = ProcessGroupsApi()
-            pg = pg_api.get_process_group(id=pg_id)
-            
-            if not pg or not hasattr(pg, "component"):
-                return
-            
-            # Get process group name
-            pg_name = pg.component.name if hasattr(pg.component, "name") else "Unknown"
-            
-            # Build path
-            if level == 0:
-                # Root process group
-                current_path = "/"
-                formatted_path = "%s (root)" % pg_name
-            else:
-                current_path = "%s/%s" % (parent_path.rstrip("/"), pg_name)
-                # Format with arrows for display
-                path_parts = current_path.strip("/").split("/")
-                formatted_path = " → ".join(path_parts)
-            
-            # Add to result
-            result.append({
-                "id": pg.id,
-                "name": pg_name,
-                "path": current_path,
-                "level": level,
-                "formatted_path": formatted_path,
+    root_pg_id = canvas.get_root_pg_id()
+    if start_pg_id == "root":
+        start_pg_id = root_pg_id
+
+    # Fetch root PG + all descendants in as few API calls as possible
+    root_pg = canvas.get_process_group(start_pg_id, "id")
+    all_pgs_raw = canvas.list_all_process_groups(start_pg_id) or []
+
+    # Build internal map: pg_id -> {id, name, parent_group_id, comments}
+    pg_map: Dict[str, Dict[str, Any]] = {}
+
+    def _add(pg_entity) -> None:
+        pg_map[pg_entity.id] = {
+            "id": pg_entity.id,
+            "name": pg_entity.component.name,
+            "parent_group_id": pg_entity.component.parent_group_id,
+            "comments": getattr(pg_entity.component, "comments", "") or "",
+        }
+
+    _add(root_pg)
+    for pg in all_pgs_raw:
+        if pg.id != start_pg_id:
+            _add(pg)
+
+    def _build_path(pg_id: str) -> List[Dict[str, Any]]:
+        """Walk parent chain to build leaf-to-root path array."""
+        path: List[Dict[str, Any]] = []
+        current_id: Optional[str] = pg_id
+        while current_id and current_id in pg_map:
+            info = pg_map[current_id]
+            path.append({
+                "id": info["id"],
+                "name": info["name"],
+                "parent_group_id": info["parent_group_id"],
             })
-            
-            # Get children
-            try:
-                children_response = pg_api.get_process_groups(id=pg_id)
-                if hasattr(children_response, "process_groups") and children_response.process_groups:
-                    for child in children_response.process_groups:
-                        _traverse(child.id, current_path, level + 1)
-            except Exception as child_error:
-                logger.warning("Failed to get children of process group %s: %s", pg_id, child_error)
-        
-        except Exception as e:
-            logger.error("Failed to traverse process group %s: %s", pg_id, e)
-    
-    # Start traversal from specified process group (default is root)
-    _traverse(start_pg_id, "", 0)
-    
-    return result
+            current_id = info["parent_group_id"]
+        return path
+
+    process_groups = []
+    for pg_info in pg_map.values():
+        path = _build_path(pg_info["id"])
+        process_groups.append({
+            "id": pg_info["id"],
+            "name": pg_info["name"],
+            "parent_group_id": pg_info["parent_group_id"],
+            "comments": pg_info["comments"],
+            "path": path,
+            "depth": len(path) - 1,
+        })
+
+    return {"process_groups": process_groups, "root_id": root_pg_id}

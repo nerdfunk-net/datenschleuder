@@ -33,18 +33,15 @@ export function Step1SelectFlows({
   isLoading = false,
   error = null,
 }: Step1SelectFlowsProps) {
-  // Check if all flows are selected
   const allSelected = useMemo(() => {
     if (flows.length === 0) return false
     return flows.every((flow) => selectedFlowIds.includes(flow.id))
   }, [flows, selectedFlowIds])
 
-  // Check if some (but not all) flows are selected
   const someSelected = useMemo(() => {
     return selectedFlowIds.length > 0 && !allSelected
   }, [selectedFlowIds.length, allSelected])
 
-  // Create stable handlers
   const handleToggleFlow = useCallback(
     (flowId: number) => {
       onToggleFlow(flowId)
@@ -59,14 +56,14 @@ export function Step1SelectFlows({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
   if (error) {
     return (
-      <Alert className="border-red-200 bg-red-50">
+      <Alert className="bg-red-50 border-red-200">
         <AlertCircle className="h-4 w-4 text-red-600" />
         <AlertDescription className="text-red-800">
           Failed to load flows: {error.message}
@@ -77,9 +74,9 @@ export function Step1SelectFlows({
 
   if (flows.length === 0) {
     return (
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
+      <Alert className="bg-blue-50 border-blue-200">
+        <AlertCircle className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-800">
           No flows available. Please create flows in the Flows → Manage page first.
         </AlertDescription>
       </Alert>
@@ -89,7 +86,7 @@ export function Step1SelectFlows({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-gray-500">
           Select the flows you want to deploy ({selectedFlowIds.length} selected)
         </p>
         <Button
@@ -102,10 +99,10 @@ export function Step1SelectFlows({
         </Button>
       </div>
 
-      <div className="rounded-lg border border-slate-200">
+      <div className="rounded-lg border border-slate-200 overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-gray-50">
               <TableHead className="w-12">
                 <Checkbox
                   checked={allSelected}
@@ -115,16 +112,16 @@ export function Step1SelectFlows({
                   className={someSelected ? 'data-[state=checked]:bg-slate-400' : ''}
                 />
               </TableHead>
-              <TableHead>Flow Name</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead>Source Template</TableHead>
-              <TableHead>Destination Template</TableHead>
-              <TableHead>Hierarchy</TableHead>
+              <TableHead className="font-bold text-slate-600 uppercase text-xs tracking-wide">Flow Name</TableHead>
+              <TableHead className="font-bold text-slate-600 uppercase text-xs tracking-wide">Contact</TableHead>
+              <TableHead className="font-bold text-slate-600 uppercase text-xs tracking-wide">Source Template</TableHead>
+              <TableHead className="font-bold text-slate-600 uppercase text-xs tracking-wide">Destination Template</TableHead>
+              <TableHead className="font-bold text-slate-600 uppercase text-xs tracking-wide">Hierarchy</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {flows.map((flow) => (
-              <TableRow key={flow.id}>
+              <TableRow key={flow.id} className="hover:bg-gray-50">
                 <TableCell>
                   <Checkbox
                     checked={selectedFlowIds.includes(flow.id)}
@@ -134,22 +131,22 @@ export function Step1SelectFlows({
                 </TableCell>
                 <TableCell className="font-medium">
                   {flow.name || (
-                    <span className="text-slate-400 italic">Unnamed</span>
+                    <span className="text-gray-400 italic">Unnamed</span>
                   )}
                 </TableCell>
-                <TableCell>{flow.contact || '—'}</TableCell>
+                <TableCell className="text-sm">{flow.contact || '—'}</TableCell>
                 <TableCell>
                   {flow.src_template_id ? (
-                    <Badge variant="outline">Template {flow.src_template_id}</Badge>
+                    <Badge className="bg-blue-100 text-blue-800 border-blue-300">Template {flow.src_template_id}</Badge>
                   ) : (
-                    <span className="text-slate-400">—</span>
+                    <span className="text-gray-400">—</span>
                   )}
                 </TableCell>
                 <TableCell>
                   {flow.dest_template_id ? (
-                    <Badge variant="outline">Template {flow.dest_template_id}</Badge>
+                    <Badge className="bg-blue-100 text-blue-800 border-blue-300">Template {flow.dest_template_id}</Badge>
                   ) : (
-                    <span className="text-slate-400">—</span>
+                    <span className="text-gray-400">—</span>
                   )}
                 </TableCell>
                 <TableCell>
@@ -159,7 +156,7 @@ export function Step1SelectFlows({
                       const destination = values?.destination
                       return (
                         <div key={key} className="flex items-center gap-1 text-xs">
-                          <span className="text-slate-500">{key}:</span>
+                          <span className="text-gray-500">{key}:</span>
                           {source && (
                             <Badge variant="secondary" className="text-xs">
                               {source}
@@ -167,7 +164,7 @@ export function Step1SelectFlows({
                           )}
                           {destination && destination !== source && (
                             <>
-                              <span className="text-slate-400">→</span>
+                              <span className="text-gray-400">→</span>
                               <Badge variant="secondary" className="text-xs">
                                 {destination}
                               </Badge>

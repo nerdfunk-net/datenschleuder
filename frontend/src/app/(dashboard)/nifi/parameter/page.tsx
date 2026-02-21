@@ -1,15 +1,11 @@
 import { Metadata } from 'next'
+import { NifiParametersPage } from '@/components/features/nifi/parameters/nifi-parameters-page'
 
 export const metadata: Metadata = {
-  title: 'NiFi Parameter - Datenschleuder',
-  description: 'Manage NiFi parameter contexts and values',
+  title: 'NiFi Parameter Contexts - Datenschleuder',
+  description: 'Manage NiFi parameter contexts across all instances',
 }
 
-export default function NifiParameterPage() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-900 mb-2">NiFi Parameter</h1>
-      <p className="text-slate-500">Coming soon — migration in progress.</p>
-    </div>
-  )
+export default function Page() {
+  return <NifiParametersPage />
 }

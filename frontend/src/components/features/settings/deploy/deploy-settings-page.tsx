@@ -23,10 +23,6 @@ import NextLink from 'next/link'
 
 // ---- helpers ---------------------------------------------------------------
 
-function buildPathString(pathArr: Array<{ id: string; name: string }>) {
-  return pathArr.map(p => p.name).reverse().join(' / ')
-}
-
 const EMPTY_INSTANCES: NifiInstance[] = []
 
 // ---- main component --------------------------------------------------------
@@ -96,24 +92,16 @@ export function DeploySettingsPage() {
   const loadPathsForInstance = useCallback(async (instanceId: number) => {
     setLoadingPgs(prev => ({ ...prev, [instanceId]: true }))
     try {
-      // Get root process group
-      const rootRes = await apiCall(
-        `nifi/instances/${instanceId}/ops/process-group`
-      ) as { process_group?: { id: string; name: string } }
+      const res = await apiCall(
+        `nifi/instances/${instanceId}/ops/process-groups/all-paths`
+      ) as { process_groups?: Array<{ id: string; name: string; parent_group_id: string | null; path: Array<{ id: string; name: string; parent_group_id: string | null }>; depth: number }> }
 
-      const rootId = rootRes?.process_group?.id
-      if (!rootId) return
-
-      // Get direct children
-      const childRes = await apiCall(
-        `nifi/instances/${instanceId}/ops/process-groups/${rootId}/children`
-      ) as { process_groups?: Array<{ id: string; name: string; path?: Array<{ id: string; name: string }> }> }
-
-      const children = childRes?.process_groups ?? []
-      const options: ProcessGroupOption[] = children.map(pg => ({
+      const groups = res?.process_groups ?? []
+      const options: ProcessGroupOption[] = groups.map(pg => ({
         id: pg.id,
         name: pg.name,
-        path: pg.path ? buildPathString(pg.path) : pg.name,
+        // path is leaf-to-root; reverse to get root-to-leaf display string
+        path: pg.path.map(p => p.name).reverse().join('/'),
       }))
 
       setPgOptions(prev => ({ ...prev, [instanceId]: options }))

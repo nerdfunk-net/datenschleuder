@@ -4,8 +4,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Rocket } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { useApi } from '@/hooks/use-api'
 import { useFlowsQuery } from '@/components/features/flows/manage/hooks/use-flows-query'
@@ -41,7 +40,7 @@ const EMPTY_REGISTRY_FLOWS: RegistryFlow[] = []
 export function DeploymentWizard() {
   const { apiCall } = useApi()
   const router = useRouter()
-  
+
   // Current step (0-4)
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
 
@@ -95,18 +94,17 @@ export function DeploymentWizard() {
       setLocalSettings(deploymentSettings)
     }
   }, [deploymentSettings, localSettings])
+
   const { data: hierarchyData } = useQuery({
     queryKey: queryKeys.nifi.hierarchy(),
     queryFn: async () => apiCall('nifi/hierarchy') as Promise<{ hierarchy?: { name: string; label: string; order: number }[] }>,
   })
 
-  // Get hierarchy from API
   const hierarchyAttributes = useMemo(
     () => hierarchyData?.hierarchy || EMPTY_HIERARCHY,
     [hierarchyData]
   )
 
-  // Current step info
   const currentStep = useMemo(() => STEPS[currentStepIndex] ?? STEPS[0], [currentStepIndex])
 
   // Navigation handlers
@@ -156,7 +154,7 @@ export function DeploymentWizard() {
       console.log('[DeploymentWizard] Hierarchy attributes:', hierarchyAttributes)
       console.log('[DeploymentWizard] Selected flows:', selectedFlowIds)
       console.log('[DeploymentWizard] Deployment targets:', deploymentTargets)
-      
+
       const configs = buildDeploymentConfigs(
         flows,
         selectedFlowIds,
@@ -174,8 +172,6 @@ export function DeploymentWizard() {
   useEffect(() => {
     if (currentStepIndex !== 2 || deploymentConfigs.length === 0) return
 
-    // Exit early if all configs with instances already have paths loaded — prevents infinite loop
-    // (this effect calls setDeploymentConfigs which would otherwise re-trigger itself)
     const configsNeedingPaths = deploymentConfigs.filter(
       (c) => c.instanceId !== null && c.availablePaths.length === 0
     )
@@ -186,7 +182,6 @@ export function DeploymentWizard() {
         setIsLoadingPaths(true)
         console.log('[DeploymentWizard] Loading process group paths')
 
-        // Load paths for each unique instance
         const uniqueInstanceIds = Array.from(
           new Set(deploymentConfigs.map((c) => c.instanceId).filter((id): id is number => id !== null))
         )
@@ -201,7 +196,6 @@ export function DeploymentWizard() {
               pathsCache[instanceId.toString()] = data.process_groups
             } else {
               console.warn(`[DeploymentWizard] No process groups returned - using root as default`)
-              // Fallback: use root process group
               pathsCache[instanceId.toString()] = [
                 {
                   id: 'root',
@@ -214,7 +208,6 @@ export function DeploymentWizard() {
             }
           } catch (error) {
             console.error(`Failed to load paths for instance ${instanceId}:`, error)
-            // Fallback: use root process group
             pathsCache[instanceId.toString()] = [
               {
                 id: 'root',
@@ -227,7 +220,6 @@ export function DeploymentWizard() {
           }
         }
 
-        // Update configs with paths and auto-select
         setDeploymentConfigs((prevConfigs) =>
           prevConfigs.map((config) => {
             if (!config.instanceId) return config
@@ -238,7 +230,6 @@ export function DeploymentWizard() {
               ? autoSelectProcessGroup(config, effectiveSettings, hierarchyAttributes)
               : null
 
-            // Generate process group name
             const selectedFlow = flows.find((f) => f.id === config.flowId)
             const processGroupName = effectiveSettings && selectedFlow
               ? generateProcessGroupName(
@@ -266,8 +257,6 @@ export function DeploymentWizard() {
       loadPaths()
     }
   }, [currentStepIndex, deploymentConfigs, effectiveSettings, hierarchyAttributes, flows, apiCall])
-  // ^ deploymentConfigs in deps is intentional: the guard above (configsNeedingPaths.length === 0)
-  //   exits early after paths are loaded, preventing the loop.
 
   // Step 3: Update process group selection
   const handleUpdateProcessGroup = useCallback((configKey: string, processGroupId: string) => {
@@ -284,7 +273,6 @@ export function DeploymentWizard() {
   useEffect(() => {
     if (currentStepIndex !== 3 || deploymentConfigs.length === 0) return
 
-    // Exit early if versions are already loaded for all configs that have registry info — prevents infinite loop
     const configsNeedingVersions = deploymentConfigs.filter(
       (c) => c.instanceId && c.registryId && c.bucketId && c.flowIdRegistry && c.availableVersions.length === 0
     )
@@ -295,10 +283,8 @@ export function DeploymentWizard() {
         setIsLoadingVersions(true)
         console.log('[DeploymentWizard] Loading flow versions')
 
-        // Load versions for each config with registryId/bucketId/flowIdRegistry
         const updatedConfigs = await Promise.all(
           deploymentConfigs.map(async (config) => {
-            // Need instance, registry, bucket, and flow info to fetch versions
             if (config.instanceId && config.registryId && config.bucketId && config.flowIdRegistry) {
               try {
                 console.log(
@@ -329,8 +315,6 @@ export function DeploymentWizard() {
       loadVersions()
     }
   }, [currentStepIndex, deploymentConfigs, apiCall])
-  // ^ deploymentConfigs in deps is intentional: the guard above (configsNeedingVersions.length === 0)
-  //   exits early after versions are loaded, preventing the loop.
 
   // Step 4: Update version selection
   const handleUpdateVersion = useCallback((configKey: string, version: number | null) => {
@@ -344,9 +328,7 @@ export function DeploymentWizard() {
   // Step 4: Update deployment settings
   const handleUpdateSettings = useCallback((updatedSettings: DeploymentSettings) => {
     console.log('[DeploymentWizard] Settings updated:', updatedSettings)
-    // Update local state immediately for responsive UI
     setLocalSettings(updatedSettings)
-    // Save to backend
     saveSettings.mutate(updatedSettings)
   }, [saveSettings])
 
@@ -409,9 +391,7 @@ export function DeploymentWizard() {
             onError: async (error: DeploymentError) => {
               console.error(`[DeploymentWizard] Failed to deploy ${config.flowName}:`, error)
 
-              // Check for 409 conflict
               if (error.status === 409 || error.message?.includes('already exists')) {
-                // Show conflict dialog and wait for resolution
                 const conflictInfo: ConflictInfo = error.conflictInfo || {
                   message: 'Process group already exists',
                   existing_process_group: {
@@ -448,7 +428,6 @@ export function DeploymentWizard() {
                       instanceId: config.instanceId!,
                       processGroupId: conflictInfo.existing_process_group.id,
                     })
-                    // Retry deployment
                     const response = await deployFlow.mutateAsync({
                       instanceId: config.instanceId!,
                       request: deploymentRequest,
@@ -494,7 +473,6 @@ export function DeploymentWizard() {
                 setCurrentConflict(null)
                 resolve(undefined)
               } else {
-                // Non-conflict error
                 results.failed.push({
                   config,
                   success: false,
@@ -507,7 +485,6 @@ export function DeploymentWizard() {
           })
         })
       } catch (error: unknown) {
-        // Catch-all for any unhandled errors
         console.error(`[DeploymentWizard] Unhandled error deploying ${config.flowName}:`, error)
       }
     }
@@ -537,32 +514,38 @@ export function DeploymentWizard() {
     }
   }, [currentConflict])
 
-  // Results dialog close handler
   const handleCloseResults = useCallback(() => {
     setShowResultsDialog(false)
-    // Optionally reset wizard or navigate away
   }, [])
 
-  // Check if current step is valid to proceed
   const canProceed = useMemo(() => {
     switch (currentStepIndex) {
-      case 0: // Step 1: Must select at least one flow
-        return selectedFlowIds.length > 0
-      case 1: // Step 2: All selected flows must have targets
-        return selectedFlowIds.every((flowId) => deploymentTargets[flowId])
-      case 2: // Step 3: All configs must have process groups selected
-        return deploymentConfigs.every((config) => config.selectedProcessGroupId && config.instanceId)
-      case 3: // Step 4: Settings are optional
-        return true
-      case 4: // Step 5: Ready to deploy
-        return deploymentConfigs.length > 0 && !isDeploying
-      default:
-        return false
+      case 0: return selectedFlowIds.length > 0
+      case 1: return selectedFlowIds.every((flowId) => deploymentTargets[flowId])
+      case 2: return deploymentConfigs.every((config) => config.selectedProcessGroupId && config.instanceId)
+      case 3: return true
+      case 4: return deploymentConfigs.length > 0 && !isDeploying
+      default: return false
     }
   }, [currentStepIndex, selectedFlowIds, deploymentTargets, deploymentConfigs, isDeploying])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="bg-blue-100 p-2 rounded-lg">
+            <Rocket className="h-6 w-6 text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Deploy Flows</h1>
+            <p className="text-muted-foreground mt-2">
+              Deploy NiFi flows to source and/or destination instances
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Step Tab Indicators */}
       <div className="grid grid-cols-5 gap-2">
         {STEPS.map((step, index) => (
@@ -604,18 +587,21 @@ export function DeploymentWizard() {
         ))}
       </div>
 
-      {/* Step Content */}
-      <Card>
-        <CardContent className="pt-6">
-          {/* Step heading */}
-          <div className="mb-6 border-b pb-4">
-            <h2 className="text-xl font-bold text-slate-900">
+      {/* Step Content Panel */}
+      <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
+        {/* Gradient header showing current step */}
+        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium">
               Step {currentStepIndex + 1}: {currentStep.contentTitle}
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">{currentStep.description}</p>
+            </span>
           </div>
+          <div className="text-xs text-blue-100 hidden sm:block">
+            {currentStep.description}
+          </div>
+        </div>
 
-          {/* Step 1: Select Flows */}
+        <div className="p-6 bg-gradient-to-b from-white to-gray-50">
           {currentStepIndex === 0 && (
             <Step1SelectFlows
               flows={flows}
@@ -627,7 +613,6 @@ export function DeploymentWizard() {
             />
           )}
 
-          {/* Step 2: Choose Targets */}
           {currentStepIndex === 1 && (
             <Step2ChooseTargets
               flows={flows}
@@ -637,7 +622,6 @@ export function DeploymentWizard() {
             />
           )}
 
-          {/* Step 3: Process Groups */}
           {currentStepIndex === 2 && (
             <Step3ProcessGroups
               deploymentConfigs={deploymentConfigs}
@@ -646,7 +630,6 @@ export function DeploymentWizard() {
             />
           )}
 
-          {/* Step 4: Settings */}
           {currentStepIndex === 3 && (
             <Step4Settings
               deploymentConfigs={deploymentConfigs}
@@ -657,7 +640,6 @@ export function DeploymentWizard() {
             />
           )}
 
-          {/* Step 5: Review & Deploy */}
           {currentStepIndex === 4 && (
             <Step5Review
               deploymentConfigs={deploymentConfigs}
@@ -666,9 +648,8 @@ export function DeploymentWizard() {
               isDeploying={isDeploying}
             />
           )}
-
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Navigation */}
       <div className="flex items-center justify-between">
@@ -684,11 +665,7 @@ export function DeploymentWizard() {
         )}
 
         {currentStepIndex < STEPS.length - 1 ? (
-          <Button
-            onClick={goToNextStep}
-            disabled={!canProceed}
-            className="bg-slate-700 text-white hover:bg-slate-800"
-          >
+          <Button onClick={goToNextStep} disabled={!canProceed}>
             Next: {STEPS[currentStepIndex + 1]?.contentTitle}
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>

@@ -1,15 +1,11 @@
 import { Metadata } from 'next'
+import { NifiInstallPage } from '@/components/features/nifi/install/nifi-install-page'
 
 export const metadata: Metadata = {
   title: 'NiFi Install - Datenschleuder',
-  description: 'Install and manage NiFi instances',
+  description: 'Check and create process groups for NiFi flow hierarchy paths',
 }
 
-export default function NifiInstallPage() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-900 mb-2">NiFi Install</h1>
-      <p className="text-slate-500">Coming soon — migration in progress.</p>
-    </div>
-  )
+export default function Page() {
+  return <NifiInstallPage />
 }

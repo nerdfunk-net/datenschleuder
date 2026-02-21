@@ -46,6 +46,7 @@ from routers.nifi import (
     registry_flows_router as nifi_registry_flows_router,
     hierarchy_router as nifi_hierarchy_router,
     certificates_router as nifi_certificates_router,
+    install_router as nifi_install_router,
 )
 
 # Health router
@@ -113,6 +114,7 @@ app.include_router(nifi_flow_views_router)
 app.include_router(nifi_registry_flows_router)
 app.include_router(nifi_hierarchy_router)
 app.include_router(nifi_certificates_router)
+app.include_router(nifi_install_router)
 
 # Health Check
 app.include_router(health_router)
