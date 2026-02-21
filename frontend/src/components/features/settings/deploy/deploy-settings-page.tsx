@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { Loader2, RefreshCw, RotateCcw } from 'lucide-react'
+import { AlertCircle, Loader2, RefreshCw, RotateCcw, Settings, Server } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
 import { useApi } from '@/hooks/use-api'
@@ -21,11 +21,7 @@ import type { DeploymentSettings, ProcessGroupOption, PathConfig } from './types
 import { DEFAULT_GLOBAL } from './types'
 import NextLink from 'next/link'
 
-// ---- helpers ---------------------------------------------------------------
-
 const EMPTY_INSTANCES: NifiInstance[] = []
-
-// ---- main component --------------------------------------------------------
 
 export function DeploySettingsPage() {
   const { user } = useAuthStore()
@@ -42,20 +38,16 @@ export function DeploySettingsPage() {
     [hierarchyData]
   )
 
-  // Local editable state
   const [globalSettings, setGlobalSettings] = useState({ ...DEFAULT_GLOBAL })
   const [paths, setPaths] = useState<DeploymentSettings['paths']>({})
   const [isDirty, setIsDirty] = useState(false)
 
-  // Per-instance path options loaded from NiFi live
   const [pgOptions, setPgOptions] = useState<Record<number, ProcessGroupOption[]>>({})
   const [loadingPgs, setLoadingPgs] = useState<Record<number, boolean>>({})
 
-  // Sync from server
   useEffect(() => {
     if (!remoteSettings) return
     setGlobalSettings({ ...DEFAULT_GLOBAL, ...remoteSettings.global })
-    // Normalise string keys → number keys (JSON serialises object keys as strings)
     const normPaths: DeploymentSettings['paths'] = {}
     for (const [k, v] of Object.entries(remoteSettings.paths ?? {})) {
       normPaths[Number(k)] = v
@@ -64,7 +56,6 @@ export function DeploySettingsPage() {
     setIsDirty(false)
   }, [remoteSettings])
 
-  // Ensure each instance has an entry in paths
   useEffect(() => {
     if (instances.length === 0) return
     setPaths(prev => {
@@ -77,7 +68,6 @@ export function DeploySettingsPage() {
     })
   }, [instances])
 
-  // Auto-load paths for instances with saved values so dropdowns show on mount
   useEffect(() => {
     if (!remoteSettings || instances.length === 0) return
     for (const inst of instances) {
@@ -100,7 +90,6 @@ export function DeploySettingsPage() {
       const options: ProcessGroupOption[] = groups.map(pg => ({
         id: pg.id,
         name: pg.name,
-        // path is leaf-to-root; reverse to get root-to-leaf display string
         path: pg.path.map(p => p.name).reverse().join('/'),
       }))
 
@@ -154,38 +143,50 @@ export function DeploySettingsPage() {
 
   const isLoading = loadingInstances || loadingSettings
 
+  const pageHeader = (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div className="bg-blue-100 p-2 rounded-lg">
+          <Settings className="h-6 w-6 text-blue-600" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Deployment Settings</h1>
+          <p className="text-muted-foreground mt-2">
+            Configure deployment parameters for flow deployment
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+
   if (isLoading) {
     return (
-      <div className="p-6 space-y-4 max-w-3xl">
-        <Skeleton className="h-7 w-52" />
-        <Skeleton className="h-4 w-72" />
-        <Skeleton className="h-40 rounded-lg" />
-        <Skeleton className="h-32 rounded-lg" />
+      <div className="space-y-6 max-w-3xl">
+        {pageHeader}
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="p-6 max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Deployment Settings</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Configure deployment parameters for flow deployment
-        </p>
-      </div>
+    <div className="space-y-6 max-w-3xl">
+      {pageHeader}
 
-      <div className="space-y-8">
-
-        {/* ── Global Settings ─────────────────────────────────────────── */}
-        <section>
-          <div className="border-b border-slate-200 pb-2 mb-4">
-            <h2 className="text-base font-semibold text-slate-700">Global Settings</h2>
+      {/* Global Settings Section */}
+      <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
+        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center rounded-t-lg">
+          <div className="flex items-center space-x-2">
+            <Settings className="h-4 w-4" />
+            <span className="text-sm font-medium">Global Settings</span>
           </div>
-
-          <div className="space-y-5">
+        </div>
+        <div className="p-6 bg-gradient-to-b from-white to-gray-50">
+          <div className="space-y-4">
             {/* Process group name template */}
-            <div>
-              <label className="text-sm font-medium text-slate-700 block mb-1">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 block">
                 Process Group Name Template
               </label>
               <Input
@@ -195,7 +196,7 @@ export function DeploySettingsPage() {
                 onChange={e => handleGlobalChange('process_group_name_template', e.target.value)}
                 className="max-w-sm"
               />
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-gray-500">
                 Default: <code className="bg-slate-100 px-1 rounded">{'{last_hierarchy_value}'}</code> — uses the value of the last hierarchy attribute (e.g. CN value)
               </p>
             </div>
@@ -214,7 +215,7 @@ export function DeploySettingsPage() {
                   <label htmlFor="disable_after_deploy" className="text-sm font-medium text-slate-700 cursor-pointer">
                     Disable flow after deployment
                   </label>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     DISABLES the deployed process group after deployment (beyond NiFi&apos;s default STOPPED state), preventing accidental starting.
                   </p>
                 </div>
@@ -232,7 +233,7 @@ export function DeploySettingsPage() {
                   <label htmlFor="start_after_deploy" className="text-sm font-medium text-slate-700 cursor-pointer">
                     Start flow after deployment
                   </label>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     STARTS the deployed process group immediately, allowing it to begin processing data.
                   </p>
                 </div>
@@ -250,29 +251,36 @@ export function DeploySettingsPage() {
                   <label htmlFor="stop_versioning_after_deploy" className="text-sm font-medium text-slate-700 cursor-pointer">
                     Stop versioning after deployment
                   </label>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     Stops version control for the deployed process group after deployment.
                   </p>
                 </div>
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </div>
 
-        {/* ── Instance Path Configuration ─────────────────────────────── */}
-        <section>
-          <div className="border-b border-slate-200 pb-2 mb-4">
-            <h2 className="text-base font-semibold text-slate-700">Instance Path Configuration</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Configure source and destination process group paths for each NiFi instance
-            </p>
+      {/* Instance Path Configuration Section */}
+      <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
+        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
+          <div className="flex items-center space-x-2">
+            <Server className="h-4 w-4" />
+            <span className="text-sm font-medium">Instance Path Configuration</span>
           </div>
-
+          <div className="text-xs text-blue-100">
+            Configure source and destination paths per instance
+          </div>
+        </div>
+        <div className="p-6 bg-gradient-to-b from-white to-gray-50">
           {instances.length === 0 ? (
-            <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-              No NiFi instances configured. Please add instances in{' '}
-              <NextLink href="/settings/nifi" className="underline font-medium">Settings / NiFi</NextLink>.
-            </div>
+            <Alert className="bg-blue-50 border-blue-200">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                No NiFi instances configured. Please add instances in{' '}
+                <NextLink href="/settings/nifi" className="underline font-medium">Settings / NiFi</NextLink>.
+              </AlertDescription>
+            </Alert>
           ) : (
             <div className="space-y-4">
               {instances.map(instance => {
@@ -283,7 +291,6 @@ export function DeploySettingsPage() {
                 const sourceValue = savedPaths?.source_path?.id ?? ''
                 const destValue = savedPaths?.dest_path?.id ?? ''
 
-                // Build select options — include saved value even if not in loaded options
                 const toOptions = (saved: PathConfig | undefined) => {
                   const base = options.map(o => ({ value: o.id, label: o.path || o.name }))
                   if (saved?.id && !options.find(o => o.id === saved.id)) {
@@ -306,7 +313,7 @@ export function DeploySettingsPage() {
                         <p className="font-semibold text-blue-700 text-sm">
                           {instance.hierarchy_attribute}={instance.hierarchy_value}
                         </p>
-                        <p className="text-xs text-slate-500">{instance.nifi_url}</p>
+                        <p className="text-xs text-muted-foreground">{instance.nifi_url}</p>
                       </div>
                       {canWrite && (
                         <Button
@@ -325,8 +332,8 @@ export function DeploySettingsPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       {/* Source path */}
-                      <div>
-                        <label className="text-xs font-semibold text-slate-600 block mb-1.5">
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-slate-600 block">
                           Source Path ({topHierarchyName})
                         </label>
                         <Select
@@ -350,14 +357,14 @@ export function DeploySettingsPage() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-gray-500">
                           Search path for the source element in the top hierarchy
                         </p>
                       </div>
 
                       {/* Destination path */}
-                      <div>
-                        <label className="text-xs font-semibold text-slate-600 block mb-1.5">
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-slate-600 block">
                           Destination Path ({topHierarchyName})
                         </label>
                         <Select
@@ -381,7 +388,7 @@ export function DeploySettingsPage() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-gray-500">
                           Search path for the destination element in the top hierarchy
                         </p>
                       </div>
@@ -391,29 +398,29 @@ export function DeploySettingsPage() {
               })}
             </div>
           )}
-        </section>
-
-        {/* ── Footer actions ───────────────────────────────────────────── */}
-        {canWrite && (
-          <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              disabled={!isDirty || saveSettings.isPending}
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Reset
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={!isDirty || saveSettings.isPending}
-            >
-              {saveSettings.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Settings
-            </Button>
-          </div>
-        )}
+        </div>
       </div>
+
+      {/* Footer actions */}
+      {canWrite && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            disabled={!isDirty || saveSettings.isPending}
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Reset
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={!isDirty || saveSettings.isPending}
+          >
+            {saveSettings.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Settings
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

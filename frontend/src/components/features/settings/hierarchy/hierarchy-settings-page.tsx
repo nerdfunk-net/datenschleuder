@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +22,7 @@ import {
   Pencil,
   Loader2,
   RotateCcw,
+  GitBranch,
 } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
@@ -41,16 +41,13 @@ export function HierarchySettingsPage() {
 
   const existingFlowCount = flowCountData?.count ?? 0
 
-  // Local editable copy of hierarchy
   const [attrs, setAttrs] = useState<HierarchyAttributeEditing[]>([])
   const [isDirty, setIsDirty] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
 
-  // Values dialog state
   const [valuesAttr, setValuesAttr] = useState<HierarchyAttribute | null>(null)
   const [valuesReadOnly, setValuesReadOnly] = useState(false)
 
-  // Sync local state when data loads
   useEffect(() => {
     if (data) {
       setAttrs(
@@ -151,7 +148,6 @@ export function HierarchySettingsPage() {
   const hasErrors = useMemo(() => attrs.some(a => !!a.nameError), [attrs])
 
   const handleSaveClick = useCallback(() => {
-    // Re-validate all names before submitting
     let list = [...attrs]
     attrs.forEach((_, i) => { list = validateUniqueName(i, list) })
     setAttrs(list)
@@ -175,32 +171,51 @@ export function HierarchySettingsPage() {
       .join(',')
   }, [attrs])
 
+  const pageHeader = (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div className="bg-purple-100 p-2 rounded-lg">
+          <GitBranch className="h-6 w-6 text-purple-600" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Hierarchy Settings</h1>
+          <p className="text-muted-foreground mt-2">
+            Configure the attribute hierarchy (e.g.,{' '}
+            <code className="text-xs bg-slate-100 px-1 rounded">CN=test,O=myOrg,OU=myOrgUnit</code>)
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+
   if (isLoading) {
     return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-7 w-48 mb-1" />
-        <Skeleton className="h-4 w-80 mb-6" />
-        {[1, 2].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}
+      <div className="space-y-6 max-w-3xl">
+        {pageHeader}
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="p-6 max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Hierarchy Settings</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Configure the attribute hierarchy (e.g., <code className="text-xs bg-slate-100 px-1 rounded">CN=test,O=myOrg,OU=myOrgUnit</code>)
-        </p>
-      </div>
+    <div className="space-y-6 max-w-3xl">
+      {pageHeader}
 
-      <div className="space-y-6">
-        {/* Attribute list */}
-        <div>
-          <label className="text-sm font-semibold text-slate-700 block mb-1">
-            Attribute Hierarchy
-          </label>
-          <p className="text-xs text-slate-500 mb-3">
+      {/* Attribute Configuration Section */}
+      <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
+        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
+          <div className="flex items-center space-x-2">
+            <GitBranch className="h-4 w-4" />
+            <span className="text-sm font-medium">Attribute Configuration</span>
+          </div>
+          <div className="text-xs text-blue-100">
+            {attrs.length} attribute{attrs.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+        <div className="p-6 bg-gradient-to-b from-white to-gray-50">
+          <p className="text-xs text-gray-500 mb-3">
             Define the order of attributes from top (first) to bottom (last). Each attribute name must be unique.
           </p>
 
@@ -309,37 +324,44 @@ export function HierarchySettingsPage() {
             </Button>
           )}
         </div>
+      </div>
 
-        {/* Preview */}
-        <div>
-          <label className="text-sm font-semibold text-slate-700 block mb-1">Preview</label>
+      {/* Preview Section */}
+      <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
+        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center rounded-t-lg">
+          <div className="flex items-center space-x-2">
+            <Eye className="h-4 w-4" />
+            <span className="text-sm font-medium">Preview</span>
+          </div>
+        </div>
+        <div className="p-6 bg-gradient-to-b from-white to-gray-50">
           <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-sm text-slate-800 break-all">
             {preview}
           </div>
-          <p className="text-xs text-slate-400 mt-1">Example output with sample values</p>
+          <p className="text-xs text-gray-500 mt-1">Example output with sample values</p>
         </div>
-
-        {/* Footer actions */}
-        {canWrite && (
-          <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              disabled={!isDirty || saveConfig.isPending}
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Reset
-            </Button>
-            <Button
-              onClick={handleSaveClick}
-              disabled={!isDirty || hasErrors || saveConfig.isPending}
-            >
-              {saveConfig.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Settings
-            </Button>
-          </div>
-        )}
       </div>
+
+      {/* Footer actions */}
+      {canWrite && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            disabled={!isDirty || saveConfig.isPending}
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Reset
+          </Button>
+          <Button
+            onClick={handleSaveClick}
+            disabled={!isDirty || hasErrors || saveConfig.isPending}
+          >
+            {saveConfig.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Settings
+          </Button>
+        </div>
+      )}
 
       {/* Double-confirmation dialog */}
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>

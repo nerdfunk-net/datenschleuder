@@ -2,8 +2,8 @@
 
 import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Server, Plus } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Server, Plus, Loader2, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
 import { useNifiInstancesQuery } from './hooks/use-nifi-instances-query'
@@ -37,18 +37,34 @@ export function NifiInstancesPage() {
     if (!open) setEditingInstance(null)
   }, [])
 
+  const pageHeader = (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div className="bg-blue-100 p-2 rounded-lg">
+          <Server className="h-6 w-6 text-blue-600" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">NiFi Instances</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage multiple NiFi instances, one for each top hierarchy value
+          </p>
+        </div>
+      </div>
+      {canWrite && (
+        <Button onClick={handleAdd}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add NiFi Instance
+        </Button>
+      )}
+    </div>
+  )
+
   if (isLoading) {
     return (
-      <div className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-7 w-40 mb-2" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-          <Skeleton className="h-9 w-36" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-48 rounded-xl" />)}
+      <div className="space-y-6">
+        {pageHeader}
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </div>
     )
@@ -56,64 +72,67 @@ export function NifiInstancesPage() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <p className="text-red-500">Failed to load NiFi instances. Please try again.</p>
+      <div className="space-y-6">
+        {pageHeader}
+        <Alert className="bg-red-50 border-red-200">
+          <AlertCircle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="text-red-800">
+            Failed to load NiFi instances. Please try again.
+          </AlertDescription>
+        </Alert>
       </div>
     )
   }
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      {(instances.length > 0 || canWrite) && (
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">NiFi Instances</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Manage multiple NiFi instances, one for each top hierarchy value
-            </p>
+    <div className="space-y-6">
+      {pageHeader}
+
+      {/* Main Content Section */}
+      <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
+        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
+          <div className="flex items-center space-x-2">
+            <Server className="h-4 w-4" />
+            <span className="text-sm font-medium">Configured Instances</span>
           </div>
-          {canWrite && (
-            <Button onClick={handleAdd}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add NiFi Instance
-            </Button>
+          <div className="text-xs text-blue-100">
+            {instances.length} instance{instances.length !== 1 ? 's' : ''} configured
+          </div>
+        </div>
+        <div className="p-6 bg-gradient-to-b from-white to-gray-50">
+          {/* Empty state */}
+          {instances.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              <p className="text-lg font-medium">No NiFi Instances</p>
+              <p className="text-sm mt-1">
+                {canWrite
+                  ? 'Add your first NiFi instance to get started.'
+                  : 'No NiFi instances configured yet.'}
+              </p>
+              {canWrite && (
+                <Button onClick={handleAdd} className="mt-4">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add NiFi Instance
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Instance grid */}
+          {instances.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {instances.map(instance => (
+                <InstanceCard
+                  key={instance.id}
+                  instance={instance}
+                  canWrite={canWrite}
+                  onEdit={handleEdit}
+                />
+              ))}
+            </div>
           )}
         </div>
-      )}
-
-      {/* Empty state */}
-      {instances.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
-          <Server className="h-12 w-12 text-slate-400 mb-4" />
-          <h3 className="text-lg font-semibold text-slate-700 mb-1">No NiFi Instances</h3>
-          <p className="text-sm text-slate-500 mb-4">
-            {canWrite
-              ? 'Add your first NiFi instance to get started.'
-              : 'No NiFi instances configured yet.'}
-          </p>
-          {canWrite && (
-            <Button onClick={handleAdd}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add NiFi Instance
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* Instance grid */}
-      {instances.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {instances.map(instance => (
-            <InstanceCard
-              key={instance.id}
-              instance={instance}
-              canWrite={canWrite}
-              onEdit={handleEdit}
-            />
-          ))}
-        </div>
-      )}
+      </div>
 
       <NifiInstanceDialog
         open={dialogOpen}
