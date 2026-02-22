@@ -30,7 +30,7 @@ Available helper dependencies:
 
 ---
 
-## Seeded permissions (46 total)
+## Seeded permissions (57 total)
 
 Defined in [backend/tools/seed_rbac.py](../backend/tools/seed_rbac.py). Run this script when setting up a new instance or after resetting the database.
 
@@ -88,6 +88,8 @@ Defined in [backend/tools/seed_rbac.py](../backend/tools/seed_rbac.py). Run this
 
 | Permission | Description |
 |---|---|
+| `jobs:read` | View job task results and status |
+| `jobs:write` | Create/trigger job tasks |
 | `jobs.templates:read` | View job templates |
 | `jobs.templates:write` | Create/modify job templates |
 | `jobs.templates:delete` | Delete job templates |
@@ -125,6 +127,30 @@ Defined in [backend/tools/seed_rbac.py](../backend/tools/seed_rbac.py). Run this
 | `flows:delete` | Delete NiFi flows |
 | `flows:deploy` | Deploy NiFi flows to target instances |
 
+### Nautobot
+
+| Permission | Description |
+|---|---|
+| `nautobot.devices:read` | View Nautobot devices |
+| `nautobot.devices:write` | Create/update Nautobot devices |
+| `nautobot.locations:write` | Create/update Nautobot locations |
+| `nautobot.export:read` | View Nautobot export status |
+| `nautobot.export:execute` | Trigger Nautobot data export |
+
+### Device operations
+
+| Permission | Description |
+|---|---|
+| `devices.onboard:execute` | Onboard new devices via Celery tasks |
+
+### Template management
+
+| Permission | Description |
+|---|---|
+| `settings.templates:read` | View Jinja/configuration templates |
+| `settings.templates:write` | Create/modify Jinja/configuration templates |
+| `settings.templates:delete` | Delete Jinja/configuration templates |
+
 ---
 
 ## System roles
@@ -137,17 +163,20 @@ Full access. Every seeded permission is assigned with `granted=True`. Gains acce
 
 ### operator
 
-Full NiFi, Registry, Flows, Jobs, Git, and Settings (read) access. No user management.
+Full NiFi, Registry, Flows, Jobs, Git, Templates, Nautobot, and Settings (read) access. No user management.
 
 Assigned permissions:
 
 - `dashboard.settings:read`
 - `git.repositories:read`, `git.operations:execute`
 - `settings.git:read`, `settings.cache:read`, `settings.celery:read`, `settings.credentials:read`, `settings.common:read`
-- `jobs.templates:read/write/delete`, `jobs.schedules:read/write/delete`, `jobs.runs:read/execute`
+- `settings.templates:read/write/delete`
+- `jobs:read/write`, `jobs.templates:read/write/delete`, `jobs.schedules:read/write/delete`, `jobs.runs:read/execute`
 - `nifi:read/write/delete/execute`, `nifi.settings:read`
 - `registry:read/write/delete`
 - `flows:read/write/delete/deploy`
+- `nautobot.devices:read/write`, `nautobot.locations:write`, `nautobot.export:read/execute`
+- `devices.onboard:execute`
 
 ### network_engineer
 
@@ -162,11 +191,13 @@ Assigned permissions:
 - `dashboard.settings:read`
 - `git.repositories:read`
 - `settings.git:read`, `settings.cache:read`, `settings.celery:read`
-- `jobs.templates:read`, `jobs.schedules:read`, `jobs.runs:read`
+- `settings.templates:read`
+- `jobs:read`, `jobs.templates:read`, `jobs.schedules:read`, `jobs.runs:read`
 - `rbac.roles:read`, `rbac.permissions:read`
 - `nifi:read`, `nifi.settings:read`
 - `registry:read`
 - `flows:read`
+- `nautobot.devices:read`, `nautobot.export:read`
 
 ---
 
@@ -378,23 +409,9 @@ Own user profile only. Uses `get_current_username` (valid JWT required). Not RBA
 
 ## Known permission gaps
 
-These permissions are referenced in router code but not defined in [seed_rbac.py](../backend/tools/seed_rbac.py). Any endpoint requiring them always returns 403, including for admins.
+None. All permissions referenced in router `require_permission()` calls are defined in [seed_rbac.py](../backend/tools/seed_rbac.py) and assigned to the appropriate roles.
 
-| Permission | Used in | Impact |
-|---|---|---|
-| `settings.templates:read` | `/api/templates` GET endpoints | All template views broken for everyone |
-| `settings.templates:write` | `/api/templates` POST/PUT endpoints | All template mutations broken for everyone |
-| `settings.templates:delete` | `/api/templates` DELETE endpoints | All template deletes broken for everyone |
-| `devices.onboard:execute` | `/api/celery` onboard endpoint | Celery-triggered onboarding broken |
-| `nautobot.export:read` | `/api/celery` export status endpoint | Nautobot export status broken |
-| `nautobot.export:execute` | `/api/celery` trigger export endpoint | Nautobot export trigger broken |
-| `nautobot.devices:read` | `/api/celery` device endpoints | Celery device read broken |
-| `nautobot.devices:write` | `/api/celery` device sync endpoints | Celery device sync broken |
-| `nautobot.locations:write` | `/api/celery` location sync endpoint | Celery location sync broken |
-| `jobs:read` | `/api/celery` task result endpoint | Task result lookup broken |
-| `jobs:write` | `/api/job-schedules` one endpoint | That schedule endpoint is broken |
-
-To fix: add the missing permissions to `seed_permissions()` in [seed_rbac.py](../backend/tools/seed_rbac.py), assign them to the appropriate roles in `assign_permissions_to_roles()`, then re-run the seed script.
+To verify: run `grep -rh 'require_permission(' routers/ --include='*.py' | grep -oE '"[a-z_.]+",\s*"[a-z]+"' | sort -u` from the `backend/` directory and confirm every pair appears in `seed_permissions()`.
 
 ---
 
@@ -447,4 +464,5 @@ The `permissions` field is a legacy bitwise integer retained for backward compat
 
 | Date | Change |
 |---|---|
+| 2026-02-22 | Added 11 missing permissions to seed: `settings.templates:read/write/delete`, `jobs:read/write`, `nautobot.devices:read/write`, `nautobot.locations:write`, `nautobot.export:read/execute`, `devices.onboard:execute`. Updated role assignments for operator, network_engineer, viewer. |
 | 2026-02-22 | Rewrote from scratch to reflect actual codebase. Fixed user_id `None`-check bug in `require_permission`. Changed deploy endpoint from `nifi:write` to `nifi:execute`. Documented all known permission gaps. |

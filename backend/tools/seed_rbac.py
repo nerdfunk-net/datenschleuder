@@ -200,6 +200,8 @@ def seed_permissions(verbose: bool = True):
         ("rbac.roles", "delete", "Delete roles"),
         ("rbac.permissions", "read", "View all permissions"),
         # Jobs permissions
+        ("jobs", "read", "View job task results and status"),
+        ("jobs", "write", "Create/trigger job tasks"),
         ("jobs.templates", "read", "View job templates"),
         ("jobs.templates", "write", "Create/modify job templates"),
         ("jobs.templates", "delete", "Delete job templates"),
@@ -224,6 +226,18 @@ def seed_permissions(verbose: bool = True):
         ("flows", "write", "Create/modify NiFi flows"),
         ("flows", "delete", "Delete NiFi flows"),
         ("flows", "deploy", "Deploy NiFi flows to target instances"),
+        # Nautobot permissions
+        ("nautobot.devices", "read", "View Nautobot devices"),
+        ("nautobot.devices", "write", "Create/update Nautobot devices"),
+        ("nautobot.locations", "write", "Create/update Nautobot locations"),
+        ("nautobot.export", "read", "View Nautobot export status"),
+        ("nautobot.export", "execute", "Trigger Nautobot data export"),
+        # Device operations
+        ("devices.onboard", "execute", "Onboard new devices via Celery tasks"),
+        # Template management permissions
+        ("settings.templates", "read", "View Jinja/configuration templates"),
+        ("settings.templates", "write", "Create/modify Jinja/configuration templates"),
+        ("settings.templates", "delete", "Delete Jinja/configuration templates"),
     ]
 
     created_count = 0
@@ -313,7 +327,13 @@ def assign_permissions_to_roles(roles, verbose: bool = True):
         "settings.celery:read",
         "settings.credentials:read",
         "settings.common:read",
+        # Templates (full access)
+        "settings.templates:read",
+        "settings.templates:write",
+        "settings.templates:delete",
         # Jobs (full access)
+        "jobs:read",
+        "jobs:write",
         "jobs.templates:read",
         "jobs.templates:write",
         "jobs.templates:delete",
@@ -337,6 +357,14 @@ def assign_permissions_to_roles(roles, verbose: bool = True):
         "flows:write",
         "flows:delete",
         "flows:deploy",
+        # Nautobot (full access)
+        "nautobot.devices:read",
+        "nautobot.devices:write",
+        "nautobot.locations:write",
+        "nautobot.export:read",
+        "nautobot.export:execute",
+        # Device operations
+        "devices.onboard:execute",
     ]
     operator_count = 0
     for perm_key in operator_perms:
@@ -374,7 +402,10 @@ def assign_permissions_to_roles(roles, verbose: bool = True):
         "settings.git:read",
         "settings.cache:read",
         "settings.celery:read",
+        # Templates (read-only)
+        "settings.templates:read",
         # Jobs (read-only)
+        "jobs:read",
         "jobs.templates:read",
         "jobs.schedules:read",
         "jobs.runs:read",
@@ -388,6 +419,9 @@ def assign_permissions_to_roles(roles, verbose: bool = True):
         "registry:read",
         # Flows (read-only)
         "flows:read",
+        # Nautobot (read-only)
+        "nautobot.devices:read",
+        "nautobot.export:read",
     ]
     viewer_count = 0
     for perm_key in viewer_perms:
