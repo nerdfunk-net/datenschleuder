@@ -1,7 +1,7 @@
 """NiFi processor operations - pure nipyapi logic."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from nipyapi import canvas
 

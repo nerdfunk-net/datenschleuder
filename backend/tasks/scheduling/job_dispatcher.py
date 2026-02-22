@@ -68,7 +68,7 @@ def dispatch_job(
                 f"[DISPATCH] Template ID {template_id} loaded: {template is not None}"
             )
             if template:
-                logger.info(f"[DISPATCH] Template name: {template.get('name')}")
+                logger.info("[DISPATCH] Template name: %s", template.get("name"))
                 logger.info(
                     f"[DISPATCH] Template activate_changes_after_sync: {template.get('activate_changes_after_sync')}"
                 )
@@ -114,17 +114,19 @@ def dispatch_job(
             )
         elif result.get("success") or result_status == "completed":
             job_run_manager.mark_completed(job_run_id, result=result)
-            logger.info(f"Job {job_name} completed successfully")
+            logger.info("Job %s completed successfully", job_name)
         else:
             error_msg = result.get("error", result.get("message", "Unknown error"))
             job_run_manager.mark_failed(job_run_id, error_msg)
-            logger.warning(f"Job {job_name} failed: {error_msg}")
+            logger.warning("Job %s failed: %s", job_name, error_msg)
 
         return result
 
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"Job dispatch failed for {job_name}: {error_msg}", exc_info=True)
+        logger.error(
+            "Job dispatch failed for %s: %s", job_name, error_msg, exc_info=True
+        )
 
         # Update job run if we created one
         if job_run:

@@ -55,13 +55,15 @@ def set_git_author(repository: Dict, repo: Repo):
     config_writer = repo.config_writer()
     try:
         author_name = repository.get("git_author_name") or "Datenschleuder Automation"
-        author_email = repository.get("git_author_email") or "noreply@datenschleuder.local"
+        author_email = (
+            repository.get("git_author_email") or "noreply@datenschleuder.local"
+        )
 
         config_writer.set_value("user", "name", author_name)
         config_writer.set_value("user", "email", author_email)
         config_writer.release()
 
-        logger.debug(f"Set git author: {author_name} <{author_email}>")
+        logger.debug("Set git author: %s <%s>", author_name, author_email)
 
         yield
     finally:

@@ -67,17 +67,23 @@ def _validate_hierarchy_values(hierarchy_values: dict, hierarchy: list) -> None:
             raise ValueError("Missing hierarchy value: %s" % name)
         if not isinstance(hierarchy_values[name], dict):
             raise ValueError(
-                "Hierarchy value for %s must be a dict with 'source' and 'destination'" % name
+                "Hierarchy value for %s must be a dict with 'source' and 'destination'"
+                % name
             )
-        if "source" not in hierarchy_values[name] or "destination" not in hierarchy_values[name]:
+        if (
+            "source" not in hierarchy_values[name]
+            or "destination" not in hierarchy_values[name]
+        ):
             raise ValueError(
-                "Hierarchy value for %s must contain both 'source' and 'destination'" % name
+                "Hierarchy value for %s must contain both 'source' and 'destination'"
+                % name
             )
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def get_flow_columns() -> list:
     """Return a list of {key, label} dicts for all visible nifi_flows columns.
@@ -102,11 +108,21 @@ def get_flow_columns() -> list:
         if col_name.startswith("src_"):
             attr_lower = col_name[4:]
             if attr_lower in hierarchy_map:
-                result.append({"key": col_name, "label": "Src " + hierarchy_map[attr_lower]["label"]})
+                result.append(
+                    {
+                        "key": col_name,
+                        "label": "Src " + hierarchy_map[attr_lower]["label"],
+                    }
+                )
         elif col_name.startswith("dest_"):
             attr_lower = col_name[5:]
             if attr_lower in hierarchy_map:
-                result.append({"key": col_name, "label": "Dest " + hierarchy_map[attr_lower]["label"]})
+                result.append(
+                    {
+                        "key": col_name,
+                        "label": "Dest " + hierarchy_map[attr_lower]["label"],
+                    }
+                )
         elif col_name in _STATIC_COLUMN_LABELS:
             result.append({"key": col_name, "label": _STATIC_COLUMN_LABELS[col_name]})
 
@@ -192,7 +208,9 @@ def create_flow(
 
     with engine.connect() as conn:
         result = conn.execute(
-            text(f"INSERT INTO nifi_flows ({cols_str}) VALUES ({placeholders}) RETURNING id"),
+            text(
+                f"INSERT INTO nifi_flows ({cols_str}) VALUES ({placeholders}) RETURNING id"
+            ),
             values,
         )
         conn.commit()
@@ -223,11 +241,19 @@ def update_flow(flow_id: int, **kwargs) -> Optional[dict]:
                     values[f"src_{attr_lower}"] = hierarchy_values[attr_name]["source"]
                 if "destination" in hierarchy_values[attr_name]:
                     update_parts.append(f"dest_{attr_lower} = :dest_{attr_lower}")
-                    values[f"dest_{attr_lower}"] = hierarchy_values[attr_name]["destination"]
+                    values[f"dest_{attr_lower}"] = hierarchy_values[attr_name][
+                        "destination"
+                    ]
 
     for col in [
-        "name", "contact", "src_connection_param", "dest_connection_param",
-        "src_template_id", "dest_template_id", "active", "description",
+        "name",
+        "contact",
+        "src_connection_param",
+        "dest_connection_param",
+        "src_template_id",
+        "dest_template_id",
+        "active",
+        "description",
     ]:
         if col in kwargs and kwargs[col] is not None:
             update_parts.append(f"{col} = :{col}")
@@ -237,7 +263,9 @@ def update_flow(flow_id: int, **kwargs) -> Optional[dict]:
 
     with engine.connect() as conn:
         result = conn.execute(
-            text(f"UPDATE nifi_flows SET {', '.join(update_parts)} WHERE id = :flow_id"),
+            text(
+                f"UPDATE nifi_flows SET {', '.join(update_parts)} WHERE id = :flow_id"
+            ),
             values,
         )
         conn.commit()
@@ -284,7 +312,9 @@ def copy_flow(flow_id: int) -> Optional[dict]:
 
     with engine.connect() as conn:
         result = conn.execute(
-            text(f"INSERT INTO nifi_flows ({cols_str}) VALUES ({placeholders}) RETURNING id"),
+            text(
+                f"INSERT INTO nifi_flows ({cols_str}) VALUES ({placeholders}) RETURNING id"
+            ),
             copy_values,
         )
         conn.commit()

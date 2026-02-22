@@ -149,7 +149,9 @@ def check_path(
     all_pgs_raw = canvas.list_all_process_groups(root_pg_id) or []
     pg_by_path, pg_id_to_path = _build_pg_by_path(all_pgs_raw)
 
-    logger.info("Found %d process groups in NiFi instance %d", len(pg_by_path), instance_id)
+    logger.info(
+        "Found %d process groups in NiFi instance %d", len(pg_by_path), instance_id
+    )
 
     # Load flows and configuration
     flows = _get_flows_raw()
@@ -173,15 +175,20 @@ def check_path(
         configured_path = pg_id_to_path[stored_pg_id]
         logger.debug(
             "Resolved configured %s path via PG id '%s' → '%s'",
-            path_type, stored_pg_id, configured_path,
+            path_type,
+            stored_pg_id,
+            configured_path,
         )
     else:
         configured_path = (
-            path_config.get("path", "") if isinstance(path_config, dict) else path_config
+            path_config.get("path", "")
+            if isinstance(path_config, dict)
+            else path_config
         )
         logger.debug(
             "Using stored %s path string (no id match): '%s'",
-            path_type, configured_path,
+            path_type,
+            configured_path,
         )
 
     if not configured_path:
@@ -194,7 +201,9 @@ def check_path(
     )
 
     expected_paths = _build_expected_paths(flows, configured_path, hierarchy, path_type)
-    logger.info("Expecting %d process group paths for %s", len(expected_paths), path_type)
+    logger.info(
+        "Expecting %d process group paths for %s", len(expected_paths), path_type
+    )
     logger.debug("Expected paths: %s", sorted(expected_paths))
     logger.debug("Available NiFi paths: %s", sorted(pg_by_path.keys()))
 

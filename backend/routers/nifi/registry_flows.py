@@ -15,7 +15,9 @@ router = APIRouter(prefix="/api/nifi/registry-flows", tags=["nifi-registry-flows
 
 @router.get("/", response_model=List[RegistryFlowResponse])
 async def list_registry_flows(
-    nifi_instance: Optional[int] = Query(None, description="Filter by NiFi instance ID"),
+    nifi_instance: Optional[int] = Query(
+        None, description="Filter by NiFi instance ID"
+    ),
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """List all registry flows, optionally filtered by NiFi instance."""

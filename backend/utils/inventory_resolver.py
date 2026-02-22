@@ -69,7 +69,7 @@ async def resolve_inventory_to_device_ids(
         operations = convert_saved_inventory_to_operations(inventory["conditions"])
 
         if not operations:
-            logger.warning(f"No valid operations for inventory '{inventory_name}'")
+            logger.warning("No valid operations for inventory '%s'", inventory_name)
             return None
 
         # Preview inventory to get matching devices

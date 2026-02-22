@@ -4,7 +4,7 @@ import logging
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from core.auth import verify_token, require_permission
+from core.auth import require_permission
 from models.nifi_operations import FlowViewCreate, FlowViewUpdate, FlowViewResponse
 from services.nifi import flow_view_service
 
@@ -49,7 +49,7 @@ async def create_flow_view(
             description=data.description,
             column_widths=data.column_widths,
             is_default=data.is_default,
-            created_by=user.get("username", "admin"),
+            created_by=current_user.get("username", "admin"),
         )
         return {"message": "Flow view created successfully", "id": view.id}
     except ValueError as e:

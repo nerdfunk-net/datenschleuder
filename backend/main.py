@@ -139,6 +139,7 @@ async def lifespan(app: FastAPI):
         logger.debug("Startup cache: settings loaded: %s", cache_cfg)
 
         if cache_cfg.get("enabled", True):
+
             async def prefetch_commits_once():
                 try:
                     logger.debug("Startup cache: prefetch_commits_once() starting")
@@ -191,7 +192,9 @@ async def lifespan(app: FastAPI):
                         )
 
                     ttl = int(cache_cfg.get("ttl_seconds", 600))
-                    repo_scope = f"repo:{selected_id}" if selected_id else "repo:default"
+                    repo_scope = (
+                        f"repo:{selected_id}" if selected_id else "repo:default"
+                    )
                     cache_key = f"{repo_scope}:commits:{branch_name}"
                     cache_service.set(cache_key, commits, ttl)
                     logger.debug(
@@ -216,7 +219,8 @@ async def lifespan(app: FastAPI):
                 for key, enabled in prefetch_items.items():
                     if enabled and key in prefetch_map:
                         logger.debug(
-                            "Startup cache: prefetch enabled for '%s' — scheduling task", key
+                            "Startup cache: prefetch enabled for '%s' — scheduling task",
+                            key,
                         )
                         asyncio.create_task(prefetch_map[key]())
                     elif not enabled:

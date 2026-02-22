@@ -75,6 +75,7 @@ def set_default(view_id: int) -> Optional[FlowView]:
 def _unset_all_defaults():
     """Unset all default views."""
     from core.database import get_db_session
+
     db = get_db_session()
     try:
         db.query(FlowView).update({"is_default": False})
@@ -86,6 +87,7 @@ def _unset_all_defaults():
 def _unset_all_defaults_except(view_id: int):
     """Unset all default views except the specified one."""
     from core.database import get_db_session
+
     db = get_db_session()
     try:
         db.query(FlowView).filter(FlowView.id != view_id).update({"is_default": False})

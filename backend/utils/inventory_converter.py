@@ -116,7 +116,7 @@ def tree_to_operations(tree_data: Dict[str, Any]) -> List[LogicalOperation]:
     # Add NOT operations
     operations.extend(not_items)
 
-    logger.info(f"Converted tree to {len(operations)} operations")
+    logger.info("Converted tree to %s operations", len(operations))
     return operations
 
 

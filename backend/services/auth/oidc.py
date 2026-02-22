@@ -155,13 +155,17 @@ class OIDCService:
             return config
 
         except httpx.HTTPError as e:
-            logger.error(f"Failed to fetch OIDC configuration for '{provider_id}': {e}")
+            logger.error(
+                "Failed to fetch OIDC configuration for '%s': %s", provider_id, e
+            )
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Unable to connect to OIDC provider '{provider_id}'",
             )
         except Exception as e:
-            logger.error(f"Error parsing OIDC configuration for '{provider_id}': {e}")
+            logger.error(
+                "Error parsing OIDC configuration for '%s': %s", provider_id, e
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Invalid OIDC provider configuration for '{provider_id}'",
@@ -226,7 +230,9 @@ class OIDCService:
                 f"[OIDC Test] Generating authorization URL with overrides for '{provider_id}'"
             )
             if client_id_override:
-                logger.info(f"[OIDC Test] - client_id overridden: {client_id_override}")
+                logger.info(
+                    "[OIDC Test] - client_id overridden: %s", client_id_override
+                )
             if scopes_override:
                 logger.info(
                     f"[OIDC Test] - scopes overridden: {', '.join(scopes_override)}"
@@ -305,8 +311,10 @@ class OIDCService:
             sanitized_request["code"] = (
                 f"{sanitized_request['code'][:10]}...{sanitized_request['code'][-10:]}"
             )
-        logger.debug(f"Token request to provider '{provider_id}': {sanitized_request}")
-        logger.debug(f"Token endpoint URL: {config.token_endpoint}")
+        logger.debug(
+            "Token request to provider '%s': %s", provider_id, sanitized_request
+        )
+        logger.debug("Token endpoint URL: %s", config.token_endpoint)
 
         try:
             # Get SSL context for custom CA certificates
@@ -343,10 +351,10 @@ class OIDCService:
                 return token_response
 
         except httpx.HTTPError as e:
-            logger.error(f"Token exchange failed for provider '{provider_id}': {e}")
+            logger.error("Token exchange failed for provider '%s': %s", provider_id, e)
             if hasattr(e, "response") and e.response is not None:
-                logger.error(f"Error response status: {e.response.status_code}")
-                logger.error(f"Error response body: {e.response.text}")
+                logger.error("Error response status: %s", e.response.status_code)
+                logger.error("Error response body: %s", e.response.text)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Failed to exchange authorization code for tokens with provider '{provider_id}'",
@@ -381,11 +389,11 @@ class OIDCService:
 
             self._jwks_caches[provider_id] = jwks
             self._jwks_cache_times[provider_id] = datetime.now(timezone.utc)
-            logger.debug(f"JWKS cache updated for provider '{provider_id}'")
+            logger.debug("JWKS cache updated for provider '%s'", provider_id)
             return jwks
 
         except httpx.HTTPError as e:
-            logger.error(f"Failed to fetch JWKS for provider '{provider_id}': {e}")
+            logger.error("Failed to fetch JWKS for provider '%s': %s", provider_id, e)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Unable to fetch OIDC signing keys from provider '{provider_id}'",
@@ -393,7 +401,7 @@ class OIDCService:
 
     async def verify_id_token(self, provider_id: str, id_token: str) -> Dict[str, Any]:
         """Verify and decode ID token from OIDC provider."""
-        logger.debug(f"[OIDC Debug] Verifying ID token for provider '{provider_id}'")
+        logger.debug("[OIDC Debug] Verifying ID token for provider '%s'", provider_id)
 
         config = await self.get_oidc_config(provider_id)
         jwks = await self.get_jwks(provider_id)
@@ -413,8 +421,8 @@ class OIDCService:
                 detail=f"OIDC provider '{provider_id}' missing required 'client_id' in configuration",
             )
 
-        logger.debug(f"[OIDC Debug] Issuer: {config.issuer}")
-        logger.debug(f"[OIDC Debug] Client ID (audience): {client_id}")
+        logger.debug("[OIDC Debug] Issuer: %s", config.issuer)
+        logger.debug("[OIDC Debug] Client ID (audience): %s", client_id)
 
         try:
             # Decode header to get kid
@@ -422,8 +430,8 @@ class OIDCService:
             algorithm = unverified_header.get("alg")
             kid = unverified_header.get("kid")
 
-            logger.debug(f"[OIDC Debug] ID token algorithm: {algorithm}")
-            logger.debug(f"[OIDC Debug] ID token key ID (kid): {kid}")
+            logger.debug("[OIDC Debug] ID token algorithm: %s", algorithm)
+            logger.debug("[OIDC Debug] ID token key ID (kid): %s", kid)
 
             # Find matching key in JWKS
             key = None
@@ -455,10 +463,10 @@ class OIDCService:
             )
 
             logger.debug("[OIDC Debug] ID token verified successfully")
-            logger.debug(f"[OIDC Debug] Token claims: {list(claims.keys())}")
-            logger.debug(f"[OIDC Debug] Subject (sub): {claims.get('sub')}")
-            logger.debug(f"[OIDC Debug] Issued at (iat): {claims.get('iat')}")
-            logger.debug(f"[OIDC Debug] Expires at (exp): {claims.get('exp')}")
+            logger.debug("[OIDC Debug] Token claims: %s", list(claims.keys()))
+            logger.debug("[OIDC Debug] Subject (sub): %s", claims.get("sub"))
+            logger.debug("[OIDC Debug] Issued at (iat): %s", claims.get("iat"))
+            logger.debug("[OIDC Debug] Expires at (exp): %s", claims.get("exp"))
 
             return claims
 
@@ -536,15 +544,15 @@ class OIDCService:
         email = claims.get(email_claim)
         name = claims.get(name_claim, username)
 
-        logger.debug(f"[OIDC Debug] Extracted username: {username}")
-        logger.debug(f"[OIDC Debug] Extracted email: {email}")
-        logger.debug(f"[OIDC Debug] Extracted name: {name}")
+        logger.debug("[OIDC Debug] Extracted username: %s", username)
+        logger.debug("[OIDC Debug] Extracted email: %s", email)
+        logger.debug("[OIDC Debug] Extracted name: %s", name)
 
         if not username:
             logger.error(
                 f"Username claim '{username_claim}' not found in token from provider '{provider_id}'"
             )
-            logger.error(f"Available claims: {claims}")
+            logger.error("Available claims: %s", claims)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Username claim '{username_claim}' not found in token from provider '{provider_id}'",
@@ -573,9 +581,9 @@ class OIDCService:
         logger.debug(
             f"[OIDC Debug] Provisioning or retrieving user from provider '{provider_id}'"
         )
-        logger.debug(f"[OIDC Debug] Username: {user_data.get('username')}")
-        logger.debug(f"[OIDC Debug] Email: {user_data.get('email')}")
-        logger.debug(f"[OIDC Debug] Subject (sub): {user_data.get('sub')}")
+        logger.debug("[OIDC Debug] Username: %s", user_data.get("username"))
+        logger.debug("[OIDC Debug] Email: %s", user_data.get("email"))
+        logger.debug("[OIDC Debug] Subject (sub): %s", user_data.get("sub"))
 
         # Get provider configuration
         provider_config = settings_manager.get_oidc_provider(provider_id)

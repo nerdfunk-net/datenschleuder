@@ -105,7 +105,9 @@ class NifiConnectionService:
 
         logger.debug(
             "Configuring test connection: url=%s verify_ssl=%s check_hostname=%s",
-            nifi_url, verify_ssl, check_hostname,
+            nifi_url,
+            verify_ssl,
+            check_hostname,
         )
 
         config.nifi_config.host = nifi_url
@@ -116,7 +118,9 @@ class NifiConnectionService:
 
         # Priority 1: OIDC Authentication
         if oidc_provider_id and oidc_provider_id.strip():
-            logger.debug("Using OIDC authentication with provider: %s", oidc_provider_id)
+            logger.debug(
+                "Using OIDC authentication with provider: %s", oidc_provider_id
+            )
             self._configure_oidc_auth(oidc_provider_id, verify_ssl)
             return
 
@@ -130,15 +134,21 @@ class NifiConnectionService:
 
         # Priority 3: Username/Password Authentication
         if username and password:
-            logger.debug("Using username/password authentication for user: %s", username)
+            logger.debug(
+                "Using username/password authentication for user: %s", username
+            )
             config.nifi_config.username = username
             config.nifi_config.password = password
             try:
-                security.service_login(service="nifi", username=username, password=password)
+                security.service_login(
+                    service="nifi", username=username, password=password
+                )
             except Exception as e:
                 logger.error(
                     "Authentication failed for user '%s' at %s: %s",
-                    username, nifi_url, str(e),
+                    username,
+                    nifi_url,
+                    str(e),
                 )
                 raise
             return
@@ -154,15 +164,11 @@ class NifiConnectionService:
             )
 
         if not provider_config.get("enabled", False):
-            raise ValueError(
-                "OIDC provider '%s' is not enabled" % provider_id
-            )
+            raise ValueError("OIDC provider '%s' is not enabled" % provider_id)
 
         discovery_url = provider_config.get("discovery_url")
         if not discovery_url:
-            raise ValueError(
-                "OIDC provider '%s' missing discovery_url" % provider_id
-            )
+            raise ValueError("OIDC provider '%s' missing discovery_url" % provider_id)
 
         token_endpoint = discovery_url
         if "/.well-known/openid-configuration" in token_endpoint:
@@ -195,7 +201,8 @@ class NifiConnectionService:
             else:
                 logger.warning(
                     "CA cert configured for OIDC provider '%s' but file not found: %s",
-                    provider_id, resolved,
+                    provider_id,
+                    resolved,
                 )
 
         security.service_login_oidc(

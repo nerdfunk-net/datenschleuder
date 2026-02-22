@@ -105,7 +105,9 @@ def test_new_connection(
     """Test connection with provided credentials (without saving)."""
     logger.debug(
         "Testing new NiFi connection: url=%s username=%s verify_ssl=%s",
-        nifi_url, username, verify_ssl,
+        nifi_url,
+        username,
+        verify_ssl,
     )
     nifi_connection_service.configure_test(
         nifi_url=nifi_url,

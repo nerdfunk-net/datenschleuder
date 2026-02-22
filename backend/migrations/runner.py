@@ -68,7 +68,7 @@ class MigrationRunner:
                     for col_name, col_type in columns_to_add:
                         alter_sql = f"ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS {col_name} {col_type}"
                         conn.execute(text(alter_sql))
-                        logger.debug(f"Added column {col_name} to schema_migrations")
+                        logger.debug("Added column %s to schema_migrations", col_name)
                     conn.commit()
                 logger.info("✓ schema_migrations table updated")
 
@@ -139,7 +139,7 @@ class MigrationRunner:
             e.g., ['001_audit_log.py', '002_add_column.py']
         """
         if not self.migrations_dir.exists():
-            logger.warning(f"Migrations directory not found: {self.migrations_dir}")
+            logger.warning("Migrations directory not found: %s", self.migrations_dir)
             return []
 
         # Find all Python files matching pattern: NNN_*.py
@@ -176,7 +176,7 @@ class MigrationRunner:
             migration_class = getattr(module, "Migration")
             return migration_class(self.engine, self.base)
         except Exception as e:
-            logger.error(f"Failed to load migration {filename}: {e}")
+            logger.error("Failed to load migration %s: %s", filename, e)
             raise
 
     def run_migrations(self) -> Dict[str, int]:
@@ -205,7 +205,7 @@ class MigrationRunner:
                 "indexes_created": 0,
             }
 
-        logger.info(f"Discovered {len(migration_files)} migration file(s)")
+        logger.info("Discovered %s migration file(s)", len(migration_files))
 
         # Track overall results
         total_results = {
@@ -223,11 +223,11 @@ class MigrationRunner:
 
                 # Check if already applied
                 if self.is_migration_applied(migration.name):
-                    logger.debug(f"⊘ {migration.name}: Already applied, skipping")
+                    logger.debug("⊘ %s: Already applied, skipping", migration.name)
                     continue
 
                 # Execute migration
-                logger.info(f"▶ {migration.name}: {migration.description}")
+                logger.info("▶ %s: %s", migration.name, migration.description)
 
                 import time
 
@@ -258,7 +258,7 @@ class MigrationRunner:
                 )
 
             except Exception as e:
-                logger.error(f"✗ Migration {filename} failed: {e}")
+                logger.error("✗ Migration %s failed: %s", filename, e)
                 raise
 
         # Summary

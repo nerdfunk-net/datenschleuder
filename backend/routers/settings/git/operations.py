@@ -63,7 +63,7 @@ async def get_repository_status(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting repository status: {e}")
+        logger.error("Error getting repository status: %s", e)
         return {
             "success": False,
             "message": f"Failed to get repository status: {str(e)}",
@@ -87,9 +87,11 @@ async def sync_repository(
         # Compute repo path (uses configured 'path' or fallback to 'name')
         repo_path = str(git_repo_path(repository))
 
-        logger.info(f"Syncing repository '{repository['name']}' to path: {repo_path}")
-        logger.info(f"Repository URL: {repository['url']}")
-        logger.info(f"Repository branch: {repository['branch']}")
+        logger.info(
+            "Syncing repository '%s' to path: %s", repository["name"], repo_path
+        )
+        logger.info("Repository URL: %s", repository["url"])
+        logger.info("Repository branch: %s", repository["branch"])
 
         os.makedirs(os.path.dirname(repo_path), exist_ok=True)
 
@@ -119,7 +121,7 @@ async def sync_repository(
                         parent_dir, f"{base_name}_backup_{int(time.time())}"
                     )
                     shutil.move(repo_path, backup_path)
-                    logger.info(f"Backed up existing directory to {backup_path}")
+                    logger.info("Backed up existing directory to %s", backup_path)
 
                 # SSL env toggle
                 try:
@@ -145,7 +147,7 @@ async def sync_repository(
                     logger.info(message)
                 except GitCommandError as gce:
                     err = str(gce)
-                    logger.error(f"Git clone failed: {err}")
+                    logger.error("Git clone failed: %s", err)
                     if "authentication" in err.lower():
                         message = (
                             "Authentication failed. Please check your Git credentials."
@@ -155,7 +157,7 @@ async def sync_repository(
                     else:
                         message = f"Git clone failed: {err}"
                 except Exception as e:
-                    logger.error(f"Unexpected error during Git clone: {e}")
+                    logger.error("Unexpected error during Git clone: %s", e)
                     message = f"Unexpected error: {str(e)}"
                 finally:
                     # Cleanup empty directory after failed clone
@@ -170,7 +172,7 @@ async def sync_repository(
                                 f"Removed empty directory after failed clone: {repo_path}"
                             )
                     except Exception as ce:
-                        logger.warning(f"Cleanup after failed clone skipped: {ce}")
+                        logger.warning("Cleanup after failed clone skipped: %s", ce)
             else:
                 # Pull latest
                 try:
@@ -182,7 +184,7 @@ async def sync_repository(
                         try:
                             origin.set_url(clone_url)
                         except Exception as e:
-                            logger.debug(f"Skipping remote URL update: {e}")
+                            logger.debug("Skipping remote URL update: %s", e)
 
                     with set_ssl_env(repository):
                         origin.pull(repository["branch"])
@@ -192,7 +194,7 @@ async def sync_repository(
                         )
                         logger.info(message)
                 except Exception as e:
-                    logger.error(f"Error during Git pull: {e}")
+                    logger.error("Error during Git pull: %s", e)
                     message = f"Pull failed: {str(e)}"
 
         # Final status
@@ -208,7 +210,7 @@ async def sync_repository(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error syncing repository {repo_id}: {e}")
+        logger.error("Error syncing repository %s: %s", repo_id, e)
         git_repo_manager.update_sync_status(repo_id, f"error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -247,12 +249,12 @@ async def remove_and_sync_repository(
 
             try:
                 shutil.move(repo_path, backup_path)
-                logger.info(f"Existing repository backed up to {backup_path}")
+                logger.info("Existing repository backed up to %s", backup_path)
             except Exception as e:
-                logger.warning(f"Could not backup existing repository: {e}")
+                logger.warning("Could not backup existing repository: %s", e)
                 # Try to remove directly
                 shutil.rmtree(repo_path, ignore_errors=True)
-                logger.info(f"Removed existing repository at {repo_path}")
+                logger.info("Removed existing repository at %s", repo_path)
 
         # Ensure parent directory exists
         os.makedirs(os.path.dirname(repo_path), exist_ok=True)
@@ -290,7 +292,7 @@ async def remove_and_sync_repository(
 
             except GitCommandError as gce:
                 err = str(gce)
-                logger.error(f"Git clone failed: {err}")
+                logger.error("Git clone failed: %s", err)
                 if "authentication" in err.lower():
                     message = (
                         "Authentication failed. Please check your Git credentials."
@@ -300,7 +302,7 @@ async def remove_and_sync_repository(
                 else:
                     message = f"Git clone failed: {err}"
             except Exception as e:
-                logger.error(f"Unexpected error during Git clone: {e}")
+                logger.error("Unexpected error during Git clone: %s", e)
                 message = f"Unexpected error: {str(e)}"
             finally:
                 # Cleanup empty directory after failed clone
@@ -315,7 +317,7 @@ async def remove_and_sync_repository(
                             f"Removed empty directory after failed clone: {repo_path}"
                         )
                 except Exception as ce:
-                    logger.warning(f"Cleanup after failed clone skipped: {ce}")
+                    logger.warning("Cleanup after failed clone skipped: %s", ce)
 
         # Final status update
         if success:
@@ -330,7 +332,7 @@ async def remove_and_sync_repository(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error removing and syncing repository {repo_id}: {e}")
+        logger.error("Error removing and syncing repository %s: %s", repo_id, e)
         git_repo_manager.update_sync_status(repo_id, f"error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -185,12 +185,12 @@ def get_permission_name(permissions: int) -> str:
 def toggle_user_status(user_id: int) -> Optional[Dict[str, Any]]:
     """Toggle user active status."""
     try:
-        logger.info(f"toggle_user_status: Starting for user_id={user_id}")
+        logger.info("toggle_user_status: Starting for user_id=%s", user_id)
         # Include inactive users when fetching for status toggle
         user = get_user_by_id(user_id, include_inactive=True)
-        logger.info(f"toggle_user_status: get_user_by_id returned: {user}")
+        logger.info("toggle_user_status: get_user_by_id returned: %s", user)
         if not user:
-            logger.warning(f"toggle_user_status: User not found for user_id={user_id}")
+            logger.warning("toggle_user_status: User not found for user_id=%s", user_id)
             return None
 
         # Toggle the status
@@ -199,10 +199,10 @@ def toggle_user_status(user_id: int) -> Optional[Dict[str, Any]]:
             f"toggle_user_status: Toggling from {user['is_active']} to {new_status}"
         )
         result = update_user(user_id, is_active=new_status)
-        logger.info(f"toggle_user_status: update_user returned: {result}")
+        logger.info("toggle_user_status: update_user returned: %s", result)
         return result
     except Exception as e:
-        logger.error(f"toggle_user_status: Exception occurred: {e}")
+        logger.error("toggle_user_status: Exception occurred: %s", e)
         raise Exception(f"Failed to toggle user status: {str(e)}")
 
 

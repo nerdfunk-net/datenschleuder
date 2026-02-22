@@ -48,11 +48,11 @@ class GitConnectionService:
             True
         """
         logger.info("=== Starting Git Connection Test ===")
-        logger.info(f"URL: {test_request.url}")
-        logger.info(f"Branch: {test_request.branch}")
-        logger.info(f"Auth Type: {test_request.auth_type}")
-        logger.info(f"Credential Name: {test_request.credential_name}")
-        logger.info(f"Verify SSL: {test_request.verify_ssl}")
+        logger.info("URL: %s", test_request.url)
+        logger.info("Branch: %s", test_request.branch)
+        logger.info("Auth Type: %s", test_request.auth_type)
+        logger.info("Credential Name: %s", test_request.credential_name)
+        logger.info("Verify SSL: %s", test_request.verify_ssl)
 
         try:
             # Create temporary directory for test
@@ -63,7 +63,7 @@ class GitConnectionService:
                 auth_type = (
                     test_request.auth_type.value if test_request.auth_type else "token"
                 )
-                logger.debug(f"Resolved auth_type to: {auth_type}")
+                logger.debug("Resolved auth_type to: %s", auth_type)
 
                 # Create a temporary repository dict for credential resolution
                 temp_repo = {
@@ -76,7 +76,7 @@ class GitConnectionService:
                 }
 
                 # Resolve credentials using authentication service
-                logger.info(f"Resolving credentials for auth_type: {auth_type}")
+                logger.info("Resolving credentials for auth_type: %s", auth_type)
                 resolved_username, resolved_token, ssh_key_path = (
                     git_auth_service.resolve_credentials(temp_repo)
                 )
@@ -131,7 +131,7 @@ class GitConnectionService:
                 details={"error": "Connection timeout after 30 seconds"},
             )
         except Exception as e:
-            logger.error(f"Error testing git connection: {e}")
+            logger.error("Error testing git connection: %s", e)
             return GitConnectionTestResponse(
                 success=False,
                 message=f"Git connection test error: {str(e)}",
@@ -206,11 +206,11 @@ class GitConnectionService:
             Clone URL with authentication embedded if using token auth
         """
         clone_url = test_request.url
-        logger.info(f"Building clone URL for auth_type: {auth_type}")
+        logger.info("Building clone URL for auth_type: %s", auth_type)
 
         # Both 'token' and 'generic' auth types use username/password in URL
         if auth_type in ["token", "generic"] and resolved_username and resolved_token:
-            logger.info(f"Adding {auth_type} authentication to URL")
+            logger.info("Adding %s authentication to URL", auth_type)
             # Add authentication to URL using the service
             clone_url = git_auth_service.build_auth_url(
                 clone_url, resolved_username, resolved_token

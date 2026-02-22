@@ -924,13 +924,9 @@ class HierarchyValue(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    __table_args__ = (
-        Index("idx_hierarchy_values_attr", "attribute_name"),
-    )
+    __table_args__ = (Index("idx_hierarchy_values_attr", "attribute_name"),)
 
 
 # NifiFlow is intentionally NOT defined here as a static ORM model.
 # The nifi_flows table is dynamic — its columns are generated from the hierarchy
 # configuration. It is created/replaced by hierarchy_service.create_nifi_flows_table().
-
-

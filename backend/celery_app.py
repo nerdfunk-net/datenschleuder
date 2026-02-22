@@ -57,11 +57,11 @@ def load_queue_configuration():
                 f"Loaded queue from database: {queue_name} - {queue.get('description', '')}"
             )
 
-        logger.info(f"Loaded {len(task_queues)} queue(s) from database configuration")
+        logger.info("Loaded %s queue(s) from database configuration", len(task_queues))
         return task_queues
 
     except Exception as e:
-        logger.error(f"Failed to load queues from database: {e}")
+        logger.error("Failed to load queues from database: %s", e)
         logger.warning("Falling back to default queue configuration")
         return get_default_queue_configuration()
 
@@ -118,7 +118,7 @@ def get_default_queue_configuration():
 # 2. CELERY_WORKER_QUEUE env var (tells worker which queue to listen to)
 # 3. Celery auto-creates queues in Redis as needed
 task_queues_from_db = get_default_queue_configuration()
-logger.info(f"Using default queue configuration ({len(task_queues_from_db)} queues)")
+logger.info("Using default queue configuration (%s queues)", len(task_queues_from_db))
 
 # Celery configuration
 # NOTE: These settings work with platform-aware pool selection in start_celery.py:

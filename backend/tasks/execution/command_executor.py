@@ -55,11 +55,11 @@ def execute_run_commands(
         logger.info("=" * 80)
         logger.info("RUN COMMANDS EXECUTOR STARTED")
         logger.info("=" * 80)
-        logger.info(f"Schedule ID: {schedule_id}")
-        logger.info(f"Credential ID: {credential_id}")
-        logger.info(f"Target devices: {len(target_devices) if target_devices else 0}")
-        logger.info(f"Job parameters: {job_parameters}")
-        logger.info(f"Template: {template}")
+        logger.info("Schedule ID: %s", schedule_id)
+        logger.info("Credential ID: %s", credential_id)
+        logger.info("Target devices: %s", len(target_devices) if target_devices else 0)
+        logger.info("Job parameters: %s", job_parameters)
+        logger.info("Template: %s", template)
 
         task_context.update_state(
             state="PROGRESS",
@@ -113,7 +113,7 @@ def execute_run_commands(
                     device_ids = [
                         device.get("id") for device in devices_result["devices"]
                     ]
-                    logger.info(f"Fetched {len(device_ids)} devices from Nautobot")
+                    logger.info("Fetched %s devices from Nautobot", len(device_ids))
                 else:
                     logger.warning("No devices found in Nautobot")
                     device_ids = []
@@ -141,10 +141,10 @@ def execute_run_commands(
         logger.info("-" * 80)
 
         # Get credentials
-        logger.info(f"Fetching credential {credential_id} from database...")
+        logger.info("Fetching credential %s from database...", credential_id)
         credential = credentials_manager.get_credential_by_id(credential_id)
         if not credential:
-            logger.error(f"ERROR: Credential {credential_id} not found in database")
+            logger.error("ERROR: Credential %s not found in database", credential_id)
             return {
                 "success": False,
                 "error": f"Credential {credential_id} not found",
@@ -158,16 +158,16 @@ def execute_run_commands(
         try:
             password = credentials_manager.get_decrypted_password(credential_id)
         except Exception as e:
-            logger.error(f"ERROR: Failed to decrypt password: {e}")
+            logger.error("ERROR: Failed to decrypt password: %s", e)
             return {
                 "success": False,
                 "error": f"Failed to decrypt credential password: {str(e)}",
                 "credential_info": credential_info,
             }
 
-        logger.info(f"✓ Credential found: {credential_name}")
-        logger.info(f"  - Username: {username}")
-        logger.info(f"  - Password: {'*' * len(password) if password else 'NOT SET'}")
+        logger.info("✓ Credential found: %s", credential_name)
+        logger.info("  - Username: %s", username)
+        logger.info("  - Password: %s", "*" * len(password) if password else "NOT SET")
 
         credential_info["credential_name"] = credential_name
         credential_info["username"] = username
@@ -181,12 +181,14 @@ def execute_run_commands(
             }
 
         # Get command template content
-        logger.info(f"Fetching command template: {command_template_name}...")
+        logger.info("Fetching command template: %s...", command_template_name)
         command_template_obj = template_manager.get_template_by_name(
             command_template_name
         )
         if not command_template_obj:
-            logger.error(f"ERROR: Command template '{command_template_name}' not found")
+            logger.error(
+                "ERROR: Command template '%s' not found", command_template_name
+            )
             return {
                 "success": False,
                 "error": f"Command template '{command_template_name}' not found",
@@ -206,9 +208,9 @@ def execute_run_commands(
                 "credential_info": credential_info,
             }
 
-        logger.info(f"✓ Command template found: {command_template_name}")
-        logger.info(f"  - Template ID: {command_template_obj['id']}")
-        logger.info(f"  - Content length: {len(template_content)} chars")
+        logger.info("✓ Command template found: %s", command_template_name)
+        logger.info("  - Template ID: %s", command_template_obj["id"])
+        logger.info("  - Content length: %s chars", len(template_content))
 
         logger.info("✓ All inputs validated successfully")
 
@@ -223,7 +225,7 @@ def execute_run_commands(
 
         # STEP 2: Execute commands on each device
         logger.info("-" * 80)
-        logger.info(f"STEP 2: EXECUTING COMMANDS ON {len(device_ids)} DEVICES")
+        logger.info("STEP 2: EXECUTING COMMANDS ON %s DEVICES", len(device_ids))
         logger.info("-" * 80)
 
         nautobot_service = NautobotService()
@@ -252,9 +254,9 @@ def execute_run_commands(
                 }
 
                 try:
-                    logger.info(f"\n{'=' * 60}")
-                    logger.info(f"Device {idx}/{total_devices}: {device_id}")
-                    logger.info(f"{'=' * 60}")
+                    logger.info("\n%s", "=" * 60)
+                    logger.info("Device %s/%s: %s", idx, total_devices, device_id)
+                    logger.info("%s", "=" * 60)
 
                     progress = 10 + int((idx / total_devices) * 80)
                     task_context.update_state(
@@ -267,7 +269,7 @@ def execute_run_commands(
                     )
 
                     # Get device details from Nautobot
-                    logger.info(f"[{idx}] Fetching device details from Nautobot...")
+                    logger.info("[%s] Fetching device details from Nautobot...", idx)
                     query = """
                     query getDevice($deviceId: ID!) {
                       device(id: $deviceId) {
@@ -394,20 +396,20 @@ def execute_run_commands(
                     device_result["device_ip"] = primary_ip
                     device_result["platform"] = platform
 
-                    logger.info(f"[{idx}] ✓ Device data fetched")
-                    logger.info(f"[{idx}]   - Name: {device_name}")
-                    logger.info(f"[{idx}]   - IP: {primary_ip or 'NOT SET'}")
-                    logger.info(f"[{idx}]   - Platform: {platform}")
-                    logger.info(f"[{idx}]   - Netmiko device type: {device_type}")
+                    logger.info("[%s] ✓ Device data fetched", idx)
+                    logger.info("[%s]   - Name: %s", idx, device_name)
+                    logger.info("[%s]   - IP: %s", idx, primary_ip or "NOT SET")
+                    logger.info("[%s]   - Platform: %s", idx, platform)
+                    logger.info("[%s]   - Netmiko device type: %s", idx, device_type)
 
                     if not primary_ip:
-                        logger.error(f"[{idx}] ✗ No primary IP")
+                        logger.error("[%s] ✗ No primary IP", idx)
                         device_result["error"] = "No primary IP address"
                         failed_devices.append(device_result)
                         continue
 
                     # Render template for this device
-                    logger.info(f"[{idx}] Rendering template...")
+                    logger.info("[%s] Rendering template...", idx)
                     try:
                         render_result = loop.run_until_complete(
                             render_service.render_template(
@@ -420,7 +422,7 @@ def execute_run_commands(
                         )
                         rendered_content = render_result["rendered_content"]
                         device_result["rendered_commands"] = rendered_content
-                        logger.info(f"[{idx}] ✓ Template rendered successfully")
+                        logger.info("[%s] ✓ Template rendered successfully", idx)
                     except Exception as render_error:
                         logger.error(
                             f"[{idx}] ✗ Template rendering failed: {render_error}"
@@ -448,16 +450,18 @@ def execute_run_commands(
                         failed_devices.append(device_result)
                         continue
 
-                    logger.info(f"[{idx}] Commands to execute: {len(commands)}")
+                    logger.info("[%s] Commands to execute: %s", idx, len(commands))
 
                     # Map platform to Netmiko device type
                     from utils.netmiko_platform_mapper import map_platform_to_netmiko
 
                     device_type = map_platform_to_netmiko(platform)
-                    logger.info(f"[{idx}] Netmiko device type: {device_type}")
+                    logger.info("[%s] Netmiko device type: %s", idx, device_type)
 
                     # Execute commands using Netmiko
-                    logger.info(f"[{idx}] Connecting via SSH and executing commands...")
+                    logger.info(
+                        "[%s] Connecting via SSH and executing commands...", idx
+                    )
                     result = netmiko_service._connect_and_execute(
                         device_ip=primary_ip,
                         device_type=device_type,
@@ -470,7 +474,7 @@ def execute_run_commands(
                     if result["success"]:
                         device_result["success"] = True
                         device_result["output"] = result["output"]
-                        logger.info(f"[{idx}] ✓ Commands executed successfully")
+                        logger.info("[%s] ✓ Commands executed successfully", idx)
                         logger.info(
                             f"[{idx}]   - Output length: {len(result['output'])} chars"
                         )
@@ -485,7 +489,7 @@ def execute_run_commands(
                         failed_devices.append(device_result)
 
                 except Exception as e:
-                    logger.error(f"[{idx}] ✗ Exception: {e}", exc_info=True)
+                    logger.error("[%s] ✗ Exception: %s", idx, e, exc_info=True)
                     device_result["error"] = str(e)
                     failed_devices.append(device_result)
 
@@ -495,8 +499,8 @@ def execute_run_commands(
         logger.info("\n" + "=" * 80)
         logger.info("COMMAND EXECUTION SUMMARY")
         logger.info("=" * 80)
-        logger.info(f"Successful: {len(successful_devices)}")
-        logger.info(f"Failed: {len(failed_devices)}")
+        logger.info("Successful: %s", len(successful_devices))
+        logger.info("Failed: %s", len(failed_devices))
 
         task_context.update_state(
             state="PROGRESS",
@@ -527,7 +531,7 @@ def execute_run_commands(
         logger.error("=" * 80)
         logger.error("RUN COMMANDS EXECUTOR FAILED")
         logger.error("=" * 80)
-        logger.error(f"Exception: {e}", exc_info=True)
+        logger.error("Exception: %s", e, exc_info=True)
         return {
             "success": False,
             "error": str(e),

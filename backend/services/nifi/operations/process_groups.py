@@ -44,7 +44,9 @@ def get_process_group(
         result["disabled_count"] = getattr(pg, "disabled_count", 0)
 
     # Add version control info
-    if hasattr(pg, "component") and hasattr(pg.component, "version_control_information"):
+    if hasattr(pg, "component") and hasattr(
+        pg.component, "version_control_information"
+    ):
         vci = pg.component.version_control_information
         if vci:
             result["version_control"] = {
@@ -72,7 +74,9 @@ def list_child_process_groups(parent_pg_id: str) -> List[Dict[str, Any]]:
                 "disabled_count": getattr(pg, "disabled_count", 0),
             }
 
-            if hasattr(pg, "component") and hasattr(pg.component, "version_control_information"):
+            if hasattr(pg, "component") and hasattr(
+                pg.component, "version_control_information"
+            ):
                 vci = pg.component.version_control_information
                 if vci:
                     pg_data["version_control"] = {
@@ -93,12 +97,20 @@ def get_output_ports(pg_id: str) -> List[Dict[str, Any]]:
     ports = []
     if hasattr(response, "output_ports") and response.output_ports:
         for port in response.output_ports:
-            ports.append({
-                "id": port.id,
-                "name": port.component.name if hasattr(port, "component") else "Unknown",
-                "state": port.component.state if hasattr(port, "component") else "UNKNOWN",
-                "comments": getattr(port.component, "comments", None) if hasattr(port, "component") else None,
-            })
+            ports.append(
+                {
+                    "id": port.id,
+                    "name": port.component.name
+                    if hasattr(port, "component")
+                    else "Unknown",
+                    "state": port.component.state
+                    if hasattr(port, "component")
+                    else "UNKNOWN",
+                    "comments": getattr(port.component, "comments", None)
+                    if hasattr(port, "component")
+                    else None,
+                }
+            )
 
     return ports
 
@@ -111,13 +123,25 @@ def get_input_ports(pg_id: str) -> List[Dict[str, Any]]:
     ports = []
     if hasattr(response, "input_ports") and response.input_ports:
         for port in response.input_ports:
-            ports.append({
-                "id": port.id,
-                "name": port.component.name if hasattr(port, "component") else "Unknown",
-                "state": port.component.state if hasattr(port, "component") else "UNKNOWN",
-                "comments": getattr(port.component, "comments", None) if hasattr(port, "component") else None,
-                "concurrent_tasks": getattr(port.component, "concurrently_schedulable_task_count", None) if hasattr(port, "component") else None,
-            })
+            ports.append(
+                {
+                    "id": port.id,
+                    "name": port.component.name
+                    if hasattr(port, "component")
+                    else "Unknown",
+                    "state": port.component.state
+                    if hasattr(port, "component")
+                    else "UNKNOWN",
+                    "comments": getattr(port.component, "comments", None)
+                    if hasattr(port, "component")
+                    else None,
+                    "concurrent_tasks": getattr(
+                        port.component, "concurrently_schedulable_task_count", None
+                    )
+                    if hasattr(port, "component")
+                    else None,
+                }
+            )
 
     return ports
 
@@ -129,14 +153,16 @@ def list_processors(pg_id: str) -> List[Dict[str, Any]]:
     result = []
     for proc in processors:
         comp = proc.component if hasattr(proc, "component") else None
-        result.append({
-            "id": proc.id,
-            "name": comp.name if comp else "Unknown",
-            "type": comp.type if comp else "Unknown",
-            "state": comp.state if comp else "UNKNOWN",
-            "parent_group_id": comp.parent_group_id if comp else None,
-            "comments": getattr(comp, "comments", None) if comp else None,
-        })
+        result.append(
+            {
+                "id": proc.id,
+                "name": comp.name if comp else "Unknown",
+                "type": comp.type if comp else "Unknown",
+                "state": comp.state if comp else "UNKNOWN",
+                "parent_group_id": comp.parent_group_id if comp else None,
+                "comments": getattr(comp, "comments", None) if comp else None,
+            }
+        )
 
     return result
 
@@ -202,9 +228,13 @@ def create_connection(
     return {
         "connection_id": created_conn.id,
         "source_id": source_id,
-        "source_name": source.component.name if hasattr(source, "component") else "Unknown",
+        "source_name": source.component.name
+        if hasattr(source, "component")
+        else "Unknown",
         "target_id": target_id,
-        "target_name": target.component.name if hasattr(target, "component") else "Unknown",
+        "target_name": target.component.name
+        if hasattr(target, "component")
+        else "Unknown",
     }
 
 
@@ -241,7 +271,9 @@ def stop_versioning(process_group_id: str) -> bool:
     if not pg:
         raise ValueError("Process group '%s' not found" % process_group_id)
 
-    if not hasattr(pg, "component") or not hasattr(pg.component, "version_control_information"):
+    if not hasattr(pg, "component") or not hasattr(
+        pg.component, "version_control_information"
+    ):
         return False
 
     if not pg.component.version_control_information:
@@ -293,18 +325,20 @@ def get_all_process_group_paths(start_pg_id: str = "root") -> Dict[str, Any]:
         current_id: Optional[str] = pg_id
         while current_id and current_id in pg_map:
             info = pg_map[current_id]
-            path.append({
-                "id": info["id"],
-                "name": info["name"],
-                "parent_group_id": info["parent_group_id"],
-            })
+            path.append(
+                {
+                    "id": info["id"],
+                    "name": info["name"],
+                    "parent_group_id": info["parent_group_id"],
+                }
+            )
             current_id = info["parent_group_id"]
         return path
 
     process_groups = []
     for pg_info in pg_map.values():
         path_chain = _build_path(pg_info["id"])
-        
+
         # Build string path (e.g., "/Parent/Child") and formatted path (e.g., "Parent → Child")
         if len(path_chain) <= 1:
             # Root level
@@ -316,13 +350,15 @@ def get_all_process_group_paths(start_pg_id: str = "root") -> Dict[str, Any]:
             # Skip root name for path string
             path_str = "/" + "/".join(names[1:]) if len(names) > 1 else "/"
             formatted_path = " → ".join(names)
-        
-        process_groups.append({
-            "id": pg_info["id"],
-            "name": pg_info["name"],
-            "path": path_str,
-            "level": len(path_chain) - 1,
-            "formatted_path": formatted_path,
-        })
+
+        process_groups.append(
+            {
+                "id": pg_info["id"],
+                "name": pg_info["name"],
+                "path": path_str,
+                "level": len(path_chain) - 1,
+                "formatted_path": formatted_path,
+            }
+        )
 
     return {"process_groups": process_groups, "root_id": root_pg_id}

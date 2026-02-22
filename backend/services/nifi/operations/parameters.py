@@ -24,7 +24,9 @@ def _extract_parameter_entity(param, context_id: str = None) -> Dict[str, Any]:
         "name": getattr(p, "name", "Unknown"),
         "description": getattr(p, "description", None),
         "sensitive": getattr(p, "sensitive", False),
-        "value": getattr(p, "value", None) if not getattr(p, "sensitive", False) else None,
+        "value": getattr(p, "value", None)
+        if not getattr(p, "sensitive", False)
+        else None,
         "provided": getattr(p, "provided", False),
         "referenced_attributes": getattr(p, "referenced_attributes", None),
         "parameter_context_id": context_id,
@@ -41,21 +43,29 @@ def _extract_context(context) -> Dict[str, Any]:
             parameters.append(_extract_parameter_entity(param, context_id))
 
     bound_groups = []
-    if hasattr(context, "component") and hasattr(context.component, "bound_process_groups"):
+    if hasattr(context, "component") and hasattr(
+        context.component, "bound_process_groups"
+    ):
         for pg in context.component.bound_process_groups:
             if hasattr(pg, "to_dict"):
                 bound_groups.append(pg.to_dict())
 
     inherited_contexts = []
-    if hasattr(context, "component") and hasattr(context.component, "inherited_parameter_contexts"):
+    if hasattr(context, "component") and hasattr(
+        context.component, "inherited_parameter_contexts"
+    ):
         for ipc in context.component.inherited_parameter_contexts:
             if hasattr(ipc, "id"):
                 inherited_contexts.append(ipc.id)
 
     return {
         "id": context_id,
-        "name": getattr(context.component, "name", "Unknown") if hasattr(context, "component") else "Unknown",
-        "description": getattr(context.component, "description", None) if hasattr(context, "component") else None,
+        "name": getattr(context.component, "name", "Unknown")
+        if hasattr(context, "component")
+        else "Unknown",
+        "description": getattr(context.component, "description", None)
+        if hasattr(context, "component")
+        else None,
         "parameters": parameters,
         "bound_process_groups": bound_groups or None,
         "inherited_parameter_contexts": inherited_contexts or None,
@@ -66,7 +76,8 @@ def _extract_context(context) -> Dict[str, Any]:
         ),
         "permissions": (
             context.permissions.to_dict()
-            if hasattr(context, "permissions") and hasattr(context.permissions, "to_dict")
+            if hasattr(context, "permissions")
+            and hasattr(context.permissions, "to_dict")
             else None
         ),
     }
@@ -88,7 +99,10 @@ def list_parameter_contexts(
         flow_api = FlowApi()
         param_contexts_entity = flow_api.get_parameter_contexts()
 
-        if hasattr(param_contexts_entity, "parameter_contexts") and param_contexts_entity.parameter_contexts:
+        if (
+            hasattr(param_contexts_entity, "parameter_contexts")
+            and param_contexts_entity.parameter_contexts
+        ):
             for context in param_contexts_entity.parameter_contexts:
                 contexts_list.append(_extract_context(context))
 
@@ -113,7 +127,7 @@ def create_parameter_context(
 ) -> Dict[str, Any]:
     """Create a new parameter context."""
     param_entities = []
-    for param in (parameters or []):
+    for param in parameters or []:
         param_dto = ParameterDTO(
             name=param["name"],
             description=param.get("description"),
@@ -204,13 +218,16 @@ def update_parameter_context(
                 ParameterContextReferenceEntity,
                 ParameterContextReferenceDTO,
             )
+
             inherited_refs = []
             for ctx_id in inherited_parameter_contexts:
                 try:
                     ref_context = param_api.get_parameter_context(id=ctx_id)
                     ref_dto = ParameterContextReferenceDTO(
                         id=ctx_id,
-                        name=ref_context.component.name if hasattr(ref_context, "component") else None,
+                        name=ref_context.component.name
+                        if hasattr(ref_context, "component")
+                        else None,
                     )
                     ref_entity = ParameterContextReferenceEntity(
                         id=ctx_id,
@@ -220,7 +237,9 @@ def update_parameter_context(
                     inherited_refs.append(ref_entity)
                 except Exception:
                     ref_dto = ParameterContextReferenceDTO(id=ctx_id)
-                    inherited_refs.append(ParameterContextReferenceEntity(id=ctx_id, component=ref_dto))
+                    inherited_refs.append(
+                        ParameterContextReferenceEntity(id=ctx_id, component=ref_dto)
+                    )
 
             existing_context.component.inherited_parameter_contexts = inherited_refs
 
@@ -237,10 +256,17 @@ def update_parameter_context(
         )
 
         if status_response.request.complete:
-            if hasattr(status_response.request, "failure_reason") and status_response.request.failure_reason:
-                raise ValueError("Update failed: %s" % status_response.request.failure_reason)
+            if (
+                hasattr(status_response.request, "failure_reason")
+                and status_response.request.failure_reason
+            ):
+                raise ValueError(
+                    "Update failed: %s" % status_response.request.failure_reason
+                )
 
-            param_api.delete_update_request(context_id=context_id, request_id=request_id)
+            param_api.delete_update_request(
+                context_id=context_id, request_id=request_id
+            )
 
             updated_context = param_api.get_parameter_context(id=context_id)
             actual_count = (

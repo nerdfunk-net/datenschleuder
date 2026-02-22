@@ -169,7 +169,7 @@ def update_job_schedule(
 
     schedule = repo.update(job_id, **update_data)
     if schedule:
-        logger.info(f"Updated job schedule ID: {job_id}")
+        logger.info("Updated job schedule ID: %s", job_id)
         return _model_to_dict(schedule)
     return None
 
@@ -178,7 +178,7 @@ def delete_job_schedule(job_id: int) -> bool:
     """Delete a job schedule"""
     deleted = repo.delete(job_id)
     if deleted:
-        logger.info(f"Deleted job schedule ID: {job_id}")
+        logger.info("Deleted job schedule ID: %s", job_id)
     return deleted
 
 
@@ -304,7 +304,9 @@ def calculate_next_run(
             cron = croniter(schedule["cron_expression"], base_time)
             return cron.get_next(datetime)
         except (ValueError, KeyError) as e:
-            logger.error(f"Invalid cron expression: {schedule['cron_expression']}: {e}")
+            logger.error(
+                "Invalid cron expression: %s: %s", schedule["cron_expression"], e
+            )
             return None
 
     elif schedule_type == "interval":
@@ -390,7 +392,7 @@ def calculate_and_update_next_run(job_id: int) -> Optional[Dict[str, Any]]:
     """
     schedule = get_job_schedule(job_id)
     if not schedule:
-        logger.warning(f"Schedule {job_id} not found for next_run calculation")
+        logger.warning("Schedule %s not found for next_run calculation", job_id)
         return None
 
     now = datetime.now(timezone.utc)

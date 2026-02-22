@@ -38,15 +38,15 @@ def main():
     logger = logging.getLogger(__name__)
 
     # Log current log level for verification
-    logger.debug(f"DEBUG: Logging configured at {settings.log_level} level")
-    logger.debug(f"DEBUG: Environment LOG_LEVEL = {os.getenv('LOG_LEVEL', 'not set')}")
+    logger.debug("DEBUG: Logging configured at %s level", settings.log_level)
+    logger.debug("DEBUG: Environment LOG_LEVEL = %s", os.getenv("LOG_LEVEL", "not set"))
 
     # Log startup information
     logger.info("Starting Datenschleuder Backend Server")
-    logger.info(f"Server: {settings.host}:{settings.port}")
-    logger.info(f"Log Level: {settings.log_level}")
-    logger.info(f"Data Directory: {settings.data_directory}")
-    logger.info(f"Git SSL Verification: {settings.git_ssl_verify}")
+    logger.info("Server: %s:%s", settings.host, settings.port)
+    logger.info("Log Level: %s", settings.log_level)
+    logger.info("Data Directory: %s", settings.data_directory)
+    logger.info("Git SSL Verification: %s", settings.git_ssl_verify)
 
     # Start the server
     # Get the backend directory path

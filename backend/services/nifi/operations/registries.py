@@ -1,7 +1,7 @@
 """NiFi registry operations - pure nipyapi logic."""
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 from nipyapi import versioning
 from nipyapi.nifi import FlowApi
@@ -14,28 +14,35 @@ def list_registry_clients() -> List[Dict[str, Any]]:
     registry_clients_entity = versioning.list_registry_clients()
 
     clients_list = []
-    if hasattr(registry_clients_entity, "registries") and registry_clients_entity.registries:
+    if (
+        hasattr(registry_clients_entity, "registries")
+        and registry_clients_entity.registries
+    ):
         for client in registry_clients_entity.registries:
             client_data = {
                 "id": client.id if hasattr(client, "id") else "Unknown",
                 "name": (
                     client.component.name
-                    if hasattr(client, "component") and hasattr(client.component, "name")
+                    if hasattr(client, "component")
+                    and hasattr(client.component, "name")
                     else "Unknown"
                 ),
                 "uri": (
                     client.component.properties.get("url", "N/A")
-                    if hasattr(client, "component") and hasattr(client.component, "properties")
+                    if hasattr(client, "component")
+                    and hasattr(client.component, "properties")
                     else "N/A"
                 ),
                 "description": (
                     client.component.description
-                    if hasattr(client, "component") and hasattr(client.component, "description")
+                    if hasattr(client, "component")
+                    and hasattr(client.component, "description")
                     else ""
                 ),
                 "type": (
                     client.component.type
-                    if hasattr(client, "component") and hasattr(client.component, "type")
+                    if hasattr(client, "component")
+                    and hasattr(client.component, "type")
                     else "Unknown"
                 ),
             }
@@ -50,7 +57,10 @@ def get_registry_buckets(registry_id: str) -> Dict[str, Any]:
     registry_client = None
     registry_type = "Unknown"
 
-    if hasattr(registry_clients_entity, "registries") and registry_clients_entity.registries:
+    if (
+        hasattr(registry_clients_entity, "registries")
+        and registry_clients_entity.registries
+    ):
         for client in registry_clients_entity.registries:
             if client.id == registry_id:
                 registry_client = client
@@ -76,17 +86,20 @@ def get_registry_buckets(registry_id: str) -> Dict[str, Any]:
                 ),
                 "description": (
                     bucket.bucket.description
-                    if hasattr(bucket, "bucket") and hasattr(bucket.bucket, "description")
+                    if hasattr(bucket, "bucket")
+                    and hasattr(bucket.bucket, "description")
                     else ""
                 ),
                 "created_timestamp": (
                     bucket.bucket.created_timestamp
-                    if hasattr(bucket, "bucket") and hasattr(bucket.bucket, "created_timestamp")
+                    if hasattr(bucket, "bucket")
+                    and hasattr(bucket.bucket, "created_timestamp")
                     else None
                 ),
                 "permissions": (
                     bucket.permissions.to_dict()
-                    if hasattr(bucket, "permissions") and hasattr(bucket.permissions, "to_dict")
+                    if hasattr(bucket, "permissions")
+                    and hasattr(bucket.permissions, "to_dict")
                     else {}
                 ),
             }
@@ -109,19 +122,23 @@ def get_registry_details(registry_id: str) -> Dict[str, Any]:
 
     registry_name = (
         registry_client.component.name
-        if hasattr(registry_client, "component") and hasattr(registry_client.component, "name")
+        if hasattr(registry_client, "component")
+        and hasattr(registry_client.component, "name")
         else "Unknown"
     )
     registry_type = (
         registry_client.component.type
-        if hasattr(registry_client, "component") and hasattr(registry_client.component, "type")
+        if hasattr(registry_client, "component")
+        and hasattr(registry_client.component, "type")
         else "Unknown"
     )
 
     properties = {}
     github_url = None
 
-    if hasattr(registry_client, "component") and hasattr(registry_client.component, "properties"):
+    if hasattr(registry_client, "component") and hasattr(
+        registry_client.component, "properties"
+    ):
         properties = registry_client.component.properties
 
         if "github" in registry_type.lower():
@@ -175,9 +192,7 @@ def get_bucket_flows(registry_id: str, bucket_id: str) -> Dict[str, Any]:
     }
 
 
-def get_flow_versions(
-    registry_id: str, bucket_id: str, flow_id: str
-) -> Dict[str, Any]:
+def get_flow_versions(registry_id: str, bucket_id: str, flow_id: str) -> Dict[str, Any]:
     """Get list of all versions for a specific flow."""
     flow_versions = versioning.list_flow_versions(
         bucket_id=bucket_id,
@@ -196,7 +211,9 @@ def get_flow_versions(
                     "timestamp": getattr(metadata, "timestamp", None),
                     "comments": getattr(metadata, "comments", ""),
                     "author": getattr(metadata, "author", "Unknown"),
-                    "bucket_identifier": getattr(metadata, "bucket_identifier", bucket_id),
+                    "bucket_identifier": getattr(
+                        metadata, "bucket_identifier", bucket_id
+                    ),
                     "flow_identifier": getattr(metadata, "flow_identifier", flow_id),
                 }
                 versions_list.append(version_data)

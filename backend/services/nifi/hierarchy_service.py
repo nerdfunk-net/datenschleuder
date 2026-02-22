@@ -4,10 +4,21 @@ import json
 import logging
 from typing import List
 
-from sqlalchemy import Table, Column, Integer, String, Boolean, DateTime, Text, MetaData, inspect, text
+from sqlalchemy import (
+    Table,
+    Column,
+    Integer,
+    String,
+    Boolean,
+    DateTime,
+    Text,
+    MetaData,
+    inspect,
+    text,
+)
 from sqlalchemy.sql import func
 
-from core.models import Setting, HierarchyValue
+from core.models import Setting
 from core.database import get_db_session, engine
 from repositories.nifi.hierarchy_repository import HierarchyValueRepository
 
@@ -70,19 +81,26 @@ def create_nifi_flows_table(hierarchy: list) -> dict:
         columns.append(Column(f"src_{attr_name}", String, nullable=False, index=True))
         columns.append(Column(f"dest_{attr_name}", String, nullable=False, index=True))
 
-    columns.extend([
-        Column("name", String, nullable=True),
-        Column("contact", String, nullable=True),
-        Column("src_connection_param", String, nullable=False),
-        Column("dest_connection_param", String, nullable=False),
-        Column("src_template_id", Integer, nullable=True),
-        Column("dest_template_id", Integer, nullable=True),
-        Column("active", Boolean, nullable=False, default=True),
-        Column("description", Text, nullable=True),
-        Column("creator_name", String, nullable=True),
-        Column("created_at", DateTime(timezone=True), server_default=func.now()),
-        Column("updated_at", DateTime(timezone=True), server_default=func.now(), onupdate=func.now()),
-    ])
+    columns.extend(
+        [
+            Column("name", String, nullable=True),
+            Column("contact", String, nullable=True),
+            Column("src_connection_param", String, nullable=False),
+            Column("dest_connection_param", String, nullable=False),
+            Column("src_template_id", Integer, nullable=True),
+            Column("dest_template_id", Integer, nullable=True),
+            Column("active", Boolean, nullable=False, default=True),
+            Column("description", Text, nullable=True),
+            Column("creator_name", String, nullable=True),
+            Column("created_at", DateTime(timezone=True), server_default=func.now()),
+            Column(
+                "updated_at",
+                DateTime(timezone=True),
+                server_default=func.now(),
+                onupdate=func.now(),
+            ),
+        ]
+    )
 
     Table("nifi_flows", metadata, *columns)
     metadata.create_all(engine)
@@ -96,7 +114,9 @@ def create_nifi_flows_table(hierarchy: list) -> dict:
         for attr in hierarchy
     ]
 
-    logger.info("Recreated nifi_flows table with %d hierarchy columns", len(hierarchy_columns))
+    logger.info(
+        "Recreated nifi_flows table with %d hierarchy columns", len(hierarchy_columns)
+    )
     return {
         "table_name": "nifi_flows",
         "hierarchy_columns": hierarchy_columns,
@@ -173,7 +193,9 @@ def get_deployment_settings() -> dict:
     """Get deployment settings."""
     db = get_db_session()
     try:
-        global_setting = db.query(Setting).filter(Setting.key == "deployment_config").first()
+        global_setting = (
+            db.query(Setting).filter(Setting.key == "deployment_config").first()
+        )
         global_settings = (
             json.loads(global_setting.value)
             if global_setting and global_setting.value
@@ -185,7 +207,9 @@ def get_deployment_settings() -> dict:
             }
         )
 
-        path_setting = db.query(Setting).filter(Setting.key == "deployment_paths").first()
+        path_setting = (
+            db.query(Setting).filter(Setting.key == "deployment_paths").first()
+        )
         path_settings = (
             json.loads(path_setting.value)
             if path_setting and path_setting.value

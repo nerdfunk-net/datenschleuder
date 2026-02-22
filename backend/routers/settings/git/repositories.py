@@ -46,7 +46,7 @@ async def get_repositories(
             repositories=repo_responses, total=len(repo_responses)
         )
     except Exception as e:
-        logger.error(f"Error getting repositories: {e}")
+        logger.error("Error getting repositories: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -68,7 +68,7 @@ async def get_repository(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting repository {repo_id}: {e}")
+        logger.error("Error getting repository %s: %s", repo_id, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -88,7 +88,7 @@ async def get_repository_for_edit(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting repository {repo_id} for edit: {e}")
+        logger.error("Error getting repository %s for edit: %s", repo_id, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -119,7 +119,7 @@ async def create_repository(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Error creating repository: {e}")
+        logger.error("Error creating repository: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -165,7 +165,7 @@ async def update_repository(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Error updating repository {repo_id}: {e}")
+        logger.error("Error updating repository %s: %s", repo_id, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -191,7 +191,7 @@ async def delete_repository(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error deleting repository {repo_id}: {e}")
+        logger.error("Error deleting repository %s: %s", repo_id, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -219,7 +219,7 @@ async def test_git_connection(
         )
         return result
     except Exception as e:
-        logger.error(f"Exception in test_git_connection endpoint: {e}", exc_info=True)
+        logger.error("Exception in test_git_connection endpoint: %s", e, exc_info=True)
         raise
 
 
@@ -232,5 +232,5 @@ async def health_check(
         health = git_repo_manager.health_check()
         return health
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
+        logger.error("Health check failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))

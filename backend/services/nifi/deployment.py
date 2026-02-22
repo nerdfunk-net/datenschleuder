@@ -37,12 +37,12 @@ class NiFiDeploymentService:
 
         try:
             bucket = versioning.get_registry_bucket(bucket_id)
-            flow = versioning.get_flow_in_bucket(
-                bucket.identifier, identifier=flow_id
-            )
+            flow = versioning.get_flow_in_bucket(bucket.identifier, identifier=flow_id)
             return bucket.identifier, flow.identifier
         except Exception as lookup_error:
-            logger.warning("Could not lookup bucket/flow, using provided values: %s", lookup_error)
+            logger.warning(
+                "Could not lookup bucket/flow, using provided values: %s", lookup_error
+            )
             return bucket_id, flow_id
 
     def get_deploy_version(
@@ -75,7 +75,9 @@ class NiFiDeploymentService:
                         key=lambda x: x.versioned_flow_snapshot_metadata.timestamp,
                         reverse=True,
                     )
-                    deploy_version = sorted_versions[0].versioned_flow_snapshot_metadata.version
+                    deploy_version = sorted_versions[
+                        0
+                    ].versioned_flow_snapshot_metadata.version
                     logger.info("Latest version selected: %s", deploy_version)
                     return deploy_version
 
@@ -109,7 +111,9 @@ class NiFiDeploymentService:
         except ValueError:
             raise
         except Exception as check_error:
-            logger.warning("Could not check for existing process group: %s", check_error)
+            logger.warning(
+                "Could not check for existing process group: %s", check_error
+            )
 
     def deploy_flow_version(
         self,
@@ -122,8 +126,12 @@ class NiFiDeploymentService:
         y_position: int = 0,
     ) -> Any:
         """Deploy flow version to NiFi."""
-        logger.info("Deploying flow - Bucket: %s, Flow: %s, Version: %s",
-                     bucket_identifier, flow_identifier, deploy_version)
+        logger.info(
+            "Deploying flow - Bucket: %s, Flow: %s, Version: %s",
+            bucket_identifier,
+            flow_identifier,
+            deploy_version,
+        )
 
         deployed_pg = versioning.deploy_flow_version(
             parent_id=parent_pg_id,
@@ -242,11 +250,17 @@ class NiFiDeploymentService:
                 target=target_port,
                 name="%s to %s" % (source_name, target_name),
             )
-            logger.info("Created %s connection: '%s' -> '%s'",
-                        port_type, source_name, target_name)
+            logger.info(
+                "Created %s connection: '%s' -> '%s'",
+                port_type,
+                source_name,
+                target_name,
+            )
 
         except Exception as connect_error:
-            logger.warning("Could not auto-connect %s ports: %s", port_type, connect_error)
+            logger.warning(
+                "Could not auto-connect %s ports: %s", port_type, connect_error
+            )
 
     def _connect_input_ports(
         self, pg_api: ProcessGroupsApi, child_pg_id: str, parent_pg_id: str
@@ -327,9 +341,7 @@ class NiFiDeploymentService:
             # RouteOnAttribute processor found - configure and connect
             child_pg = pg_api.get_process_group(id=child_pg_id)
             child_pg_name = (
-                child_pg.component.name
-                if hasattr(child_pg, "component")
-                else "Unknown"
+                child_pg.component.name if hasattr(child_pg, "component") else "Unknown"
             )
 
             route_processor_id = route_processor.id
@@ -341,12 +353,18 @@ class NiFiDeploymentService:
             )
             properties = {}
 
-            if config_obj and hasattr(config_obj, "properties") and config_obj.properties:
+            if (
+                config_obj
+                and hasattr(config_obj, "properties")
+                and config_obj.properties
+            ):
                 properties = dict(config_obj.properties)
 
             property_exists = child_pg_name in properties
             routing_strategy = properties.get("Routing Strategy", "")
-            needs_update = not property_exists or routing_strategy != "Route to Property name"
+            needs_update = (
+                not property_exists or routing_strategy != "Route to Property name"
+            )
 
             if needs_update:
                 current_state = (
@@ -363,9 +381,9 @@ class NiFiDeploymentService:
                         pass
 
                 if not property_exists:
-                    property_value = (
-                        "${%s:equalsIgnoreCase('%s')}"
-                        % (self.last_hierarchy_attr, child_pg_name)
+                    property_value = "${%s:equalsIgnoreCase('%s')}" % (
+                        self.last_hierarchy_attr,
+                        child_pg_name,
                     )
                     properties[child_pg_name] = property_value
 
@@ -430,7 +448,9 @@ class NiFiDeploymentService:
         as reported by nipyapi.
         """
         try:
-            result = canvas.schedule_process_group(pg_id, scheduled=True, identifier_type="id")
+            result = canvas.schedule_process_group(
+                pg_id, scheduled=True, identifier_type="id"
+            )
             if result:
                 logger.info("Process group %s started", pg_id)
             else:
@@ -534,10 +554,14 @@ class NiFiDeploymentService:
             )
 
             if not param_context:
-                logger.warning("Parameter context '%s' not found", parameter_context_name)
+                logger.warning(
+                    "Parameter context '%s' not found", parameter_context_name
+                )
                 return
 
-            param_context_id = param_context.id if hasattr(param_context, "id") else None
+            param_context_id = (
+                param_context.id if hasattr(param_context, "id") else None
+            )
             if not param_context_id:
                 return
 
@@ -569,11 +593,11 @@ class NiFiDeploymentService:
 
 def find_or_create_process_group_by_path(path: str) -> str:
     """Find process group ID by path, creating missing parent process groups if needed."""
-    logger.info("="*80)
+    logger.info("=" * 80)
     logger.info("FIND OR CREATE PROCESS GROUP BY PATH")
-    logger.info("="*80)
+    logger.info("=" * 80)
     logger.info("Input path: '%s'", path)
-    
+
     if not path or path == "/" or path == "":
         logger.info("Empty or root path provided, returning root PG ID")
         root_id = canvas.get_root_pg_id()
@@ -582,7 +606,7 @@ def find_or_create_process_group_by_path(path: str) -> str:
 
     path_parts = [p.strip() for p in path.split("/") if p.strip()]
     logger.info("Path parts after split: %s", path_parts)
-    
+
     if not path_parts:
         logger.info("No path parts after filtering, returning root PG ID")
         return canvas.get_root_pg_id()
@@ -615,13 +639,18 @@ def find_or_create_process_group_by_path(path: str) -> str:
             "name": pg.component.name,
             "parent_group_id": pg.component.parent_group_id,
         }
-    
+
     logger.info("Built pg_map with %d entries", len(pg_map))
     if len(pg_map) <= 10:
         for pg_id, pg_info in pg_map.items():
-            logger.info("  - PG: %s (parent: %s, name: '%s')", 
-                       pg_id[:8], pg_info["parent_group_id"][:8] if pg_info["parent_group_id"] else "None", 
-                       pg_info["name"])
+            logger.info(
+                "  - PG: %s (parent: %s, name: '%s')",
+                pg_id[:8],
+                pg_info["parent_group_id"][:8]
+                if pg_info["parent_group_id"]
+                else "None",
+                pg_info["name"],
+            )
 
     def build_path_parts(pg_id):
         parts = []
@@ -637,7 +666,7 @@ def find_or_create_process_group_by_path(path: str) -> str:
         pg_path_parts = build_path_parts(pg_id)
         if pg_path_parts == path_parts:
             logger.info("✅ FOUND EXACT MATCH: PG ID=%s, Path=%s", pg_id, pg_path_parts)
-            logger.info("="*80)
+            logger.info("=" * 80)
             return pg_id
 
     logger.info("No exact match found, will create missing PG hierarchy")
@@ -654,27 +683,37 @@ def find_or_create_process_group_by_path(path: str) -> str:
                 current_parent_id = pg_id
                 existing_depth = i + 1
                 found = True
-                logger.info("  Partial path %s exists at depth %d (PG ID: %s)", 
-                           partial_path, i + 1, pg_id[:8])
+                logger.info(
+                    "  Partial path %s exists at depth %d (PG ID: %s)",
+                    partial_path,
+                    i + 1,
+                    pg_id[:8],
+                )
                 break
         if not found:
-            logger.info("  Partial path %s does NOT exist, will create from here", partial_path)
+            logger.info(
+                "  Partial path %s does NOT exist, will create from here", partial_path
+            )
             break
 
     logger.info("Existing hierarchy depth: %d of %d", existing_depth, len(path_parts))
     logger.info("Creating missing process groups from depth %d...", existing_depth)
-    
+
     for i in range(existing_depth, len(path_parts)):
         pg_name = path_parts[i]
-        logger.info("  Creating PG '%s' under parent %s...", pg_name, current_parent_id[:8])
+        logger.info(
+            "  Creating PG '%s' under parent %s...", pg_name, current_parent_id[:8]
+        )
         new_pg = canvas.create_process_group(
             parent_pg=canvas.get_process_group(current_parent_id, "id"),
             new_pg_name=pg_name,
             location=(0.0, 0.0),
         )
         current_parent_id = new_pg.id
-        logger.info("  ✅ Created process group '%s' (ID: %s)", pg_name, current_parent_id[:8])
+        logger.info(
+            "  ✅ Created process group '%s' (ID: %s)", pg_name, current_parent_id[:8]
+        )
 
     logger.info("Final parent PG ID: %s", current_parent_id)
-    logger.info("="*80)
+    logger.info("=" * 80)
     return current_parent_id

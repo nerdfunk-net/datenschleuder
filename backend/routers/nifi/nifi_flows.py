@@ -46,7 +46,7 @@ async def create_flow(
             dest_template_id=data.dest_template_id,
             active=data.active,
             description=data.description,
-            creator_name=data.creator_name or user.get("username"),
+            creator_name=data.creator_name or current_user.get("username"),
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

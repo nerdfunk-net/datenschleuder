@@ -9,8 +9,12 @@ from datetime import datetime
 
 # Valid job template types (cache_devices removed - now handled by system tasks)
 JobTemplateType = Literal[
-    "backup", "compare_devices", "run_commands", "sync_devices", "scan_prefixes",
-    "deploy_agent"
+    "backup",
+    "compare_devices",
+    "run_commands",
+    "sync_devices",
+    "scan_prefixes",
+    "deploy_agent",
 ]
 
 # Inventory source options
@@ -25,7 +29,9 @@ class DeployTemplateEntry(BaseModel):
         None, description="Inventory ID for this template's rendering context"
     )
     path: Optional[str] = Field(
-        None, max_length=500, description="Deployment file path (overrides template default)"
+        None,
+        max_length=500,
+        description="Deployment file path (overrides template default)",
     )
     custom_variables: Optional[Dict[str, Any]] = Field(
         None, description="User variable overrides for this template"

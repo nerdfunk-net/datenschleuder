@@ -113,5 +113,5 @@ def check_job_schedules_task() -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"check_job_schedules task failed: {e}", exc_info=True)
+        logger.error("check_job_schedules task failed: %s", e, exc_info=True)
         return {"success": False, "error": str(e)}

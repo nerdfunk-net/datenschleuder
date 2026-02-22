@@ -4,7 +4,7 @@ import logging
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from core.auth import verify_token, require_permission
+from core.auth import require_permission
 from models.nifi_instance import (
     NifiInstanceCreate,
     NifiInstanceUpdate,
@@ -50,7 +50,9 @@ async def list_nifi_instances(
             "id": instances[0].id,
             "hierarchy_attribute": instances[0].hierarchy_attribute,
             "hierarchy_value": instances[0].hierarchy_value,
-        } if instances else None
+        }
+        if instances
+        else None,
     )
     return instances
 
@@ -70,7 +72,9 @@ async def get_nifi_instance(
     return instance
 
 
-@router.post("/", response_model=NifiInstanceResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=NifiInstanceResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_nifi_instance(
     data: NifiInstanceCreate,
     current_user: dict = Depends(require_permission("nifi", "write")),
@@ -136,7 +140,9 @@ async def test_nifi_connection(
     """Test connection with provided NiFi credentials (without saving)."""
     logger.debug(
         "Test connection request: url=%s username=%s verify_ssl=%s",
-        data.nifi_url, data.username, data.verify_ssl,
+        data.nifi_url,
+        data.username,
+        data.verify_ssl,
     )
     try:
         result = instance_service.test_new_connection(
@@ -187,7 +193,9 @@ async def test_instance_connection(
             detail=str(e),
         )
     except Exception as e:
-        logger.error("Test connection failed for instance id=%d: %s", instance_id, str(e))
+        logger.error(
+            "Test connection failed for instance id=%d: %s", instance_id, str(e)
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail={

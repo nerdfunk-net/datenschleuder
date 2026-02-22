@@ -42,7 +42,9 @@ class GitOperationsService:
             Exception: If sync operation fails
         """
         repo_path = str(get_repo_path(repository))
-        logger.info(f"Syncing repository '{repository['name']}' to path: {repo_path}")
+        logger.info(
+            "Syncing repository '%s' to path: %s", repository["name"], repo_path
+        )
 
         os.makedirs(os.path.dirname(repo_path), exist_ok=True)
 
@@ -72,7 +74,7 @@ class GitOperationsService:
                         parent_dir, f"{base_name}_backup_{int(time.time())}"
                     )
                     shutil.move(repo_path, backup_path)
-                    logger.info(f"Backed up existing directory to {backup_path}")
+                    logger.info("Backed up existing directory to %s", backup_path)
 
                 # Clone repository
                 try:
@@ -98,7 +100,7 @@ class GitOperationsService:
                     logger.info(message)
                 except GitCommandError as gce:
                     err = str(gce)
-                    logger.error(f"Git clone failed: {err}")
+                    logger.error("Git clone failed: %s", err)
                     if "authentication" in err.lower():
                         message = (
                             "Authentication failed. Please check your Git credentials."
@@ -108,7 +110,7 @@ class GitOperationsService:
                     else:
                         message = f"Git clone failed: {err}"
                 except Exception as e:
-                    logger.error(f"Unexpected error during Git clone: {e}")
+                    logger.error("Unexpected error during Git clone: %s", e)
                     message = f"Unexpected error: {str(e)}"
                 finally:
                     # Cleanup empty directory after failed clone
@@ -123,7 +125,7 @@ class GitOperationsService:
                                 f"Removed empty directory after failed clone: {repo_path}"
                             )
                     except Exception as ce:
-                        logger.warning(f"Cleanup after failed clone skipped: {ce}")
+                        logger.warning("Cleanup after failed clone skipped: %s", ce)
             else:
                 # Pull latest
                 try:
@@ -135,7 +137,7 @@ class GitOperationsService:
                         try:
                             origin.set_url(clone_url)
                         except Exception as e:
-                            logger.debug(f"Skipping remote URL update: {e}")
+                            logger.debug("Skipping remote URL update: %s", e)
 
                     with set_ssl_env(repository):
                         origin.pull(repository["branch"])
@@ -145,7 +147,7 @@ class GitOperationsService:
                         )
                         logger.info(message)
                 except Exception as e:
-                    logger.error(f"Error during Git pull: {e}")
+                    logger.error("Error during Git pull: %s", e)
                     message = f"Pull failed: {str(e)}"
 
         return SyncResult(
@@ -174,9 +176,9 @@ class GitOperationsService:
         if os.path.exists(repo_path):
             try:
                 shutil.rmtree(repo_path, ignore_errors=True)
-                logger.info(f"Removed existing repository at {repo_path}")
+                logger.info("Removed existing repository at %s", repo_path)
             except Exception as e:
-                logger.error(f"Failed to remove repository: {e}")
+                logger.error("Failed to remove repository: %s", e)
 
         # Ensure parent directory exists
         os.makedirs(os.path.dirname(repo_path), exist_ok=True)
@@ -214,7 +216,7 @@ class GitOperationsService:
 
             except GitCommandError as gce:
                 err = str(gce)
-                logger.error(f"Git clone failed: {err}")
+                logger.error("Git clone failed: %s", err)
                 if "authentication" in err.lower():
                     message = (
                         "Authentication failed. Please check your Git credentials."
@@ -224,7 +226,7 @@ class GitOperationsService:
                 else:
                     message = f"Git clone failed: {err}"
             except Exception as e:
-                logger.error(f"Unexpected error during Git clone: {e}")
+                logger.error("Unexpected error during Git clone: %s", e)
                 message = f"Unexpected error: {str(e)}"
             finally:
                 # Cleanup empty directory after failed clone
@@ -239,7 +241,7 @@ class GitOperationsService:
                             f"Removed empty directory after failed clone: {repo_path}"
                         )
                 except Exception as ce:
-                    logger.warning(f"Cleanup after failed clone skipped: {ce}")
+                    logger.warning("Cleanup after failed clone skipped: %s", ce)
 
         return SyncResult(
             success=success,
@@ -262,7 +264,7 @@ class GitOperationsService:
             CloneResult with success status and path
         """
         repo_path = target_path or str(get_repo_path(repository))
-        logger.info(f"Cloning repository '{repository['name']}' to {repo_path}")
+        logger.info("Cloning repository '%s' to %s", repository["name"], repo_path)
 
         success = False
         message = ""
@@ -283,7 +285,7 @@ class GitOperationsService:
                 message = f"Repository cloned successfully to {repo_path}"
 
         except Exception as e:
-            logger.error(f"Clone failed: {e}")
+            logger.error("Clone failed: %s", e)
             message = f"Clone failed: {str(e)}"
             # Cleanup on failure
             if os.path.exists(repo_path):
@@ -342,7 +344,7 @@ class GitOperationsService:
             try:
                 status_info["current_branch"] = repo.active_branch.name
             except Exception as e:
-                logger.warning(f"Could not get current branch: {e}")
+                logger.warning("Could not get current branch: %s", e)
                 status_info["current_branch"] = "HEAD"
 
             # Get current commit info (replaces subprocess git log)
@@ -357,13 +359,13 @@ class GitOperationsService:
                     status_info["last_commit_author"] = commit.author.name
                     status_info["last_commit_author_email"] = commit.author.email
             except Exception as e:
-                logger.warning(f"Could not get commit info: {e}")
+                logger.warning("Could not get commit info: %s", e)
 
             # Get list of branches (replaces subprocess git branch)
             try:
                 status_info["branches"] = [branch.name for branch in repo.branches]
             except Exception as e:
-                logger.warning(f"Could not list branches: {e}")
+                logger.warning("Could not list branches: %s", e)
 
             # Get recent commits using cache service
             try:
@@ -377,7 +379,7 @@ class GitOperationsService:
                     use_models=False,
                 )
             except Exception as e:
-                logger.warning(f"Could not get recent commits: {e}")
+                logger.warning("Could not get recent commits: %s", e)
                 status_info["commits"] = []
 
             # Check if repository is synced with remote (replaces subprocess git fetch/rev-list)
@@ -389,7 +391,7 @@ class GitOperationsService:
                     try:
                         origin.fetch()
                     except Exception as fetch_error:
-                        logger.debug(f"Fetch failed: {fetch_error}")
+                        logger.debug("Fetch failed: %s", fetch_error)
 
                     # Calculate commits behind/ahead using GitPython
                     try:
@@ -413,9 +415,9 @@ class GitOperationsService:
 
                             status_info["is_synced"] = status_info["behind_count"] == 0
                     except Exception as rev_error:
-                        logger.debug(f"Could not calculate ahead/behind: {rev_error}")
+                        logger.debug("Could not calculate ahead/behind: %s", rev_error)
             except Exception as e:
-                logger.warning(f"Could not check sync status: {e}")
+                logger.warning("Could not check sync status: %s", e)
                 status_info["is_synced"] = False
 
             # Get list of configuration files (filesystem operation)
@@ -434,10 +436,10 @@ class GitOperationsService:
 
                 status_info["config_files"].sort()
             except Exception as e:
-                logger.warning(f"Could not scan config files: {e}")
+                logger.warning("Could not scan config files: %s", e)
 
         except Exception as e:
-            logger.warning(f"Error checking Git repository status: {e}")
+            logger.warning("Error checking Git repository status: %s", e)
 
         return status_info
 

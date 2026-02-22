@@ -77,7 +77,7 @@ def execute_sync_devices(
                 )
                 if devices_result and hasattr(devices_result, "devices"):
                     device_ids = [device.get("id") for device in devices_result.devices]
-                    logger.info(f"Fetched {len(device_ids)} devices from Nautobot")
+                    logger.info("Fetched %s devices from Nautobot", len(device_ids))
                 else:
                     logger.warning("No devices found in Nautobot")
                     device_ids = []
@@ -98,7 +98,7 @@ def execute_sync_devices(
         failed_count = 0
         results = []
 
-        logger.info(f"Starting sync of {total_devices} devices to CheckMK")
+        logger.info("Starting sync of %s devices to CheckMK", total_devices)
 
         # Process each device
         for i, device_id in enumerate(device_ids):
@@ -172,7 +172,7 @@ def execute_sync_devices(
             except Exception as e:
                 failed_count += 1
                 error_msg = str(e)
-                logger.error(f"Error syncing device {device_id}: {error_msg}")
+                logger.error("Error syncing device %s: %s", device_id, error_msg)
                 results.append(
                     {
                         "device_id": device_id,
@@ -199,9 +199,9 @@ def execute_sync_devices(
         activate_changes = True
 
         # Log template details for debugging
-        logger.info(f"[ACTIVATION DEBUG] Template provided: {template is not None}")
+        logger.info("[ACTIVATION DEBUG] Template provided: %s", template is not None)
         if template:
-            logger.info(f"[ACTIVATION DEBUG] Template keys: {list(template.keys())}")
+            logger.info("[ACTIVATION DEBUG] Template keys: %s", list(template.keys()))
             logger.info(
                 f"[ACTIVATION DEBUG] activate_changes_after_sync in template: {'activate_changes_after_sync' in template}"
             )
@@ -213,7 +213,7 @@ def execute_sync_devices(
         logger.info(
             f"[ACTIVATION DEBUG] Final activate_changes value: {activate_changes}"
         )
-        logger.info(f"[ACTIVATION DEBUG] success_count: {success_count}")
+        logger.info("[ACTIVATION DEBUG] success_count: %s", success_count)
         logger.info(
             f"[ACTIVATION DEBUG] Will activate changes: {activate_changes and success_count > 0}"
         )
@@ -237,7 +237,7 @@ def execute_sync_devices(
                         f"CheckMK activation completed with issues: {activation_result.get('message')}"
                     )
             except Exception as activation_error:
-                logger.error(f"Failed to activate CheckMK changes: {activation_error}")
+                logger.error("Failed to activate CheckMK changes: %s", activation_error)
                 activation_result = {
                     "success": False,
                     "error": str(activation_error),
@@ -271,7 +271,7 @@ def execute_sync_devices(
 
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"Sync devices job failed: {error_msg}", exc_info=True)
+        logger.error("Sync devices job failed: %s", error_msg, exc_info=True)
         return {"success": False, "error": error_msg}
 
 
@@ -340,7 +340,7 @@ def _activate_checkmk_changes() -> Dict[str, Any]:
             force_foreign_changes=True,
             redirect=False,
         )
-        logger.info(f"[ACTIVATION] activate_changes returned: {result}")
+        logger.info("[ACTIVATION] activate_changes returned: %s", result)
     except Exception as e:
         logger.error(
             f"[ACTIVATION] activate_changes raised exception: {e}", exc_info=True

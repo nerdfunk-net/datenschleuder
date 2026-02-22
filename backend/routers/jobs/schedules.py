@@ -21,7 +21,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/job-schedules", tags=["job-schedules"])
 
 
-@router.post("", response_model=JobScheduleResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=JobScheduleResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_job_schedule(
     job_data: JobScheduleCreate, current_user: dict = Depends(verify_token)
 ):
@@ -68,7 +70,7 @@ async def create_job_schedule(
         return JobScheduleResponse(**job_schedule)
 
     except Exception as e:
-        logger.error(f"Error creating job schedule: {e}")
+        logger.error("Error creating job schedule: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create job schedule: {str(e)}",
@@ -102,7 +104,7 @@ async def list_job_schedules(
         return [JobScheduleResponse(**job) for job in jobs]
 
     except Exception as e:
-        logger.error(f"Error listing job schedules: {e}")
+        logger.error("Error listing job schedules: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list job schedules: {str(e)}",
@@ -132,7 +134,7 @@ async def get_job_schedule(job_id: int, current_user: dict = Depends(verify_toke
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting job schedule: {e}")
+        logger.error("Error getting job schedule: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get job schedule: {str(e)}",
@@ -195,7 +197,7 @@ async def update_job_schedule(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error updating job schedule: {e}")
+        logger.error("Error updating job schedule: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update job schedule: {str(e)}",
@@ -249,7 +251,7 @@ async def delete_job_schedule(job_id: int, current_user: dict = Depends(verify_t
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error deleting job schedule: {e}")
+        logger.error("Error deleting job schedule: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete job schedule: {str(e)}",
@@ -336,7 +338,7 @@ async def execute_job(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error executing job: {e}", exc_info=True)
+        logger.error("Error executing job: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to execute job: {str(e)}",
@@ -445,7 +447,7 @@ async def get_scheduler_debug_status(current_user: dict = Depends(verify_token))
         }
 
     except Exception as e:
-        logger.error(f"Error getting scheduler debug status: {e}", exc_info=True)
+        logger.error("Error getting scheduler debug status: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get scheduler status: {str(e)}",
@@ -470,7 +472,7 @@ async def recalculate_all_next_runs(
         }
 
     except Exception as e:
-        logger.error(f"Error recalculating next runs: {e}", exc_info=True)
+        logger.error("Error recalculating next runs: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to recalculate next runs: {str(e)}",

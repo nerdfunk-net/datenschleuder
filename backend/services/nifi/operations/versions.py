@@ -16,7 +16,9 @@ def update_process_group_version(
     pg_api = ProcessGroupsApi()
     pg = pg_api.get_process_group(id=process_group_id)
     versioning.update_flow_version(process_group=pg, target_version=target_version)
-    logger.info("Process group %s updated to version %s", process_group_id, target_version)
+    logger.info(
+        "Process group %s updated to version %s", process_group_id, target_version
+    )
 
 
 def stop_version_control(process_group_id: str) -> bool:

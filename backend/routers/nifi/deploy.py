@@ -20,9 +20,7 @@ async def deploy_flow(
 ):
     """Deploy a flow from registry to a NiFi instance."""
     try:
-        result = deploy_service.deploy_flow(
-            instance_id, deployment.model_dump()
-        )
+        result = deploy_service.deploy_flow(instance_id, deployment.model_dump())
         return DeploymentResponse(**result)
     except ValueError as e:
         raise HTTPException(

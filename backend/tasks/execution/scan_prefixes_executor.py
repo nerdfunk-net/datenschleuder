@@ -40,8 +40,8 @@ def execute_scan_prefixes(
         logger.info("=" * 80)
         logger.info("SCAN PREFIXES EXECUTOR STARTED")
         logger.info("=" * 80)
-        logger.info(f"Schedule ID: {schedule_id}")
-        logger.info(f"Template: {template.get('name') if template else 'None'}")
+        logger.info("Schedule ID: %s", schedule_id)
+        logger.info("Template: %s", template.get("name") if template else "None")
 
         task_context.update_state(
             state="PROGRESS",
@@ -77,7 +77,9 @@ def execute_scan_prefixes(
         interval_ms = template.get("scan_interval_ms") or 10
         scan_max_ips = template.get("scan_max_ips")
 
-        logger.info(f"Scanning prefixes with {custom_field_name}={custom_field_value}")
+        logger.info(
+            "Scanning prefixes with %s=%s", custom_field_name, custom_field_value
+        )
         logger.info(
             f"Scan options: resolve_dns={resolve_dns}, ping_count={ping_count}, "
             f"timeout={timeout_ms}ms, retries={retries}, interval={interval_ms}ms, max_ips={scan_max_ips}"
@@ -110,7 +112,7 @@ def execute_scan_prefixes(
         return result
 
     except Exception as e:
-        logger.error(f"Scan prefixes executor failed: {e}", exc_info=True)
+        logger.error("Scan prefixes executor failed: %s", e, exc_info=True)
         return {
             "success": False,
             "error": str(e),

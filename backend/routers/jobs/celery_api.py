@@ -303,7 +303,7 @@ async def trigger_bulk_onboard_devices(
                     f"Created job run {job_run_id} for bulk onboard task {task.id}"
                 )
         except Exception as e:
-            logger.warning(f"Failed to create job run entry: {e}")
+            logger.warning("Failed to create job run entry: %s", e)
 
         return TaskResponse(
             task_id=task.id,
@@ -510,7 +510,7 @@ async def list_queues(
         }
 
     except Exception as e:
-        logger.error(f"Error fetching queue metrics: {e}")
+        logger.error("Error fetching queue metrics: %s", e)
         return {
             "success": False,
             "error": str(e),
@@ -576,7 +576,7 @@ async def purge_queue(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error purging queue {queue_name}: {e}")
+        logger.error("Error purging queue %s: %s", queue_name, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to purge queue: {str(e)}",
@@ -628,7 +628,7 @@ async def purge_all_queues(
                         f"Purged {purged_count} task(s) from queue '{queue_name}'"
                     )
                 except Exception as e:
-                    logger.error(f"Error purging queue {queue_name}: {e}")
+                    logger.error("Error purging queue %s: %s", queue_name, e)
                     purged_queues.append(
                         {"queue": queue_name, "purged_tasks": 0, "error": str(e)}
                     )
@@ -645,7 +645,7 @@ async def purge_all_queues(
         }
 
     except Exception as e:
-        logger.error(f"Error purging all queues: {e}")
+        logger.error("Error purging all queues: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to purge all queues: {str(e)}",
@@ -865,7 +865,9 @@ class DeployAgentRequest(BaseModel):
     path: Optional[str] = None
     inventory_id: Optional[int] = None
     activate_after_deploy: Optional[bool] = None  # If None, read from template
-    template_entries: Optional[list[DeployTemplateEntryRequest]] = None  # Multi-template entries
+    template_entries: Optional[list[DeployTemplateEntryRequest]] = (
+        None  # Multi-template entries
+    )
 
 
 @router.post("/tasks/backup-devices", response_model=TaskResponse)
@@ -1205,7 +1207,7 @@ async def preview_export_devices(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error previewing export: {e}", exc_info=True)
+        logger.error("Error previewing export: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to preview export: {str(e)}",
@@ -1352,10 +1354,10 @@ async def download_export_file(
             detail="Export file path not found in task result",
         )
 
-    logger.info(f"Download endpoint - checking file: {file_path}")
-    logger.info(f"  - File exists: {os.path.exists(file_path)}")
-    logger.info(f"  - Current working directory: {os.getcwd()}")
-    logger.info(f"  - Absolute path: {os.path.abspath(file_path)}")
+    logger.info("Download endpoint - checking file: %s", file_path)
+    logger.info("  - File exists: %s", os.path.exists(file_path))
+    logger.info("  - Current working directory: %s", os.getcwd())
+    logger.info("  - Absolute path: %s", os.path.abspath(file_path))
 
     if not os.path.exists(file_path):
         raise HTTPException(
@@ -1367,25 +1369,25 @@ async def download_export_file(
     export_format = task_result.get("export_format", "yaml")
 
     logger.info("Download endpoint - RAW values from task_result:")
-    logger.info(f"  - filename: '{filename}'")
-    logger.info(f"  - export_format: '{export_format}'")
-    logger.info(f"  - file_path: '{file_path}'")
+    logger.info("  - filename: '%s'", filename)
+    logger.info("  - export_format: '%s'", export_format)
+    logger.info("  - file_path: '%s'", file_path)
 
     # Sanitize export_format and filename (remove trailing underscores)
     export_format = export_format.strip().rstrip("_")
     filename = filename.strip().rstrip("_")
 
     logger.info("Download endpoint - SANITIZED values:")
-    logger.info(f"  - filename: '{filename}'")
-    logger.info(f"  - export_format: '{export_format}'")
+    logger.info("  - filename: '%s'", filename)
+    logger.info("  - export_format: '%s'", export_format)
 
     # Determine media type
     media_type = "application/x-yaml" if export_format == "yaml" else "text/csv"
 
     logger.info("Download endpoint - FileResponse parameters:")
-    logger.info(f"  - path: '{file_path}'")
-    logger.info(f"  - filename: '{filename}'")
-    logger.info(f"  - media_type: '{media_type}'")
+    logger.info("  - path: '%s'", file_path)
+    logger.info("  - filename: '%s'", filename)
+    logger.info("  - media_type: '%s'", media_type)
 
     # Create FileResponse with manually set Content-Disposition header to avoid filename issues
     response = FileResponse(
@@ -1539,12 +1541,12 @@ async def trigger_update_ip_prefixes_from_csv(
     logger.info("=" * 80)
     logger.info("RECEIVED UPDATE IP PREFIXES REQUEST")
     logger.info("=" * 80)
-    logger.info(f"  - dry_run: {request.dry_run}")
-    logger.info(f"  - ignore_uuid: {request.ignore_uuid}")
-    logger.info(f"  - tags_mode: {request.tags_mode}")
-    logger.info(f"  - column_mapping: {request.column_mapping}")
-    logger.info(f"  - selected_columns: {request.selected_columns}")
-    logger.info(f"  - csv_options: {request.csv_options}")
+    logger.info("  - dry_run: %s", request.dry_run)
+    logger.info("  - ignore_uuid: %s", request.ignore_uuid)
+    logger.info("  - tags_mode: %s", request.tags_mode)
+    logger.info("  - column_mapping: %s", request.column_mapping)
+    logger.info("  - selected_columns: %s", request.selected_columns)
+    logger.info("  - csv_options: %s", request.csv_options)
 
     if not request.csv_content:
         raise HTTPException(
@@ -1644,11 +1646,11 @@ async def trigger_update_ip_addresses_from_csv(
     logger.info("=" * 80)
     logger.info("RECEIVED UPDATE IP ADDRESSES REQUEST")
     logger.info("=" * 80)
-    logger.info(f"  - dry_run: {request.dry_run}")
-    logger.info(f"  - ignore_uuid: {request.ignore_uuid}")
-    logger.info(f"  - tags_mode: {request.tags_mode}")
-    logger.info(f"  - column_mapping: {request.column_mapping}")
-    logger.info(f"  - selected_columns: {request.selected_columns}")
+    logger.info("  - dry_run: %s", request.dry_run)
+    logger.info("  - ignore_uuid: %s", request.ignore_uuid)
+    logger.info("  - tags_mode: %s", request.tags_mode)
+    logger.info("  - column_mapping: %s", request.column_mapping)
+    logger.info("  - selected_columns: %s", request.selected_columns)
 
     if not request.csv_content:
         raise HTTPException(
@@ -2249,7 +2251,7 @@ async def check_device_backups(
                 logger.info("Returning cached device backup status")
                 return BackupCheckResponse(**json.loads(cached))
         except Exception as e:
-            logger.warning(f"Cache read failed, proceeding with fresh data: {e}")
+            logger.warning("Cache read failed, proceeding with fresh data: %s", e)
 
     session = get_db_session()
 
@@ -2348,7 +2350,7 @@ async def check_device_backups(
                         device_status[device_id]["total_failed_backups"] += 1
 
             except (json.JSONDecodeError, KeyError, AttributeError) as e:
-                logger.warning(f"Failed to parse backup job result: {e}")
+                logger.warning("Failed to parse backup job result: %s", e)
                 continue
 
         # Calculate summary statistics
@@ -2374,7 +2376,7 @@ async def check_device_backups(
                 f"Cached device backup status for {CACHE_DURATION_SECONDS} seconds"
             )
         except Exception as e:
-            logger.warning(f"Failed to cache device backup status: {e}")
+            logger.warning("Failed to cache device backup status: %s", e)
 
         return response
 
@@ -2436,7 +2438,7 @@ async def check_ip_task_endpoint(
         if job_run:
             job_run_manager.mark_started(job_run["id"], task.id)
 
-        logger.info(f"Started check IP task {task.id} for file {csv_file.filename}")
+        logger.info("Started check IP task %s for file %s", task.id, csv_file.filename)
 
         return TaskResponse(
             task_id=task.id,
@@ -2447,7 +2449,7 @@ async def check_ip_task_endpoint(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error starting check IP task: {str(e)}")
+        logger.error("Error starting check IP task: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to start check IP task: {str(e)}",

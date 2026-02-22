@@ -73,7 +73,7 @@ class GitAuthenticationService:
                     # Get the SSH key file path
                     ssh_key_path = cred_mgr.get_ssh_key_path(match["id"])
                     if ssh_key_path:
-                        logger.debug(f"SSH key path resolved: {ssh_key_path}")
+                        logger.debug("SSH key path resolved: %s", ssh_key_path)
                         return match.get("username"), None, ssh_key_path
                     else:
                         logger.error(
@@ -156,7 +156,7 @@ class GitAuthenticationService:
                     )
                     return None, None, None
         except Exception as ce:
-            logger.error(f"Error resolving credential '{credential_name}': {ce}")
+            logger.error("Error resolving credential '%s': %s", credential_name, ce)
             return None, None, None
 
     def build_auth_url(

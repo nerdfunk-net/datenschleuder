@@ -57,7 +57,8 @@ def list_templates() -> List[dict]:
         {
             "id": flow.id,
             "name": flow.flow_name,
-            "label": "%s (%s / %s)" % (flow.flow_name, flow.nifi_instance_name, flow.bucket_name),
+            "label": "%s (%s / %s)"
+            % (flow.flow_name, flow.nifi_instance_name, flow.bucket_name),
             "nifi_instance": flow.nifi_instance_name,
             "bucket": flow.bucket_name,
         }

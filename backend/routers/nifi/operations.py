@@ -47,6 +47,7 @@ _NIFI_RETRY_DELAY = 1.0  # seconds between attempts
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _setup_instance(instance_id: int):
     """Fetch instance from DB and configure nipyapi connection."""
     instance = instance_service.get_instance(instance_id)
@@ -190,7 +191,9 @@ async def get_bucket_flows(
     return {"status": "success", **result}
 
 
-@router.get("/{instance_id}/ops/registries/{registry_id}/buckets/{bucket_id}/flows/{flow_id}/versions")
+@router.get(
+    "/{instance_id}/ops/registries/{registry_id}/buckets/{bucket_id}/flows/{flow_id}/versions"
+)
 async def get_flow_versions(
     instance_id: int,
     registry_id: str,
@@ -210,7 +213,9 @@ async def get_flow_versions(
 # ============================================================================
 
 
-@router.get("/{instance_id}/ops/registries/{registry_id}/buckets/{bucket_id}/export-flow")
+@router.get(
+    "/{instance_id}/ops/registries/{registry_id}/buckets/{bucket_id}/export-flow"
+)
 async def export_flow(
     instance_id: int,
     registry_id: str,
@@ -223,7 +228,9 @@ async def export_flow(
     try:
         result = await _execute_with_retry(
             instance_id,
-            lambda: flow_ops.export_flow(registry_id, bucket_id, flow_id, version, mode),
+            lambda: flow_ops.export_flow(
+                registry_id, bucket_id, flow_id, version, mode
+            ),
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -234,7 +241,9 @@ async def export_flow(
     )
 
 
-@router.post("/{instance_id}/ops/registries/{registry_id}/buckets/{bucket_id}/import-flow")
+@router.post(
+    "/{instance_id}/ops/registries/{registry_id}/buckets/{bucket_id}/import-flow"
+)
 async def import_flow(
     instance_id: int,
     registry_id: str,
@@ -258,11 +267,18 @@ async def import_flow(
     try:
         result = await _execute_with_retry(
             instance_id,
-            lambda: flow_ops.import_flow(registry_id, bucket_id, encoded_flow, flow_name, flow_id),
+            lambda: flow_ops.import_flow(
+                registry_id, bucket_id, encoded_flow, flow_name, flow_id
+            ),
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    return {"status": "success", "message": "Flow imported successfully", **result, "filename": filename}
+    return {
+        "status": "success",
+        "message": "Flow imported successfully",
+        **result,
+        "filename": filename,
+    }
 
 
 # ============================================================================
@@ -313,7 +329,11 @@ async def create_parameter_context(
         instance_id,
         lambda: param_ops.create_parameter_context(data.name, data.description, params),
     )
-    return {"status": "success", "message": "Parameter context created", "parameter_context": result}
+    return {
+        "status": "success",
+        "message": "Parameter context created",
+        "parameter_context": result,
+    }
 
 
 @router.put("/{instance_id}/ops/parameter-contexts/{context_id}")
@@ -327,10 +347,18 @@ async def update_parameter_context(
     result = await _execute_with_retry(
         instance_id,
         lambda: param_ops.update_parameter_context(
-            context_id, data.name, data.description, params, data.inherited_parameter_contexts
+            context_id,
+            data.name,
+            data.description,
+            params,
+            data.inherited_parameter_contexts,
         ),
     )
-    return {"status": "success", "message": "Parameter context updated", "parameter_context": result}
+    return {
+        "status": "success",
+        "message": "Parameter context updated",
+        "parameter_context": result,
+    }
 
 
 @router.delete("/{instance_id}/ops/parameter-contexts/{context_id}")
@@ -403,7 +431,12 @@ async def get_all_process_group_paths(
         lambda: pg_ops.get_all_process_group_paths(start_pg_id),
     )
     pgs = result["process_groups"]
-    return {"status": "success", "process_groups": pgs, "count": len(pgs), "root_id": result["root_id"]}
+    return {
+        "status": "success",
+        "process_groups": pgs,
+        "count": len(pgs),
+        "root_id": result["root_id"],
+    }
 
 
 @router.get("/{instance_id}/ops/process-groups/{pg_id}/output-ports")
@@ -416,7 +449,12 @@ async def get_output_ports(
         instance_id,
         lambda: pg_ops.get_output_ports(pg_id),
     )
-    return {"status": "success", "process_group_id": pg_id, "ports": ports, "count": len(ports)}
+    return {
+        "status": "success",
+        "process_group_id": pg_id,
+        "ports": ports,
+        "count": len(ports),
+    }
 
 
 @router.get("/{instance_id}/ops/process-groups/{pg_id}/input-ports")
@@ -429,7 +467,12 @@ async def get_input_ports(
         instance_id,
         lambda: pg_ops.get_input_ports(pg_id),
     )
-    return {"status": "success", "process_group_id": pg_id, "input_ports": ports, "count": len(ports)}
+    return {
+        "status": "success",
+        "process_group_id": pg_id,
+        "input_ports": ports,
+        "count": len(ports),
+    }
 
 
 @router.get("/{instance_id}/ops/process-groups/{pg_id}/processors")
@@ -442,7 +485,12 @@ async def list_processors(
         instance_id,
         lambda: pg_ops.list_processors(pg_id),
     )
-    return {"status": "success", "process_group_id": pg_id, "processors": processors, "count": len(processors)}
+    return {
+        "status": "success",
+        "process_group_id": pg_id,
+        "processors": processors,
+        "count": len(processors),
+    }
 
 
 @router.post("/{instance_id}/ops/process-groups/{pg_id}/connections")
@@ -470,7 +518,9 @@ async def assign_parameter_context(
 ):
     await _execute_with_retry(
         instance_id,
-        lambda: pg_ops.assign_parameter_context(pg_id, data.parameter_context_id, data.cascade),
+        lambda: pg_ops.assign_parameter_context(
+            pg_id, data.parameter_context_id, data.cascade
+        ),
     )
     return AssignParameterContextResponse(
         status="success",
@@ -536,10 +586,16 @@ async def update_process_group_version(
 ):
     await _execute_with_retry(
         instance_id,
-        lambda: ver_ops.update_process_group_version(pg_id, version_request.get("version")),
+        lambda: ver_ops.update_process_group_version(
+            pg_id, version_request.get("version")
+        ),
         normalized_url=True,
     )
-    return {"status": "success", "message": "Process group updated", "process_group_id": pg_id}
+    return {
+        "status": "success",
+        "message": "Process group updated",
+        "process_group_id": pg_id,
+    }
 
 
 @router.post("/{instance_id}/ops/process-groups/{pg_id}/stop-versioning")
@@ -558,7 +614,9 @@ async def stop_process_group_versioning(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return {
         "status": "success",
-        "message": "Version control stopped" if was_versioned else "Not under version control",
+        "message": "Version control stopped"
+        if was_versioned
+        else "Not under version control",
         "process_group_id": pg_id,
         "was_versioned": was_versioned,
     }
@@ -567,6 +625,7 @@ async def stop_process_group_versioning(
 # ---------------------------------------------------------------------------
 # Monitoring endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get("/{instance_id}/ops/system-diagnostics")
 async def get_system_diagnostics(
@@ -582,7 +641,9 @@ async def get_system_diagnostics(
         data = diagnostics.to_dict() if hasattr(diagnostics, "to_dict") else diagnostics
         return {"status": "success", "instance_id": instance_id, "data": data}
     except Exception as exc:
-        logger.error("Error getting system diagnostics for instance %d: %s", instance_id, exc)
+        logger.error(
+            "Error getting system diagnostics for instance %d: %s", instance_id, exc
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get system diagnostics: %s" % str(exc),
@@ -617,7 +678,10 @@ async def get_process_group_status(
         }
     except Exception as exc:
         logger.error(
-            "Error getting process group %s status for instance %d: %s", pg_id, instance_id, exc
+            "Error getting process group %s status for instance %d: %s",
+            pg_id,
+            instance_id,
+            exc,
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -638,7 +702,10 @@ async def list_components_by_kind(
 
     _setup_instance(instance_id)
     try:
-        raw_list = canvas.list_all_by_kind(kind=kind, pg_id=pg_id, descendants=descendants) or []
+        raw_list = (
+            canvas.list_all_by_kind(kind=kind, pg_id=pg_id, descendants=descendants)
+            or []
+        )
     except Exception as exc:
         logger.error("Failed to list components by kind '%s': %s", kind, exc)
         raise HTTPException(
@@ -673,13 +740,17 @@ async def list_components_by_kind(
             comp_data["status"] = {
                 "run_status": getattr(item_status, "run_status", None),
                 "aggregate_snapshot": {
-                    "active_thread_count": getattr(snapshot, "active_thread_count", None),
+                    "active_thread_count": getattr(
+                        snapshot, "active_thread_count", None
+                    ),
                     "bytes_in": getattr(snapshot, "bytes_in", None),
                     "bytes_out": getattr(snapshot, "bytes_out", None),
                     "flow_files_in": getattr(snapshot, "flow_files_in", None),
                     "flow_files_out": getattr(snapshot, "flow_files_out", None),
                     "queued": getattr(snapshot, "queued", None),
-                } if snapshot else {},
+                }
+                if snapshot
+                else {},
             }
         components.append(comp_data)
 

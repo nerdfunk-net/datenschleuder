@@ -35,7 +35,7 @@ def worker_health_check() -> dict:
 
         active_workers = len(stats) if stats else 0
 
-        logger.info(f"Health check: {active_workers} workers active")
+        logger.info("Health check: %s workers active", active_workers)
 
         return {
             "success": True,
@@ -44,7 +44,7 @@ def worker_health_check() -> dict:
         }
 
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
+        logger.error("Health check failed: %s", e)
         return {"success": False, "error": str(e)}
 
 
@@ -84,7 +84,7 @@ def load_cache_schedules_task() -> dict:
         }
 
     except Exception as e:
-        logger.error(f"Error in load_cache_schedules: {e}", exc_info=True)
+        logger.error("Error in load_cache_schedules: %s", e, exc_info=True)
         return {"success": False, "error": str(e)}
 
 
@@ -136,7 +136,9 @@ def dispatch_cache_task(self, cache_type: str, task_name: str) -> dict:
             raise
 
     except Exception as e:
-        logger.error(f"Error dispatching cache task {cache_type}: {e}", exc_info=True)
+        logger.error(
+            "Error dispatching cache task %s: %s", cache_type, e, exc_info=True
+        )
         return {"success": False, "error": str(e)}
 
 
@@ -203,7 +205,7 @@ def cleanup_celery_data_task() -> dict:
                                 r.delete(key)
                                 removed_results += 1
             except Exception as e:
-                logger.debug(f"Error processing key {key}: {e}")
+                logger.debug("Error processing key %s: %s", key, e)
                 continue
 
         # Remove old job runs from database
@@ -214,7 +216,7 @@ def cleanup_celery_data_task() -> dict:
             # Use the hours-based cleanup function
             removed_job_runs = job_run_manager.cleanup_old_runs_hours(cleanup_age_hours)
         except Exception as e:
-            logger.warning(f"Error cleaning up job runs: {e}")
+            logger.warning("Error cleaning up job runs: %s", e)
 
         logger.info(
             f"Cleanup completed: {removed_results} results, {removed_job_runs} job runs removed"
@@ -230,7 +232,7 @@ def cleanup_celery_data_task() -> dict:
         }
 
     except Exception as e:
-        logger.error(f"Cleanup task failed: {e}")
+        logger.error("Cleanup task failed: %s", e)
         return {"success": False, "error": str(e)}
 
 
@@ -341,5 +343,5 @@ def check_stale_jobs_task() -> dict:
         }
 
     except Exception as e:
-        logger.error(f"Error checking stale jobs: {e}", exc_info=True)
+        logger.error("Error checking stale jobs: %s", e, exc_info=True)
         return {"success": False, "error": str(e)}

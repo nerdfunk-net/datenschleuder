@@ -21,7 +21,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/job-templates", tags=["job-templates"])
 
 
-@router.post("", response_model=JobTemplateResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=JobTemplateResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_job_template(
     template_data: JobTemplateCreate, current_user: dict = Depends(verify_token)
 ):
@@ -76,7 +78,9 @@ async def create_job_template(
             deploy_path=template_data.deploy_path,
             deploy_custom_variables=template_data.deploy_custom_variables,
             activate_after_deploy=template_data.activate_after_deploy,
-            deploy_templates=[e.model_dump() for e in template_data.deploy_templates] if template_data.deploy_templates else None,
+            deploy_templates=[e.model_dump() for e in template_data.deploy_templates]
+            if template_data.deploy_templates
+            else None,
             is_global=template_data.is_global,
         )
 
@@ -85,7 +89,7 @@ async def create_job_template(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        logger.error(f"Error creating job template: {e}")
+        logger.error("Error creating job template: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create job template: {str(e)}",
@@ -114,7 +118,7 @@ async def list_job_templates(
         )
 
     except Exception as e:
-        logger.error(f"Error listing job templates: {e}")
+        logger.error("Error listing job templates: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list job templates: {str(e)}",
@@ -155,7 +159,7 @@ async def get_job_template(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting job template: {e}")
+        logger.error("Error getting job template: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get job template: {str(e)}",
@@ -225,7 +229,9 @@ async def update_job_template(
             deploy_path=update_data.deploy_path,
             deploy_custom_variables=update_data.deploy_custom_variables,
             activate_after_deploy=update_data.activate_after_deploy,
-            deploy_templates=[e.model_dump() for e in update_data.deploy_templates] if update_data.deploy_templates else None,
+            deploy_templates=[e.model_dump() for e in update_data.deploy_templates]
+            if update_data.deploy_templates
+            else None,
             is_global=update_data.is_global,
             user_id=current_user["user_id"],
         )
@@ -242,7 +248,7 @@ async def update_job_template(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error updating job template: {e}")
+        logger.error("Error updating job template: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update job template: {str(e)}",
@@ -291,7 +297,7 @@ async def delete_job_template(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error deleting job template: {e}")
+        logger.error("Error deleting job template: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete job template: {str(e)}",

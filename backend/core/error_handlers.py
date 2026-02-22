@@ -58,7 +58,7 @@ def handle_errors(
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"Failed to do operation: {e}")
+                logger.error("Failed to do operation: %s", e)
                 raise HTTPException(status_code=500, detail=str(e))
 
         Use:

@@ -97,7 +97,7 @@ class NetmikoPlatformMapper:
             >>> NetmikoPlatformMapper.add_mapping("custom_os", "cisco_ios")
         """
         cls.PLATFORM_MAP[platform_key.lower()] = device_type
-        logger.info(f"Added platform mapping: '{platform_key}' → '{device_type}'")
+        logger.info("Added platform mapping: '%s' → '%s'", platform_key, device_type)
 
     @classmethod
     def get_supported_platforms(cls) -> list[str]:

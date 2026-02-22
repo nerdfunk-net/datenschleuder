@@ -115,7 +115,7 @@ def check_job_schedules_task() -> dict:
         }
 
     except Exception as e:
-        logger.error(f"check_job_schedules task failed: {e}", exc_info=True)
+        logger.error("check_job_schedules task failed: %s", e, exc_info=True)
         return {"success": False, "error": str(e)}
 
 
@@ -209,17 +209,19 @@ def dispatch_job(
         is_success = result.get("success") or result.get("status") == "completed"
         if is_success:
             job_run_manager.mark_completed(job_run_id, result=result)
-            logger.info(f"Job {job_name} completed successfully")
+            logger.info("Job %s completed successfully", job_name)
         else:
             error_msg = result.get("error", result.get("message", "Unknown error"))
             job_run_manager.mark_failed(job_run_id, error_msg)
-            logger.warning(f"Job {job_name} failed: {error_msg}")
+            logger.warning("Job %s failed: %s", job_name, error_msg)
 
         return result
 
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"Job dispatch failed for {job_name}: {error_msg}", exc_info=True)
+        logger.error(
+            "Job dispatch failed for %s: %s", job_name, error_msg, exc_info=True
+        )
 
         # Update job run if we created one
         if job_run:
@@ -422,7 +424,7 @@ def _execute_sync_devices(
                 )
                 if devices_result and hasattr(devices_result, "devices"):
                     device_ids = [device.get("id") for device in devices_result.devices]
-                    logger.info(f"Fetched {len(device_ids)} devices from Nautobot")
+                    logger.info("Fetched %s devices from Nautobot", len(device_ids))
                 else:
                     logger.warning("No devices found in Nautobot")
                     device_ids = []
@@ -443,7 +445,7 @@ def _execute_sync_devices(
         failed_count = 0
         results = []
 
-        logger.info(f"Starting sync of {total_devices} devices to CheckMK")
+        logger.info("Starting sync of %s devices to CheckMK", total_devices)
 
         # Process each device
         for i, device_id in enumerate(device_ids):
@@ -517,7 +519,7 @@ def _execute_sync_devices(
             except Exception as e:
                 failed_count += 1
                 error_msg = str(e)
-                logger.error(f"Error syncing device {device_id}: {error_msg}")
+                logger.error("Error syncing device %s: %s", device_id, error_msg)
                 results.append(
                     {
                         "device_id": device_id,
@@ -544,9 +546,9 @@ def _execute_sync_devices(
         activate_changes = True
 
         # Log template details for debugging
-        logger.info(f"[ACTIVATION DEBUG] Template provided: {template is not None}")
+        logger.info("[ACTIVATION DEBUG] Template provided: %s", template is not None)
         if template:
-            logger.info(f"[ACTIVATION DEBUG] Template keys: {list(template.keys())}")
+            logger.info("[ACTIVATION DEBUG] Template keys: %s", list(template.keys()))
             logger.info(
                 f"[ACTIVATION DEBUG] activate_changes_after_sync in template: {'activate_changes_after_sync' in template}"
             )
@@ -558,7 +560,7 @@ def _execute_sync_devices(
         logger.info(
             f"[ACTIVATION DEBUG] Final activate_changes value: {activate_changes}"
         )
-        logger.info(f"[ACTIVATION DEBUG] success_count: {success_count}")
+        logger.info("[ACTIVATION DEBUG] success_count: %s", success_count)
         logger.info(
             f"[ACTIVATION DEBUG] Will activate changes: {activate_changes and success_count > 0}"
         )
@@ -582,7 +584,7 @@ def _execute_sync_devices(
                         f"CheckMK activation completed with issues: {activation_result.get('message')}"
                     )
             except Exception as activation_error:
-                logger.error(f"Failed to activate CheckMK changes: {activation_error}")
+                logger.error("Failed to activate CheckMK changes: %s", activation_error)
                 activation_result = {
                     "success": False,
                     "error": str(activation_error),
@@ -607,7 +609,7 @@ def _execute_sync_devices(
 
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"Sync devices job failed: {error_msg}", exc_info=True)
+        logger.error("Sync devices job failed: %s", error_msg, exc_info=True)
         return {"success": False, "error": error_msg}
 
 
@@ -630,7 +632,7 @@ def _activate_checkmk_changes() -> dict:
         key in db_settings for key in ["url", "site", "username", "password"]
     ):
         logger.warning("[ACTIVATION] CheckMK settings not configured or incomplete")
-        logger.warning(f"[ACTIVATION] db_settings: {db_settings}")
+        logger.warning("[ACTIVATION] db_settings: %s", db_settings)
         return {
             "success": False,
             "message": "CheckMK settings not configured",
@@ -675,7 +677,7 @@ def _activate_checkmk_changes() -> dict:
             force_foreign_changes=True,
             redirect=False,
         )
-        logger.info(f"[ACTIVATION] activate_changes returned: {result}")
+        logger.info("[ACTIVATION] activate_changes returned: %s", result)
     except Exception as e:
         logger.error(
             f"[ACTIVATION] activate_changes raised exception: {e}", exc_info=True
@@ -780,11 +782,11 @@ def _execute_run_commands(
         logger.info("=" * 80)
         logger.info("RUN COMMANDS EXECUTOR STARTED")
         logger.info("=" * 80)
-        logger.info(f"Schedule ID: {schedule_id}")
-        logger.info(f"Credential ID: {credential_id}")
-        logger.info(f"Target devices: {len(target_devices) if target_devices else 0}")
-        logger.info(f"Job parameters: {job_parameters}")
-        logger.info(f"Template: {template}")
+        logger.info("Schedule ID: %s", schedule_id)
+        logger.info("Credential ID: %s", credential_id)
+        logger.info("Target devices: %s", len(target_devices) if target_devices else 0)
+        logger.info("Job parameters: %s", job_parameters)
+        logger.info("Template: %s", template)
 
         task_context.update_state(
             state="PROGRESS",
@@ -831,10 +833,10 @@ def _execute_run_commands(
         logger.info("-" * 80)
 
         # Get credentials
-        logger.info(f"Fetching credential {credential_id} from database...")
+        logger.info("Fetching credential %s from database...", credential_id)
         credential = credentials_manager.get_credential_by_id(credential_id)
         if not credential:
-            logger.error(f"ERROR: Credential {credential_id} not found in database")
+            logger.error("ERROR: Credential %s not found in database", credential_id)
             return {
                 "success": False,
                 "error": f"Credential {credential_id} not found",
@@ -848,16 +850,16 @@ def _execute_run_commands(
         try:
             password = credentials_manager.get_decrypted_password(credential_id)
         except Exception as e:
-            logger.error(f"ERROR: Failed to decrypt password: {e}")
+            logger.error("ERROR: Failed to decrypt password: %s", e)
             return {
                 "success": False,
                 "error": f"Failed to decrypt credential password: {str(e)}",
                 "credential_info": credential_info,
             }
 
-        logger.info(f"✓ Credential found: {credential_name}")
-        logger.info(f"  - Username: {username}")
-        logger.info(f"  - Password: {'*' * len(password) if password else 'NOT SET'}")
+        logger.info("✓ Credential found: %s", credential_name)
+        logger.info("  - Username: %s", username)
+        logger.info("  - Password: %s", "*" * len(password) if password else "NOT SET")
 
         credential_info["credential_name"] = credential_name
         credential_info["username"] = username
@@ -871,12 +873,14 @@ def _execute_run_commands(
             }
 
         # Get command template content
-        logger.info(f"Fetching command template: {command_template_name}...")
+        logger.info("Fetching command template: %s...", command_template_name)
         command_template_obj = template_manager.get_template_by_name(
             command_template_name
         )
         if not command_template_obj:
-            logger.error(f"ERROR: Command template '{command_template_name}' not found")
+            logger.error(
+                "ERROR: Command template '%s' not found", command_template_name
+            )
             return {
                 "success": False,
                 "error": f"Command template '{command_template_name}' not found",
@@ -896,9 +900,9 @@ def _execute_run_commands(
                 "credential_info": credential_info,
             }
 
-        logger.info(f"✓ Command template found: {command_template_name}")
-        logger.info(f"  - Template ID: {command_template_obj['id']}")
-        logger.info(f"  - Content length: {len(template_content)} chars")
+        logger.info("✓ Command template found: %s", command_template_name)
+        logger.info("  - Template ID: %s", command_template_obj["id"])
+        logger.info("  - Content length: %s chars", len(template_content))
 
         logger.info("✓ All inputs validated successfully")
 
@@ -913,7 +917,7 @@ def _execute_run_commands(
 
         # STEP 2: Execute commands on each device
         logger.info("-" * 80)
-        logger.info(f"STEP 2: EXECUTING COMMANDS ON {len(target_devices)} DEVICES")
+        logger.info("STEP 2: EXECUTING COMMANDS ON %s DEVICES", len(target_devices))
         logger.info("-" * 80)
 
         nautobot_service = NautobotService()
@@ -942,9 +946,9 @@ def _execute_run_commands(
                 }
 
                 try:
-                    logger.info(f"\n{'=' * 60}")
-                    logger.info(f"Device {idx}/{total_devices}: {device_id}")
-                    logger.info(f"{'=' * 60}")
+                    logger.info("\n%s", "=" * 60)
+                    logger.info("Device %s/%s: %s", idx, total_devices, device_id)
+                    logger.info("%s", "=" * 60)
 
                     progress = 10 + int((idx / total_devices) * 80)
                     task_context.update_state(
@@ -957,7 +961,7 @@ def _execute_run_commands(
                     )
 
                     # Get device details from Nautobot
-                    logger.info(f"[{idx}] Fetching device details from Nautobot...")
+                    logger.info("[%s] Fetching device details from Nautobot...", idx)
                     query = """
                     query getDevice($deviceId: ID!) {
                       device(id: $deviceId) {
@@ -1057,19 +1061,19 @@ def _execute_run_commands(
                     device_result["device_ip"] = primary_ip
                     device_result["platform"] = platform
 
-                    logger.info(f"[{idx}] ✓ Device data fetched")
-                    logger.info(f"[{idx}]   - Name: {device_name}")
-                    logger.info(f"[{idx}]   - IP: {primary_ip or 'NOT SET'}")
-                    logger.info(f"[{idx}]   - Platform: {platform}")
+                    logger.info("[%s] ✓ Device data fetched", idx)
+                    logger.info("[%s]   - Name: %s", idx, device_name)
+                    logger.info("[%s]   - IP: %s", idx, primary_ip or "NOT SET")
+                    logger.info("[%s]   - Platform: %s", idx, platform)
 
                     if not primary_ip:
-                        logger.error(f"[{idx}] ✗ No primary IP")
+                        logger.error("[%s] ✗ No primary IP", idx)
                         device_result["error"] = "No primary IP address"
                         failed_devices.append(device_result)
                         continue
 
                     # Render template for this device
-                    logger.info(f"[{idx}] Rendering template...")
+                    logger.info("[%s] Rendering template...", idx)
                     try:
                         render_result = loop.run_until_complete(
                             render_service.render_template(
@@ -1082,7 +1086,7 @@ def _execute_run_commands(
                         )
                         rendered_content = render_result["rendered_content"]
                         device_result["rendered_commands"] = rendered_content
-                        logger.info(f"[{idx}] ✓ Template rendered successfully")
+                        logger.info("[%s] ✓ Template rendered successfully", idx)
                     except Exception as render_error:
                         logger.error(
                             f"[{idx}] ✗ Template rendering failed: {render_error}"
@@ -1110,16 +1114,18 @@ def _execute_run_commands(
                         failed_devices.append(device_result)
                         continue
 
-                    logger.info(f"[{idx}] Commands to execute: {len(commands)}")
+                    logger.info("[%s] Commands to execute: %s", idx, len(commands))
 
                     # Map platform to Netmiko device type
                     from utils.netmiko_platform_mapper import map_platform_to_netmiko
 
                     device_type = map_platform_to_netmiko(platform)
-                    logger.info(f"[{idx}] Netmiko device type: {device_type}")
+                    logger.info("[%s] Netmiko device type: %s", idx, device_type)
 
                     # Execute commands using Netmiko
-                    logger.info(f"[{idx}] Connecting via SSH and executing commands...")
+                    logger.info(
+                        "[%s] Connecting via SSH and executing commands...", idx
+                    )
                     result = netmiko_service._connect_and_execute(
                         device_ip=primary_ip,
                         device_type=device_type,
@@ -1132,7 +1138,7 @@ def _execute_run_commands(
                     if result["success"]:
                         device_result["success"] = True
                         device_result["output"] = result["output"]
-                        logger.info(f"[{idx}] ✓ Commands executed successfully")
+                        logger.info("[%s] ✓ Commands executed successfully", idx)
                         logger.info(
                             f"[{idx}]   - Output length: {len(result['output'])} chars"
                         )
@@ -1147,7 +1153,7 @@ def _execute_run_commands(
                         failed_devices.append(device_result)
 
                 except Exception as e:
-                    logger.error(f"[{idx}] ✗ Exception: {e}", exc_info=True)
+                    logger.error("[%s] ✗ Exception: %s", idx, e, exc_info=True)
                     device_result["error"] = str(e)
                     failed_devices.append(device_result)
 
@@ -1157,8 +1163,8 @@ def _execute_run_commands(
         logger.info("\n" + "=" * 80)
         logger.info("COMMAND EXECUTION SUMMARY")
         logger.info("=" * 80)
-        logger.info(f"Successful: {len(successful_devices)}")
-        logger.info(f"Failed: {len(failed_devices)}")
+        logger.info("Successful: %s", len(successful_devices))
+        logger.info("Failed: %s", len(failed_devices))
 
         task_context.update_state(
             state="PROGRESS",
@@ -1189,7 +1195,7 @@ def _execute_run_commands(
         logger.error("=" * 80)
         logger.error("RUN COMMANDS EXECUTOR FAILED")
         logger.error("=" * 80)
-        logger.error(f"Exception: {e}", exc_info=True)
+        logger.error("Exception: %s", e, exc_info=True)
         return {
             "success": False,
             "error": str(e),
@@ -1269,7 +1275,7 @@ def _execute_compare_devices(
                 )
                 if devices_result and hasattr(devices_result, "devices"):
                     device_ids = [device.get("id") for device in devices_result.devices]
-                    logger.info(f"Fetched {len(device_ids)} devices from Nautobot")
+                    logger.info("Fetched %s devices from Nautobot", len(device_ids))
                 else:
                     logger.warning("No devices found in Nautobot")
                     device_ids = []
@@ -1303,7 +1309,9 @@ def _execute_compare_devices(
             job_id, 0, total_devices, "Starting comparison..."
         )
 
-        logger.info(f"Starting comparison of {total_devices} devices, job_id: {job_id}")
+        logger.info(
+            "Starting comparison of %s devices, job_id: %s", total_devices, job_id
+        )
 
         # Process each device
         for i, device_id in enumerate(device_ids):
@@ -1444,7 +1452,7 @@ def _execute_compare_devices(
             except Exception as e:
                 failed_count += 1
                 error_msg = str(e)
-                logger.error(f"Error comparing device {device_id}: {error_msg}")
+                logger.error("Error comparing device %s: %s", device_id, error_msg)
                 nb2cmk_db_service.add_device_result(
                     job_id=job_id,
                     device_id=device_id,
@@ -1485,7 +1493,7 @@ def _execute_compare_devices(
 
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"Compare devices job failed: {error_msg}", exc_info=True)
+        logger.error("Compare devices job failed: %s", error_msg, exc_info=True)
         return {"success": False, "error": error_msg}
 
 
@@ -1509,7 +1517,9 @@ def cache_devices_task(self, job_schedule_id: Optional[int] = None) -> dict:
         dict: Task execution results
     """
     try:
-        logger.info(f"Starting cache_devices task (job_schedule_id: {job_schedule_id})")
+        logger.info(
+            "Starting cache_devices task (job_schedule_id: %s)", job_schedule_id
+        )
 
         # Update task state to show progress
         self.update_state(
@@ -1567,7 +1577,7 @@ def cache_devices_task(self, job_schedule_id: Optional[int] = None) -> dict:
             )
 
             if "errors" in result:
-                logger.error(f"GraphQL errors: {result['errors']}")
+                logger.error("GraphQL errors: %s", result["errors"])
                 return {
                     "success": False,
                     "error": f"GraphQL errors: {result['errors']}",
@@ -1588,7 +1598,7 @@ def cache_devices_task(self, job_schedule_id: Optional[int] = None) -> dict:
                 meta={"current": 100, "total": 100, "status": "Complete"},
             )
 
-            logger.info(f"Successfully cached {len(devices)} devices")
+            logger.info("Successfully cached %s devices", len(devices))
 
             return {
                 "success": True,
@@ -1601,7 +1611,7 @@ def cache_devices_task(self, job_schedule_id: Optional[int] = None) -> dict:
             loop.close()
 
     except Exception as e:
-        logger.error(f"cache_devices task failed: {e}", exc_info=True)
+        logger.error("cache_devices task failed: %s", e, exc_info=True)
         return {"success": False, "error": str(e), "job_schedule_id": job_schedule_id}
 
 
@@ -1619,7 +1629,7 @@ def sync_checkmk_task(self, job_schedule_id: Optional[int] = None) -> dict:
         dict: Task execution results
     """
     try:
-        logger.info(f"Starting sync_checkmk task (job_schedule_id: {job_schedule_id})")
+        logger.info("Starting sync_checkmk task (job_schedule_id: %s)", job_schedule_id)
 
         self.update_state(
             state="PROGRESS",
@@ -1664,7 +1674,7 @@ def sync_checkmk_task(self, job_schedule_id: Optional[int] = None) -> dict:
             loop.close()
 
     except Exception as e:
-        logger.error(f"sync_checkmk task failed: {e}", exc_info=True)
+        logger.error("sync_checkmk task failed: %s", e, exc_info=True)
         return {"success": False, "error": str(e), "job_schedule_id": job_schedule_id}
 
 
@@ -1722,7 +1732,7 @@ def backup_configs_task(
 
         device_count = len(devices) if devices else 0
 
-        logger.info(f"Backup task completed for {device_count} devices")
+        logger.info("Backup task completed for %s devices", device_count)
 
         return {
             "success": True,
@@ -1732,7 +1742,7 @@ def backup_configs_task(
         }
 
     except Exception as e:
-        logger.error(f"backup_configs task failed: {e}", exc_info=True)
+        logger.error("backup_configs task failed: %s", e, exc_info=True)
         return {"success": False, "error": str(e), "job_schedule_id": job_schedule_id}
 
 
@@ -1786,7 +1796,7 @@ def ansible_playbook_task(
             state="PROGRESS", meta={"current": 100, "total": 100, "status": "Complete"}
         )
 
-        logger.info(f"Ansible playbook task completed: {playbook}")
+        logger.info("Ansible playbook task completed: %s", playbook)
 
         return {
             "success": True,
@@ -1796,7 +1806,7 @@ def ansible_playbook_task(
         }
 
     except Exception as e:
-        logger.error(f"ansible_playbook task failed: {e}", exc_info=True)
+        logger.error("ansible_playbook task failed: %s", e, exc_info=True)
         return {"success": False, "error": str(e), "job_schedule_id": job_schedule_id}
 
 

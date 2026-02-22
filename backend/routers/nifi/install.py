@@ -49,7 +49,9 @@ async def check_path(
             detail=str(exc),
         )
     except Exception as exc:
-        logger.error("Error checking %s paths for instance %d: %s", path_type, instance_id, exc)
+        logger.error(
+            "Error checking %s paths for instance %d: %s", path_type, instance_id, exc
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),

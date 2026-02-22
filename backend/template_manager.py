@@ -98,7 +98,7 @@ class TemplateManager:
         except ValueError as e:
             raise e
         except Exception as e:
-            logger.error(f"Error creating template: {e}")
+            logger.error("Error creating template: %s", e)
             raise e
 
     def get_template(self, template_id: int) -> Optional[Dict[str, Any]]:
@@ -116,7 +116,7 @@ class TemplateManager:
             return None
 
         except Exception as e:
-            logger.error(f"Error getting template {template_id}: {e}")
+            logger.error("Error getting template %s: %s", template_id, e)
             return None
 
     def get_template_by_name(self, name: str) -> Optional[Dict[str, Any]]:
@@ -130,7 +130,7 @@ class TemplateManager:
             return None
 
         except Exception as e:
-            logger.error(f"Error getting template by name '{name}': {e}")
+            logger.error("Error getting template by name '%s': %s", name, e)
             return None
 
     def list_templates(
@@ -149,7 +149,7 @@ class TemplateManager:
         try:
             repo = TemplateRepository()
 
-            logger.info(f"DEBUG: list_templates - filtering for username={username}")
+            logger.info("DEBUG: list_templates - filtering for username=%s", username)
 
             templates = repo.list_templates(
                 category=category,
@@ -159,7 +159,7 @@ class TemplateManager:
             )
 
             results = [self._model_to_dict(t) for t in templates]
-            logger.info(f"DEBUG: list_templates - found {len(results)} templates")
+            logger.info("DEBUG: list_templates - found %s templates", len(results))
             for template in results:
                 logger.info(
                     f"DEBUG: list_templates - template: id={template['id']}, name={template['name']}, scope={template.get('scope')}, created_by={template.get('created_by')}"
@@ -168,7 +168,7 @@ class TemplateManager:
             return results
 
         except Exception as e:
-            logger.error(f"Error listing templates: {e}")
+            logger.error("Error listing templates: %s", e)
             return []
 
     def update_template(self, template_id: int, template_data: Dict[str, Any]) -> bool:
@@ -260,11 +260,11 @@ class TemplateManager:
                     template_data.get("change_notes", "Template updated"),
                 )
 
-            logger.info(f"Template {template_id} updated")
+            logger.info("Template %s updated", template_id)
             return True
 
         except Exception as e:
-            logger.error(f"Error updating template {template_id}: {e}")
+            logger.error("Error updating template %s: %s", template_id, e)
             return False
 
     def delete_template(self, template_id: int, hard_delete: bool = False) -> bool:
@@ -286,7 +286,7 @@ class TemplateManager:
             return True
 
         except Exception as e:
-            logger.error(f"Error deleting template {template_id}: {e}")
+            logger.error("Error deleting template %s: %s", template_id, e)
             return False
 
     def get_template_content(self, template_id: int) -> Optional[str]:
@@ -301,7 +301,7 @@ class TemplateManager:
             return template.get("content")
 
         except Exception as e:
-            logger.error(f"Error getting template content for {template_id}: {e}")
+            logger.error("Error getting template content for %s: %s", template_id, e)
             return None
 
     def render_template(
@@ -356,7 +356,7 @@ class TemplateManager:
             return [self._version_model_to_dict(v) for v in versions]
 
         except Exception as e:
-            logger.error(f"Error getting template versions for {template_id}: {e}")
+            logger.error("Error getting template versions for %s: %s", template_id, e)
             return []
 
     def _model_to_dict(self, template: Template) -> Dict[str, Any]:
@@ -448,7 +448,7 @@ class TemplateManager:
             )
 
         except Exception as e:
-            logger.error(f"Error creating template version: {e}")
+            logger.error("Error creating template version: %s", e)
 
     def search_templates(
         self, query: str, search_content: bool = False, username: str = None
@@ -465,7 +465,7 @@ class TemplateManager:
             return [self._model_to_dict(t) for t in templates]
 
         except Exception as e:
-            logger.error(f"Error searching templates: {e}")
+            logger.error("Error searching templates: %s", e)
             return []
 
     def get_categories(self) -> List[str]:
@@ -475,7 +475,7 @@ class TemplateManager:
             return repo.get_categories()
 
         except Exception as e:
-            logger.error(f"Error getting categories: {e}")
+            logger.error("Error getting categories: %s", e)
             return []
 
     def health_check(self) -> Dict[str, Any]:
@@ -496,7 +496,7 @@ class TemplateManager:
             }
 
         except Exception as e:
-            logger.error(f"Template database health check failed: {e}")
+            logger.error("Template database health check failed: %s", e)
             return {"status": "unhealthy", "error": str(e)}
 
 

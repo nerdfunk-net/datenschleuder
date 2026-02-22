@@ -4,7 +4,6 @@ import logging
 from typing import Optional, Dict, Any
 
 from nipyapi import versioning
-from nipyapi.nifi import FlowApi
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +39,7 @@ def export_flow(
         "github" in registry_type.lower() or "git" in registry_type.lower()
     )
     if is_external:
-        raise ValueError(
-            "Export is not supported for %s registries" % registry_type
-        )
+        raise ValueError("Export is not supported for %s registries" % registry_type)
 
     exported_content = versioning.export_flow_version(
         bucket_id=bucket_id, flow_id=flow_id, version=version, mode=mode
@@ -94,9 +91,7 @@ def import_flow(
         "github" in registry_type.lower() or "git" in registry_type.lower()
     )
     if is_external:
-        raise ValueError(
-            "Import is not supported for %s registries" % registry_type
-        )
+        raise ValueError("Import is not supported for %s registries" % registry_type)
 
     imported_flow = versioning.import_flow_version(
         bucket_id=bucket_id,

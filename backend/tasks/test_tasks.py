@@ -21,13 +21,13 @@ def test_task(message: str = "Hello from Celery!") -> dict:
         dict: Result with success status and message
     """
     try:
-        logger.info(f"Test task received: {message}")
+        logger.info("Test task received: %s", message)
         time.sleep(2)  # Simulate some work
 
         return {"success": True, "message": message, "timestamp": time.time()}
 
     except Exception as e:
-        logger.error(f"Test task failed: {e}")
+        logger.error("Test task failed: %s", e)
         return {"success": False, "error": str(e)}
 
 
@@ -44,7 +44,7 @@ def test_progress_task(self, duration: int = 10) -> dict:
         dict: Result with success status
     """
     try:
-        logger.info(f"Test progress task started: {duration} seconds")
+        logger.info("Test progress task started: %s seconds", duration)
 
         for i in range(duration):
             self.update_state(
@@ -64,5 +64,5 @@ def test_progress_task(self, duration: int = 10) -> dict:
         }
 
     except Exception as e:
-        logger.error(f"Test progress task failed: {e}")
+        logger.error("Test progress task failed: %s", e)
         return {"success": False, "error": str(e)}

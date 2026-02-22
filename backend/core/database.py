@@ -30,7 +30,9 @@ engine = create_engine(
 # expire_on_commit=False: after a commit, objects are NOT expired, so their column
 # attributes remain accessible even after the session is closed. Without this,
 # committing expires all attributes and any post-close access raises DetachedInstanceError.
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
+SessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
+)
 
 # Base class for all models
 Base = declarative_base()
@@ -71,7 +73,7 @@ def init_db():
     """
     Initialize database - create all tables from SQLAlchemy models.
     This should be called on application startup.
-    
+
     This will create any missing tables but will NOT alter existing tables.
     For schema migrations, use the migration system in migrations/ directory.
     """
@@ -81,17 +83,23 @@ def init_db():
         # Import all models to ensure they're registered with Base.metadata
         from core import models  # noqa: F401
 
-        logger.info(f"Loaded {len(Base.metadata.tables)} table definitions from models")
+        logger.info(
+            "Loaded %s table definitions from models", len(Base.metadata.tables)
+        )
 
         # Get inspector to check existing tables
         inspector = inspect(engine)
         existing_tables = set(inspector.get_table_names())
         model_tables = set(Base.metadata.tables.keys())
-        
+
         missing_tables = model_tables - existing_tables
-        
+
         if missing_tables:
-            logger.info(f"Creating {len(missing_tables)} missing table(s): {', '.join(sorted(missing_tables))}")
+            logger.info(
+                "Creating %s missing table(s): %s",
+                len(missing_tables),
+                ", ".join(sorted(missing_tables)),
+            )
             # Create all tables defined in models (only missing ones will be created)
             Base.metadata.create_all(bind=engine)
             logger.info("✓ Database tables created successfully")
@@ -102,7 +110,7 @@ def init_db():
             f"Database initialized successfully ({len(model_tables)} tables total)"
         )
     except Exception as e:
-        logger.error(f"Error initializing database: {e}")
+        logger.error("Error initializing database: %s", e)
         raise
 
 
@@ -129,5 +137,5 @@ def check_connection():
         logger.info("Database connection successful")
         return True
     except Exception as e:
-        logger.error(f"Database connection failed: {e}")
+        logger.error("Database connection failed: %s", e)
         return False

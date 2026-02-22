@@ -31,11 +31,7 @@ class NifiInstanceRepository(BaseRepository[NifiInstance]):
         """Get instance by name."""
         db = get_db_session()
         try:
-            return (
-                db.query(NifiInstance)
-                .filter(NifiInstance.name == name)
-                .first()
-            )
+            return db.query(NifiInstance).filter(NifiInstance.name == name).first()
         finally:
             db.close()
 
@@ -45,7 +41,9 @@ class NifiInstanceRepository(BaseRepository[NifiInstance]):
         try:
             return (
                 db.query(NifiInstance)
-                .order_by(NifiInstance.hierarchy_attribute, NifiInstance.hierarchy_value)
+                .order_by(
+                    NifiInstance.hierarchy_attribute, NifiInstance.hierarchy_value
+                )
                 .all()
             )
         finally:

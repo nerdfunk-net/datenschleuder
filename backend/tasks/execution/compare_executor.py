@@ -82,7 +82,7 @@ def execute_compare_devices(
                 )
                 if devices_result and hasattr(devices_result, "devices"):
                     device_ids = [device.get("id") for device in devices_result.devices]
-                    logger.info(f"Fetched {len(device_ids)} devices from Nautobot")
+                    logger.info("Fetched %s devices from Nautobot", len(device_ids))
                 else:
                     logger.warning("No devices found in Nautobot")
                     device_ids = []
@@ -116,7 +116,9 @@ def execute_compare_devices(
             job_id, 0, total_devices, "Starting comparison..."
         )
 
-        logger.info(f"Starting comparison of {total_devices} devices, job_id: {job_id}")
+        logger.info(
+            "Starting comparison of %s devices, job_id: %s", total_devices, job_id
+        )
 
         # Process each device
         for i, device_id in enumerate(device_ids):
@@ -226,7 +228,7 @@ def execute_compare_devices(
             except Exception as e:
                 failed_count += 1
                 error_msg = str(e)
-                logger.error(f"Error comparing device {device_id}: {error_msg}")
+                logger.error("Error comparing device %s: %s", device_id, error_msg)
                 nb2cmk_db_service.add_device_result(
                     job_id=job_id,
                     device_id=device_id,
@@ -267,5 +269,5 @@ def execute_compare_devices(
 
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"Compare devices job failed: {error_msg}", exc_info=True)
+        logger.error("Compare devices job failed: %s", error_msg, exc_info=True)
         return {"success": False, "error": error_msg}

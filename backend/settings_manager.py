@@ -138,7 +138,7 @@ class SettingsManager:
                 return asdict(self.default_git)
 
         except Exception as e:
-            logger.error(f"Error getting Git settings: {e}")
+            logger.error("Error getting Git settings: %s", e)
             return asdict(self.default_git)
 
     def get_all_settings(self) -> Dict[str, Any]:
@@ -184,7 +184,7 @@ class SettingsManager:
                 }
             return asdict(self.default_cache)
         except Exception as e:
-            logger.error(f"Error getting Cache settings: {e}")
+            logger.error("Error getting Cache settings: %s", e)
             return asdict(self.default_cache)
 
     def update_cache_settings(self, settings: Dict[str, Any]) -> bool:
@@ -235,7 +235,7 @@ class SettingsManager:
             logger.info("Cache settings updated successfully")
             return True
         except Exception as e:
-            logger.error(f"Error updating Cache settings: {e}")
+            logger.error("Error updating Cache settings: %s", e)
             return False
 
     def get_celery_settings(self) -> Dict[str, Any]:
@@ -264,7 +264,7 @@ class SettingsManager:
                 }
             return asdict(self.default_celery)
         except Exception as e:
-            logger.error(f"Error getting Celery settings: {e}")
+            logger.error("Error getting Celery settings: %s", e)
             return asdict(self.default_celery)
 
     def update_celery_settings(self, settings: Dict[str, Any]) -> bool:
@@ -307,7 +307,7 @@ class SettingsManager:
             logger.info("Celery settings updated successfully")
             return True
         except Exception as e:
-            logger.error(f"Error updating Celery settings: {e}")
+            logger.error("Error updating Celery settings: %s", e)
             return False
 
     def ensure_builtin_queues(self) -> bool:
@@ -391,7 +391,7 @@ class SettingsManager:
                 return True
 
         except Exception as e:
-            logger.error(f"Error ensuring built-in queues: {e}")
+            logger.error("Error ensuring built-in queues: %s", e)
             return False
 
     def update_git_settings(self, settings: Dict[str, Any]) -> bool:
@@ -434,7 +434,7 @@ class SettingsManager:
             return True
 
         except Exception as e:
-            logger.error(f"Error updating Git settings: {e}")
+            logger.error("Error updating Git settings: %s", e)
             return False
 
     def update_all_settings(self, settings: Dict[str, Any]) -> bool:
@@ -466,7 +466,7 @@ class SettingsManager:
             return metadata
 
         except Exception as e:
-            logger.error(f"Error getting metadata: {e}")
+            logger.error("Error getting metadata: %s", e)
             return {"error": str(e)}
 
     def _handle_database_corruption(self) -> Dict[str, str]:
@@ -502,7 +502,7 @@ class SettingsManager:
                 session.close()
 
         except Exception as e:
-            logger.error(f"Error resetting settings: {e}")
+            logger.error("Error resetting settings: %s", e)
             return False
 
     def health_check(self) -> Dict[str, Any]:
@@ -525,7 +525,7 @@ class SettingsManager:
             }
 
         except Exception as e:
-            logger.error(f"Database health check failed: {e}")
+            logger.error("Database health check failed: %s", e)
             return {"status": "unhealthy", "error": str(e), "recovery_needed": False}
 
     def get_selected_git_repository(self) -> Optional[int]:
@@ -536,7 +536,7 @@ class SettingsManager:
             return int(result.value) if result and result.value else None
 
         except Exception as e:
-            logger.error(f"Error getting selected Git repository: {e}")
+            logger.error("Error getting selected Git repository: %s", e)
             return None
 
     def set_selected_git_repository(self, repository_id: int) -> bool:
@@ -544,11 +544,11 @@ class SettingsManager:
         try:
             repo = SettingsMetadataRepository()
             repo.set_metadata("selected_git_repository", str(repository_id))
-            logger.info(f"Selected Git repository set to ID: {repository_id}")
+            logger.info("Selected Git repository set to ID: %s", repository_id)
             return True
 
         except Exception as e:
-            logger.error(f"Error setting selected Git repository: {e}")
+            logger.error("Error setting selected Git repository: %s", e)
             return False
 
     # OIDC Provider Management
@@ -566,7 +566,7 @@ class SettingsManager:
         config_path = self.get_oidc_providers_config_path()
 
         if not os.path.exists(config_path):
-            logger.warning(f"OIDC providers config not found at {config_path}")
+            logger.warning("OIDC providers config not found at %s", config_path)
             return {"providers": {}, "global": {"allow_traditional_login": True}}
 
         try:
@@ -589,10 +589,10 @@ class SettingsManager:
             return config
 
         except yaml.YAMLError as e:
-            logger.error(f"Error parsing OIDC providers YAML: {e}")
+            logger.error("Error parsing OIDC providers YAML: %s", e)
             return {"providers": {}, "global": {"allow_traditional_login": True}}
         except Exception as e:
-            logger.error(f"Error loading OIDC providers config: {e}")
+            logger.error("Error loading OIDC providers config: %s", e)
             return {"providers": {}, "global": {"allow_traditional_login": True}}
 
     def get_oidc_providers(self) -> Dict[str, Dict[str, Any]]:
@@ -610,7 +610,9 @@ class SettingsManager:
 
         enabled_providers = []
         for provider_id, provider_config in providers.items():
-            if provider_config.get("enabled", False) and not provider_config.get("backend", False):
+            if provider_config.get("enabled", False) and not provider_config.get(
+                "backend", False
+            ):
                 provider_data = provider_config.copy()
                 provider_data["provider_id"] = provider_id
                 enabled_providers.append(provider_data)
@@ -618,7 +620,9 @@ class SettingsManager:
         # Sort by display_order
         enabled_providers.sort(key=lambda p: p.get("display_order", 999))
 
-        logger.info(f"Found {len(enabled_providers)} enabled user-facing OIDC provider(s)")
+        logger.info(
+            "Found %s enabled user-facing OIDC provider(s)", len(enabled_providers)
+        )
         return enabled_providers
 
     def get_nifi_oidc_providers(self) -> List[Dict[str, Any]]:
@@ -627,14 +631,18 @@ class SettingsManager:
 
         nifi_providers = []
         for provider_id, provider_config in providers.items():
-            if provider_config.get("enabled", False) and provider_config.get("backend", False):
+            if provider_config.get("enabled", False) and provider_config.get(
+                "backend", False
+            ):
                 provider_data = provider_config.copy()
                 provider_data["provider_id"] = provider_id
                 nifi_providers.append(provider_data)
 
         nifi_providers.sort(key=lambda p: p.get("display_order", 999))
 
-        logger.info(f"Found {len(nifi_providers)} enabled NiFi backend OIDC provider(s)")
+        logger.info(
+            "Found %s enabled NiFi backend OIDC provider(s)", len(nifi_providers)
+        )
         return nifi_providers
 
     def get_oidc_provider(self, provider_id: str) -> Optional[Dict[str, Any]]:
@@ -648,7 +656,7 @@ class SettingsManager:
             provider_data["provider_id"] = provider_id
             return provider_data
 
-        logger.warning(f"OIDC provider '{provider_id}' not found in config")
+        logger.warning("OIDC provider '%s' not found in config", provider_id)
         return None
 
     def get_oidc_global_settings(self) -> Dict[str, Any]:
