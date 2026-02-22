@@ -124,16 +124,32 @@ def deploy_flow(instance_id: int, deployment_data: dict) -> dict:
     logger.info("STEP 6: Deploy Flow Version")
     logger.info("="*60)
 
+    # Determine deploy position using nipyapi.layout if available
+    x_position = deployment_data.get("x_position", 0)
+    y_position = deployment_data.get("y_position", 0)
+    try:
+        import nipyapi.layout
+        logger.info("Aligning existing process groups in parent PG %s into grid", resolved_parent_pg_id)
+        moves = nipyapi.layout.align_pg_grid(resolved_parent_pg_id, sort_by_name=True)
+        logger.info("Grid alignment moved %d process groups", len(moves))
+        pos = nipyapi.layout.suggest_pg_position(resolved_parent_pg_id)
+        x_position, y_position = pos
+        logger.info("Suggested position for new PG: x=%s, y=%s", x_position, y_position)
+    except (ImportError, AttributeError):
+        logger.info("nipyapi.layout not available, using manual position: x=%s, y=%s", x_position, y_position)
+    except Exception as e:
+        logger.warning("Layout auto-positioning failed, falling back to manual position x=%s, y=%s: %s",
+                       x_position, y_position, e)
+
     logger.info("Deploying to parent PG: %s", resolved_parent_pg_id)
-    logger.info("Position: x=%s, y=%s", deployment_data.get("x_position", 0), deployment_data.get("y_position", 0))
     deployed_pg = service.deploy_flow_version(
         resolved_parent_pg_id,
         bucket_identifier,
         flow_identifier,
         registry_client_id,
         deploy_version,
-        deployment_data.get("x_position", 0),
-        deployment_data.get("y_position", 0),
+        x_position,
+        y_position,
     )
 
     pg_id = deployed_pg.id if hasattr(deployed_pg, "id") else None
