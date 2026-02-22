@@ -1,6 +1,7 @@
 export interface PathConfig {
-  id: string   // UUID of the process group
-  path: string // Human-readable path, e.g. "Nifi Flow/From DC1"
+  id: string      // UUID of the process group
+  path: string    // Human-readable (formatted_path), e.g. "NiFi Flow → From DC1"
+  raw_path: string // API path for hierarchy construction, e.g. "/From DC1"
 }
 
 export interface DeploymentSettings {
@@ -21,7 +22,8 @@ export interface DeploymentSettings {
 export interface ProcessGroupOption {
   id: string
   name: string
-  path: string // reversed breadcrumb, e.g. "Root / Child / Grandchild"
+  path: string     // formatted_path for display, e.g. "NiFi Flow → From DC1"
+  raw_path: string // API path for hierarchy building, e.g. "/From DC1"
 }
 
 const DEFAULT_GLOBAL = {

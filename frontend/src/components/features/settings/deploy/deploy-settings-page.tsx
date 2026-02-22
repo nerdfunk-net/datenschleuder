@@ -84,13 +84,14 @@ export function DeploySettingsPage() {
     try {
       const res = await apiCall(
         `nifi/instances/${instanceId}/ops/process-groups/all-paths`
-      ) as { process_groups?: Array<{ id: string; name: string; parent_group_id: string | null; path: Array<{ id: string; name: string; parent_group_id: string | null }>; depth: number }> }
+      ) as { process_groups?: Array<{ id: string; name: string; path: string; level: number; formatted_path: string }> }
 
       const groups = res?.process_groups ?? []
       const options: ProcessGroupOption[] = groups.map(pg => ({
         id: pg.id,
         name: pg.name,
-        path: pg.path.map(p => p.name).reverse().join('/'),
+        path: pg.formatted_path,
+        raw_path: pg.path,
       }))
 
       setPgOptions(prev => ({ ...prev, [instanceId]: options }))
@@ -119,7 +120,7 @@ export function DeploySettingsPage() {
       ...prev,
       [instanceId]: {
         ...prev[instanceId],
-        [field]: pg ? { id: pg.id, path: pg.path } as PathConfig : undefined,
+        [field]: pg ? { id: pg.id, path: pg.path, raw_path: pg.raw_path } as PathConfig : undefined,
       },
     }))
     setIsDirty(true)

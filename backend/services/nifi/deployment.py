@@ -2,7 +2,7 @@
 
 import time
 import logging
-from typing import Optional, Tuple, Callable, Any
+from typing import Optional, Tuple, Any
 
 from nipyapi import versioning, canvas
 from nipyapi.nifi import ProcessGroupsApi
@@ -424,78 +424,21 @@ class NiFiDeploymentService:
             logger.warning("Could not stop version control: %s", e)
 
     def start_process_group(self, pg_id: str) -> None:
-        """Start all components in a process group."""
+        """Start all components in a process group.
+
+        Note: Components in DISABLED or INVALID states will not be started,
+        as reported by nipyapi.
+        """
         try:
-            from nipyapi.nifi import (
-                ProcessorsApi,
-                ProcessorRunStatusEntity,
-                RevisionDTO,
-                InputPortsApi,
-                OutputPortsApi,
-                PortRunStatusEntity,
-            )
-
-            processors = canvas.list_all_processors(pg_id)
-            processors_api = ProcessorsApi()
-
-            for processor in processors:
-                try:
-                    current_state = (
-                        processor.status.run_status
-                        if hasattr(processor, "status")
-                        else "UNKNOWN"
-                    )
-                    if current_state in ("RUNNING", "DISABLED"):
-                        continue
-
-                    run_status = ProcessorRunStatusEntity(
-                        revision=RevisionDTO(version=processor.revision.version),
-                        state="RUNNING",
-                    )
-                    processors_api.update_run_status4(body=run_status, id=processor.id)
-                except Exception:
-                    pass
-
-            input_ports = canvas.list_all_input_ports(pg_id)
-            input_ports_api = InputPortsApi()
-
-            for port in input_ports:
-                try:
-                    current_state = (
-                        port.status.run_status if hasattr(port, "status") else "UNKNOWN"
-                    )
-                    if current_state in ("RUNNING", "DISABLED"):
-                        continue
-
-                    run_status = PortRunStatusEntity(
-                        revision=RevisionDTO(version=port.revision.version),
-                        state="RUNNING",
-                    )
-                    input_ports_api.update_run_status2(body=run_status, id=port.id)
-                except Exception:
-                    pass
-
-            output_ports = canvas.list_all_output_ports(pg_id)
-            output_ports_api = OutputPortsApi()
-
-            for port in output_ports:
-                try:
-                    current_state = (
-                        port.status.run_status if hasattr(port, "status") else "UNKNOWN"
-                    )
-                    if current_state in ("RUNNING", "DISABLED"):
-                        continue
-
-                    run_status = PortRunStatusEntity(
-                        revision=RevisionDTO(version=port.revision.version),
-                        state="RUNNING",
-                    )
-                    output_ports_api.update_run_status3(body=run_status, id=port.id)
-                except Exception:
-                    pass
-
-            logger.info("Process group %s started", pg_id)
-
+            result = canvas.schedule_process_group(pg_id, scheduled=True, identifier_type="id")
+            if result:
+                logger.info("Process group %s started", pg_id)
+            else:
+                logger.warning(
+                    "Process group %s may not have fully started (some components"
+                    " may be in invalid states)",
+                    pg_id,
+                )
         except Exception as e:
             logger.error("Failed to start process group %s: %s", pg_id, e)
             raise

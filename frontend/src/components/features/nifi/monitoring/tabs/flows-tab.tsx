@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -432,11 +432,8 @@ export function FlowsTab() {
 
         const pathToIdMap = new Map<string, string>()
         allPathsResponse.process_groups.forEach((pg) => {
-          const pathString = pg.path
-            .slice()
-            .reverse()
-            .map((p) => p.name)
-            .join('/')
+          // backend returns path as "/Parent/Child" string; strip leading slash
+          const pathString = pg.path.startsWith('/') ? pg.path.slice(1) : pg.path
           pathToIdMap.set(pathString, pg.id)
         })
 
@@ -689,9 +686,8 @@ export function FlowsTab() {
       {/* Flow Widgets Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {filteredFlows.map((flow) => (
-          <>
+          <React.Fragment key={flow.id}>
             <FlowWidget
-              key={`${flow.id}_source`}
               flow={flow}
               flowType="source"
               statusData={getFlowItemStatus(flow, 'source')}
@@ -702,7 +698,6 @@ export function FlowsTab() {
               onStatusClick={() => handleStatusClick(flow, 'source')}
             />
             <FlowWidget
-              key={`${flow.id}_destination`}
               flow={flow}
               flowType="destination"
               statusData={getFlowItemStatus(flow, 'destination')}
@@ -712,7 +707,7 @@ export function FlowsTab() {
               onInfoClick={() => handleInfoClick(flow, 'destination')}
               onStatusClick={() => handleStatusClick(flow, 'destination')}
             />
-          </>
+          </React.Fragment>
         ))}
       </div>
 

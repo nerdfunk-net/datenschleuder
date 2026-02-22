@@ -22,10 +22,6 @@ interface VersionsResponse {
   versions: FlowVersion[]
 }
 
-interface DeploymentSettingsResponse {
-  settings: DeploymentSettings
-}
-
 /**
  * Fetch deployment settings (global + per-instance paths)
  */
@@ -35,8 +31,8 @@ export function useDeploymentSettingsQuery(): UseQueryResult<DeploymentSettings>
   return useQuery<DeploymentSettings>({
     queryKey: queryKeys.deploy.settings(),
     queryFn: async () => {
-      const result = await apiCall<DeploymentSettingsResponse>('nifi/hierarchy/deploy')
-      return result?.settings || getDefaultSettings()
+      const result = await apiCall<DeploymentSettings>('nifi/hierarchy/deploy')
+      return result || getDefaultSettings()
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   })

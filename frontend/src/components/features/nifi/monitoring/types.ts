@@ -187,9 +187,9 @@ export interface HierarchyConfig {
 export interface ProcessGroupPath {
   id: string
   name: string
-  parent_group_id: string | null
-  path: Array<{ id: string; name: string; parent_group_id: string | null }>
-  depth: number
+  path: string
+  level: number
+  formatted_path: string
 }
 
 export interface AllPathsResponse {

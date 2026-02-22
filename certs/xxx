@@ -1,0 +1,1 @@
+When I look at "Settings / Deploy" and load the path, the selection "Source Path (DC)" only contains values like "From net1". The prefix is missing. It should be "Nifi Flow / From net1".

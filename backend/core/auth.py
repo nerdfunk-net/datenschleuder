@@ -85,7 +85,11 @@ def verify_admin_token(user_info: dict = Depends(verify_token)) -> dict:
 
 
 def verify_api_key(x_api_key: Optional[str] = None) -> dict:
-    """Verify API key and return user info."""
+    """Verify API key and return user info.
+
+    Looks up the API key in the PostgreSQL user_profiles table and returns
+    the associated user's details.
+    """
 
     if not x_api_key:
         raise HTTPException(
@@ -94,37 +98,21 @@ def verify_api_key(x_api_key: Optional[str] = None) -> dict:
             headers={"WWW-Authenticate": "ApiKey"},
         )
 
-    # Search for user with matching API key
-    import sqlite3
-    from config import settings as config_settings
-    import os
-
-    db_path = os.path.join(
-        config_settings.data_directory, "settings", "cockpit_settings.db"
-    )
-
     try:
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
+        from repositories.auth.profile_repository import ProfileRepository
+        from services.auth.user_management import get_user_by_username
 
-        user_row = conn.execute(
-            "SELECT username FROM user_profiles WHERE api_key = ? AND api_key IS NOT NULL",
-            (x_api_key,),
-        ).fetchone()
+        profile_repo = ProfileRepository()
+        profile = profile_repo.get_by_api_key(x_api_key)
 
-        conn.close()
-
-        if not user_row:
+        if not profile:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid API key",
                 headers={"WWW-Authenticate": "ApiKey"},
             )
 
-        # Get user details from user management system
-        from services.user_management import get_user_by_username
-
-        user = get_user_by_username(user_row["username"])
+        user = get_user_by_username(profile.username)
 
         if not user or not user.get("is_active", False):
             raise HTTPException(

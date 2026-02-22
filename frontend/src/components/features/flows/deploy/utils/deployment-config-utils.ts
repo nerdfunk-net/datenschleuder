@@ -140,14 +140,10 @@ export function autoSelectProcessGroup(
     return null
   }
 
-  // Try to match configured path with available paths
-  const matchingPath = config.availablePaths.find((path) => {
-    // Check if path matches the configured pattern
-    // E.g., configured: "NiFi Flow/Engineering" matches "NiFi Flow/Engineering/DataPipeline"
-    return path.path.startsWith(configuredPath) || path.formatted_path.includes(configuredPath)
-  })
+  // PathConfig has an id — use it directly if it matches an available path
+  const matchingPath = config.availablePaths.find((path) => path.id === configuredPath.id)
 
-  return matchingPath?.id || null
+  return matchingPath?.id || configuredPath.id
 }
 
 /**
@@ -193,7 +189,7 @@ export function getSuggestedPath(
   const configuredPath = config.target === 'source' ? instancePaths?.source_path : instancePaths?.dest_path
 
   if (configuredPath) {
-    return `Suggested: ${configuredPath}`
+    return `Suggested: ${configuredPath.path}`
   }
 
   return null

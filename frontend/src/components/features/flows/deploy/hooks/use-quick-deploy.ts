@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useApi } from '@/hooks/use-api'
 import { useToast } from '@/hooks/use-toast'
 import { useDeployMutations } from './use-deploy-mutations'
 import { useDeploymentSettingsQuery } from './use-deploy-query'
@@ -27,7 +26,6 @@ export function useQuickDeploy({
   registryFlows: RegistryFlow[]
   hierarchyAttributes: { name: string; label: string; order: number }[]
 }) {
-  const { apiCall } = useApi()
   const { toast } = useToast()
   const { deployFlow, deleteProcessGroup, updateProcessGroupVersion } = useDeployMutations()
   const { data: deploymentSettings } = useDeploymentSettingsQuery()
@@ -159,35 +157,59 @@ export function useQuickDeploy({
             )
           : config.hierarchyValue
 
-        // Get configured process group path from settings (if any)
+        // ─── DEPLOYMENT PATH LOGIC ────────────────────────────────────────────────
+        // DO NOT REMOVE OR SIMPLIFY THIS BLOCK.
+        //
+        // The backend's find_or_create_process_group_by_path() requires a FULL path
+        // including all intermediate hierarchy levels, e.g. "From net1/O1/OU1".
+        //
+        // PathConfig saved in deployment settings contains:
+        //   - id:       UUID of the base process group (e.g. the "From net1" UUID)
+        //   - raw_path: Raw API path string, e.g. "/From net1"  ← use for path building
+        //   - path:     Formatted display label, e.g. "NiFi Flow → From net1"  ← display only
+        //
+        // We build the full path by combining:
+        //   raw_path base parts  +  middle hierarchy values (skip first=DC and last=CN)
+        //   e.g. "/From net1" + O=O1 + OU=OU1  →  parent_process_group_path = "From net1/O1/OU1"
+        //
+        // FALLBACK: If raw_path is absent (settings saved before this field was added),
+        //   send the UUID directly as parent_process_group_id instead. The hierarchy
+        //   nesting will be wrong (deploys into base group, not OU), but does not crash.
+        // ─────────────────────────────────────────────────────────────────────────
+
         const instancePaths = deploymentSettings?.paths[config.instanceId.toString()]
-        const processGroupPath =
-          target === 'source' ? instancePaths?.source_path : instancePaths?.dest_path
+        const savedPath = target === 'source' ? instancePaths?.source_path : instancePaths?.dest_path
 
-        // If a path is configured, try to resolve it to an ID; otherwise use path directly
+        if (!savedPath) {
+          toast({
+            title: 'Deployment path not configured',
+            description: `No ${target} path is configured for this NiFi instance. Open Settings → Deploy, click "Load Paths" for instance ${config.instanceId}, select the ${target} path, and save.`,
+            variant: 'destructive',
+          })
+          return
+        }
+
         let parentProcessGroupId: string | null = null
-        let parentProcessGroupPath: string | null = processGroupPath ?? null
+        let parentProcessGroupPath: string | null = null
 
-        if (processGroupPath) {
-          try {
-            const pathsData = await apiCall(
-              `nifi/instances/${config.instanceId}/ops/process-groups/all-paths`
-            ) as { process_groups?: { id: string; path: string; formatted_path: string }[] }
-
-            const match = pathsData?.process_groups?.find(
-              (pg) =>
-                pg.path === processGroupPath ||
-                pg.formatted_path.includes(processGroupPath) ||
-                processGroupPath.includes(pg.path)
-            )
-
-            if (match) {
-              parentProcessGroupId = match.id
-              parentProcessGroupPath = null // Use ID when available
-            }
-          } catch {
-            // Path lookup failed — fall back to path string (backend handles it)
+        if (savedPath.raw_path) {
+          // ✅ Preferred path: build full nested path using raw_path (e.g. "/From net1")
+          // + middle hierarchy attribute values (skip first=DC and last=CN/leaf)
+          const baseParts = savedPath.raw_path.split('/').filter(s => s.trim())
+          const middleParts: string[] = []
+          for (let i = 1; i < hierAttrs.length - 1; i++) {
+            const attr = hierAttrs[i]
+            if (!attr) continue
+            const values = flow.hierarchy_values?.[attr.name]
+            const value = target === 'source' ? values?.source : values?.destination
+            if (value) middleParts.push(value)
           }
+          parentProcessGroupPath = [...baseParts, ...middleParts].join('/')
+        } else {
+          // ⚠️ Fallback: raw_path missing (old settings). Use the UUID directly.
+          // This deploys into the base group without hierarchy nesting.
+          // Re-save settings in Settings → Deploy to fix this.
+          parentProcessGroupId = savedPath.id
         }
 
         const request: DeploymentRequest = {
@@ -215,7 +237,7 @@ export function useQuickDeploy({
         setDeployingFlows((prev) => ({ ...prev, [key]: false }))
       }
     },
-    [instances, registryFlows, hierAttrs, deploymentSettings, deployAndHandle, apiCall, toast]
+    [instances, registryFlows, hierAttrs, deploymentSettings, deployAndHandle, toast]
   )
 
   const handleSkipConflict = useCallback(() => {

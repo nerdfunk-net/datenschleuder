@@ -33,8 +33,8 @@ export function useMonitoringFlowsQuery() {
   return useQuery<Flow[]>({
     queryKey: queryKeys.nifi.monitoringFlows(),
     queryFn: async () => {
-      const result = await apiCall<{ flows: Flow[] }>('nifi/flows/')
-      return result?.flows ?? EMPTY_FLOWS
+      const result = await apiCall<Flow[]>('nifi/flows/')
+      return result ?? EMPTY_FLOWS
     },
     staleTime: 2 * 60 * 1000,
   })

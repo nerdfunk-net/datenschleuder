@@ -43,8 +43,8 @@ export interface DeploymentSettings {
   paths: Record<
     string,
     {
-      source_path?: string
-      dest_path?: string
+      source_path?: { id: string; path: string; raw_path: string }
+      dest_path?: { id: string; path: string; raw_path: string }
     }
   > // Key is instanceId as string
 }
