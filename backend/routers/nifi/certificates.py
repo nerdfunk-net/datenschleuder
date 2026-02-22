@@ -23,7 +23,7 @@ class CertificatesResponse(BaseModel):
 
 @router.get("/", response_model=CertificatesResponse)
 async def get_certificates(
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Get list of available client certificates for NiFi authentication."""
     certificates = certificate_manager.get_certificates()

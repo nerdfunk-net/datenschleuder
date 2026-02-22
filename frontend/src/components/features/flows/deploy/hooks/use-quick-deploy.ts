@@ -117,6 +117,27 @@ export function useQuickDeploy({
       setDeployingFlows((prev) => ({ ...prev, [key]: true }))
 
       try {
+        console.log('[QuickDeploy] ═══════════════════════════════════════════════════')
+        console.log('[QuickDeploy] Starting deployment for flow:', {
+          flowId: flow.id,
+          flowName: flow.name,
+          target,
+          hierarchyValues: flow.hierarchy_values,
+        })
+
+        // Check if deployment settings are loaded
+        if (!deploymentSettings) {
+          console.error('[QuickDeploy] ERROR: Deployment settings not loaded')
+          toast({
+            title: 'Deployment settings not loaded',
+            description: 'Please wait for the page to fully load and try again.',
+            variant: 'destructive',
+          })
+          return
+        }
+
+        console.log('[QuickDeploy] Deployment settings:', deploymentSettings)
+
         // Resolve the deployment config (instance, template, registry info)
         const configs = buildDeploymentConfigs(
           [flow],
@@ -128,6 +149,7 @@ export function useQuickDeploy({
         )
 
         const config = configs[0]
+        console.log('[QuickDeploy] Deployment config:', config)
 
         if (!config) {
           toast({
@@ -148,14 +170,12 @@ export function useQuickDeploy({
         }
 
         // Generate process group name from settings template
-        const processGroupName = deploymentSettings
-          ? generateProcessGroupName(
-              deploymentSettings.global.process_group_name_template,
-              config,
-              flow,
-              hierAttrs
-            )
-          : config.hierarchyValue
+        const processGroupName = generateProcessGroupName(
+          deploymentSettings.global.process_group_name_template,
+          config,
+          flow,
+          hierAttrs
+        )
 
         // ─── DEPLOYMENT PATH LOGIC ────────────────────────────────────────────────
         // DO NOT REMOVE OR SIMPLIFY THIS BLOCK.
@@ -177,10 +197,24 @@ export function useQuickDeploy({
         //   nesting will be wrong (deploys into base group, not OU), but does not crash.
         // ─────────────────────────────────────────────────────────────────────────
 
-        const instancePaths = deploymentSettings?.paths[config.instanceId.toString()]
+        // Check if deployment settings are loaded
+        if (!deploymentSettings) {
+          toast({
+            title: 'Deployment settings not loaded',
+            description: 'Please wait for deployment settings to load and try again.',
+            variant: 'destructive',
+          })
+          return
+        }
+
+        const instancePaths = deploymentSettings.paths[config.instanceId.toString()]
+        console.log('[QuickDeploy] Instance paths for instance', config.instanceId, ':', instancePaths)
+        
         const savedPath = target === 'source' ? instancePaths?.source_path : instancePaths?.dest_path
+        console.log('[QuickDeploy] Selected', target, 'path:', savedPath)
 
         if (!savedPath) {
+          console.error('[QuickDeploy] ERROR: No saved path found for', target)
           toast({
             title: 'Deployment path not configured',
             description: `No ${target} path is configured for this NiFi instance. Open Settings → Deploy, click "Load Paths" for instance ${config.instanceId}, select the ${target} path, and save.`,
@@ -193,23 +227,66 @@ export function useQuickDeploy({
         let parentProcessGroupPath: string | null = null
 
         if (savedPath.raw_path) {
+          console.log('[QuickDeploy] ✅ Using raw_path (preferred method)')
+          console.log('[QuickDeploy] raw_path value:', savedPath.raw_path)
+          console.log('[QuickDeploy] Hierarchy attributes:', hierAttrs)
+          
           // ✅ Preferred path: build full nested path using raw_path (e.g. "/From net1")
           // + middle hierarchy attribute values (skip first=DC and last=CN/leaf)
           const baseParts = savedPath.raw_path.split('/').filter(s => s.trim())
+          console.log('[QuickDeploy] Base parts after split:', baseParts)
+          
           const middleParts: string[] = []
+          
+          // Loop through middle hierarchy levels (skip first [DC] and last [CN])
+          console.log('[QuickDeploy] Extracting middle hierarchy parts...')
+          console.log('[QuickDeploy] Hierarchy length:', hierAttrs.length, '(will process indices 1 to', hierAttrs.length - 2, ')')
+          
           for (let i = 1; i < hierAttrs.length - 1; i++) {
             const attr = hierAttrs[i]
-            if (!attr) continue
+            console.log(`[QuickDeploy] Processing hierarchy[${i}]:`, attr)
+            if (!attr) {
+              console.warn(`[QuickDeploy] WARNING: hierarchy[${i}] is undefined/null`)
+              continue
+            }
             const values = flow.hierarchy_values?.[attr.name]
+            console.log(`[QuickDeploy]   - Flow values for ${attr.name}:`, values)
             const value = target === 'source' ? values?.source : values?.destination
-            if (value) middleParts.push(value)
+            console.log(`[QuickDeploy]   - Selected ${target} value:`, value)
+            if (value) {
+              middleParts.push(value)
+              console.log(`[QuickDeploy]   - ✅ Added "${value}" to middleParts`)
+            } else {
+              console.log(`[QuickDeploy]   - ⚠️  No value found, skipping`)
+            }
           }
+          
+          // Build full path: base + hierarchy values
           parentProcessGroupPath = [...baseParts, ...middleParts].join('/')
+          
+          console.log('[QuickDeploy] ═══ PATH CONSTRUCTION RESULT ═══')
+          console.log('[QuickDeploy] Base parts:', baseParts)
+          console.log('[QuickDeploy] Middle parts:', middleParts)
+          console.log('[QuickDeploy] Final path:', parentProcessGroupPath)
+          console.log('[QuickDeploy] ════════════════════════════════')
         } else {
-          // ⚠️ Fallback: raw_path missing (old settings). Use the UUID directly.
-          // This deploys into the base group without hierarchy nesting.
-          // Re-save settings in Settings → Deploy to fix this.
-          parentProcessGroupId = savedPath.id
+          // ❌ CRITICAL: raw_path missing (old settings).
+          // This would deploy into the base group without hierarchy nesting.
+          // BLOCK deployment and force user to update settings.
+          console.error('[QuickDeploy] ❌ CRITICAL: raw_path is missing!')
+          console.error('[QuickDeploy] Deployment settings were saved before raw_path field was added.')
+          console.error('[QuickDeploy] Without raw_path, the flow would be deployed to the WRONG location.')
+          console.error('[QuickDeploy] savedPath:', savedPath)
+          
+          toast({
+            title: 'Deployment settings outdated',
+            description: 'Please go to Settings → Deploy, click "Load Paths" for this instance, re-select your paths, and save. This will fix the missing raw_path field.',
+            variant: 'destructive',
+            duration: 10000, // Show for 10 seconds
+          })
+          
+          // STOP deployment - don't proceed with wrong path
+          return
         }
 
         const request: DeploymentRequest = {
@@ -224,13 +301,18 @@ export function useQuickDeploy({
           x_position: 0,
           y_position: 0,
           stop_versioning_after_deploy:
-            deploymentSettings?.global.stop_versioning_after_deploy ?? false,
-          disable_after_deploy: deploymentSettings?.global.disable_after_deploy ?? false,
-          start_after_deploy: deploymentSettings?.global.start_after_deploy ?? false,
+            deploymentSettings.global.stop_versioning_after_deploy ?? false,
+          disable_after_deploy: deploymentSettings.global.disable_after_deploy ?? false,
+          start_after_deploy: deploymentSettings.global.start_after_deploy ?? false,
           parameter_context_name:
             (target === 'source' ? flow.src_connection_param : flow.dest_connection_param) ||
             undefined,
         }
+
+        console.log('[QuickDeploy] ═══ FINAL DEPLOYMENT REQUEST ═══')
+        console.log('[QuickDeploy] Instance ID:', config.instanceId)
+        console.log('[QuickDeploy] Request payload:', JSON.stringify(request, null, 2))
+        console.log('[QuickDeploy] ════════════════════════════════')
 
         await deployAndHandle({ ...config, processGroupName }, request)
       } finally {

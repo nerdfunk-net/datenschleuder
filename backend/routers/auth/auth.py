@@ -8,6 +8,7 @@ from datetime import timedelta
 from fastapi import APIRouter, HTTPException, status, Depends, Request
 from models.auth import UserLogin, LoginResponse
 from core.auth import create_access_token, get_api_key_user
+from services.auth.login_service import get_user_with_rbac_safe, build_user_response
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,6 @@ async def login(user_data: UserLogin):
     """
     from config import settings
     from services.auth.user_management import authenticate_user
-    import rbac_manager as rbac
 
     try:
         # Authenticate against new user database
@@ -31,32 +31,8 @@ async def login(user_data: UserLogin):
             logger.info(f"Authenticated user {user['username']} (id={user['id']})")
 
             # Get user with RBAC roles
-            user_with_roles = rbac.get_user_with_rbac(user["id"])
-
-            if not user_with_roles:
-                logger.warning(
-                    f"get_user_with_rbac returned None for user_id={user['id']}, using base user"
-                )
-                user_with_roles = user
-                user_with_roles["roles"] = []
-                user_with_roles["permissions"] = []
-
-            # Extract role names for the response
-            role_names = [r["name"] for r in user_with_roles.get("roles", [])]
-
-            # Set primary role (for legacy compatibility)
-            # Priority: admin > operator > network_engineer > viewer > first role
-            primary_role = None
-            if "admin" in role_names:
-                primary_role = "admin"
-            elif "operator" in role_names:
-                primary_role = "operator"
-            elif "network_engineer" in role_names:
-                primary_role = "network_engineer"
-            elif "viewer" in role_names:
-                primary_role = "viewer"
-            elif role_names:
-                primary_role = role_names[0]
+            user_with_roles = get_user_with_rbac_safe(user)
+            response_user = build_user_response(user_with_roles)
 
             access_token_expires = timedelta(
                 minutes=settings.access_token_expire_minutes
@@ -69,20 +45,6 @@ async def login(user_data: UserLogin):
                 },
                 expires_delta=access_token_expires,
             )
-
-            # Build response user object
-            response_user = {
-                "id": user_with_roles["id"],
-                "username": user_with_roles["username"],
-                "realname": user_with_roles["realname"],
-                "email": user_with_roles.get("email"),
-                "role": primary_role,  # Legacy field for compatibility
-                "roles": role_names,  # New RBAC roles array
-                "permissions": user_with_roles.get(
-                    "permissions", []
-                ),  # New RBAC permissions
-                "debug": user_with_roles.get("debug", False),
-            }
 
             # Log successful login to audit log
             from repositories.audit_log_repository import audit_log_repo
@@ -98,7 +60,7 @@ async def login(user_data: UserLogin):
                 severity="info",
                 extra_data={
                     "authentication_method": "password",
-                    "roles": role_names,
+                    "roles": response_user["roles"],
                 },
             )
 
@@ -168,11 +130,18 @@ async def refresh_token(request: Request):
         )
 
     try:
-        # Optional: enforce a small grace window (uncomment if desired)
-        # exp = payload.get('exp', 0)
-        # from time import time
-        # if time() - exp > 3600:  # token expired more than 1 hour ago
-        #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Token too old to refresh')
+        # Enforce a 1-hour grace window: tokens expired more than 1 hour ago cannot
+        # be refreshed. This prevents indefinite refresh of old/stolen tokens while
+        # still handling race conditions where a token expires just before the call.
+        exp = payload.get("exp", 0)
+        from time import time
+
+        if time() - exp > 3600:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token too old to refresh, please log in again",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
         # Get current user data from database
         user = get_user_by_username(username)
@@ -184,34 +153,7 @@ async def refresh_token(request: Request):
             )
 
         # Get user with RBAC roles - same as login endpoint
-        import rbac_manager as rbac
-
-        user_with_roles = rbac.get_user_with_rbac(user["id"])
-
-        if not user_with_roles:
-            logger.warning(
-                f"get_user_with_rbac returned None for user_id={user['id']}, using base user"
-            )
-            user_with_roles = user
-            user_with_roles["roles"] = []
-            user_with_roles["permissions"] = []
-
-        # Extract role names for the response
-        role_names = [r["name"] for r in user_with_roles.get("roles", [])]
-
-        # Set primary role (for legacy compatibility)
-        # Priority: admin > operator > network_engineer > viewer > first role
-        primary_role = None
-        if "admin" in role_names:
-            primary_role = "admin"
-        elif "operator" in role_names:
-            primary_role = "operator"
-        elif "network_engineer" in role_names:
-            primary_role = "network_engineer"
-        elif "viewer" in role_names:
-            primary_role = "viewer"
-        elif role_names:
-            primary_role = role_names[0]
+        user_with_roles = get_user_with_rbac_safe(user)
 
         access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
         access_token = create_access_token(
@@ -227,18 +169,7 @@ async def refresh_token(request: Request):
             access_token=access_token,
             token_type="bearer",
             expires_in=settings.access_token_expire_minutes * 60,
-            user={
-                "id": user_with_roles["id"],
-                "username": user_with_roles["username"],
-                "realname": user_with_roles["realname"],
-                "email": user_with_roles.get("email"),
-                "role": primary_role,  # Legacy field for compatibility
-                "roles": role_names,  # CRITICAL FIX: Include roles array for sidebar
-                "permissions": user_with_roles.get(
-                    "permissions", []
-                ),  # New RBAC permissions
-                "debug": user_with_roles.get("debug", False),
-            },
+            user=build_user_response(user_with_roles),
         )
     except HTTPException:
         raise

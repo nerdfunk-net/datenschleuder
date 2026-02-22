@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/nifi/flows", tags=["nifi-flows"])
 
 @router.get("/columns")
 async def get_flow_columns(
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Return the column list for the nifi_flows table with human-readable labels."""
     return {"columns": nifi_flow_service.get_flow_columns()}
@@ -23,7 +23,7 @@ async def get_flow_columns(
 
 @router.get("/", response_model=List[NifiFlowResponse])
 async def list_flows(
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """List all NiFi flows."""
     return nifi_flow_service.list_flows()
@@ -32,7 +32,7 @@ async def list_flows(
 @router.post("/", response_model=NifiFlowResponse)
 async def create_flow(
     data: NifiFlowCreate,
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     """Create a new NiFi flow."""
     try:
@@ -56,7 +56,7 @@ async def create_flow(
 async def update_flow(
     flow_id: int,
     data: NifiFlowUpdate,
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     """Update a NiFi flow."""
     try:
@@ -75,7 +75,7 @@ async def update_flow(
 @router.post("/{flow_id}/copy", response_model=NifiFlowResponse)
 async def copy_flow(
     flow_id: int,
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     """Copy an existing NiFi flow."""
     flow = nifi_flow_service.copy_flow(flow_id)
@@ -90,7 +90,7 @@ async def copy_flow(
 @router.delete("/{flow_id}")
 async def delete_flow(
     flow_id: int,
-    user: dict = Depends(require_permission("nifi", "delete")),
+    current_user: dict = Depends(require_permission("nifi", "delete")),
 ):
     """Delete a NiFi flow."""
     if not nifi_flow_service.delete_flow(flow_id):

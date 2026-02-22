@@ -17,6 +17,7 @@ from models.auth import (
     OIDCTestLoginRequest,
 )
 from core.auth import create_access_token, verify_admin_token
+from services.auth.login_service import get_user_with_rbac_safe, build_user_response
 from services.auth.oidc import oidc_service
 from settings_manager import settings_manager
 from config import settings
@@ -240,33 +241,8 @@ async def oidc_callback(provider_id: str, callback_data: OIDCCallbackRequest):
 
         # Get user with RBAC roles and permissions
         logger.debug("[OIDC Debug] Fetching user RBAC roles and permissions...")
-        import rbac_manager as rbac
-
-        user_with_roles = rbac.get_user_with_rbac(user["id"])
-
-        if not user_with_roles:
-            logger.warning(
-                f"get_user_with_rbac returned None for user_id={user['id']}, using base user"
-            )
-            user_with_roles = user
-            user_with_roles["roles"] = []
-            user_with_roles["permissions"] = []
-
-        # Extract role names for the response
-        role_names = [r["name"] for r in user_with_roles.get("roles", [])]
-
-        # Determine primary role for legacy compatibility
-        primary_role = "user"  # Default role
-        if "admin" in role_names:
-            primary_role = "admin"
-        elif "operator" in role_names:
-            primary_role = "operator"
-        elif "network_engineer" in role_names:
-            primary_role = "network_engineer"
-        elif "viewer" in role_names:
-            primary_role = "viewer"
-        elif role_names:
-            primary_role = role_names[0]
+        user_with_roles = get_user_with_rbac_safe(user)
+        response_user = build_user_response(user_with_roles, default_role="user")
 
         # Create internal JWT token
         logger.debug("[OIDC Debug] Creating application access token...")
@@ -301,24 +277,10 @@ async def oidc_callback(provider_id: str, callback_data: OIDCCallbackRequest):
             extra_data={
                 "authentication_method": "oidc",
                 "oidc_provider": provider_id,
-                "roles": role_names,
+                "roles": response_user["roles"],
                 "is_new_user": is_new_user,
             },
         )
-
-        # Build response user object with RBAC roles
-        response_user = {
-            "id": user_with_roles["id"],
-            "username": user_with_roles["username"],
-            "realname": user_with_roles["realname"],
-            "email": user_with_roles.get("email"),
-            "role": primary_role,  # Legacy field for compatibility
-            "roles": role_names,  # New RBAC roles array
-            "permissions": user_with_roles.get(
-                "permissions", []
-            ),  # New RBAC permissions
-            "debug": user_with_roles.get("debug", False),
-        }
 
         return LoginResponse(
             access_token=access_token,

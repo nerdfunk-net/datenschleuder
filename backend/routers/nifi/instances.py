@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/nifi/instances", tags=["nifi-instances"])
 
 @router.get("/oidc-providers")
 async def list_nifi_oidc_providers(
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Get OIDC providers available for NiFi backend authentication (backend: true only)."""
     providers = settings_manager.get_nifi_oidc_providers()
@@ -39,7 +39,7 @@ async def list_nifi_oidc_providers(
 
 @router.get("/", response_model=List[NifiInstanceResponse])
 async def list_nifi_instances(
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Get all NiFi instances."""
     instances = instance_service.list_instances()
@@ -58,7 +58,7 @@ async def list_nifi_instances(
 @router.get("/{instance_id}", response_model=NifiInstanceResponse)
 async def get_nifi_instance(
     instance_id: int,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Get a specific NiFi instance."""
     instance = instance_service.get_instance(instance_id)
@@ -73,7 +73,7 @@ async def get_nifi_instance(
 @router.post("/", response_model=NifiInstanceResponse)
 async def create_nifi_instance(
     data: NifiInstanceCreate,
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     """Create a new NiFi instance."""
     try:
@@ -101,7 +101,7 @@ async def create_nifi_instance(
 async def update_nifi_instance(
     instance_id: int,
     data: NifiInstanceUpdate,
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     """Update a NiFi instance."""
     update_data = data.model_dump(exclude_unset=True)
@@ -117,7 +117,7 @@ async def update_nifi_instance(
 @router.delete("/{instance_id}")
 async def delete_nifi_instance(
     instance_id: int,
-    user: dict = Depends(require_permission("nifi", "delete")),
+    current_user: dict = Depends(require_permission("nifi", "delete")),
 ):
     """Delete a NiFi instance."""
     if not instance_service.delete_instance(instance_id):
@@ -131,7 +131,7 @@ async def delete_nifi_instance(
 @router.post("/test")
 async def test_nifi_connection(
     data: NifiInstanceTestConnection,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Test connection with provided NiFi credentials (without saving)."""
     logger.debug(
@@ -156,17 +156,20 @@ async def test_nifi_connection(
         }
     except Exception as e:
         logger.error("Test connection failed for url=%s: %s", data.nifi_url, str(e))
-        return {
-            "status": "error",
-            "message": "Connection failed: %s" % str(e),
-            "details": {"connected": False, "nifi_url": data.nifi_url, "error": str(e)},
-        }
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "connected": False,
+                "nifi_url": data.nifi_url,
+                "error": str(e),
+            },
+        )
 
 
 @router.post("/{instance_id}/test-connection")
 async def test_instance_connection(
     instance_id: int,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Test connection for a specific NiFi instance."""
     logger.debug("Test connection request for instance id=%d", instance_id)
@@ -185,8 +188,10 @@ async def test_instance_connection(
         )
     except Exception as e:
         logger.error("Test connection failed for instance id=%d: %s", instance_id, str(e))
-        return {
-            "status": "error",
-            "message": "Connection failed: %s" % str(e),
-            "details": {"connected": False, "error": str(e)},
-        }
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "connected": False,
+                "error": str(e),
+            },
+        )

@@ -115,50 +115,47 @@ This is a pragmatic solution, though it obscures dependencies. Consider a depend
 - `require_role(role_name)` -- Role-based check
 - `require_any_permission()` / `require_all_permissions()` -- Compound checks
 
-### 3.2 CRITICAL: SQLite Remnant in API Key Auth
+### 3.2 ~~CRITICAL: SQLite Remnant in API Key Auth~~ ✅ RESOLVED
 
 **File:** `core/auth.py:87-149`
-**Severity:** Critical
+**Severity:** ~~Critical~~ → **Fixed (2026-02-22)**
 
-The `verify_api_key()` function still uses SQLite3 directly, bypassing the PostgreSQL migration entirely:
+The `verify_api_key()` function has been migrated from SQLite to PostgreSQL.
+
+**Changes made:**
+- `repositories/auth/profile_repository.py` — added `get_by_api_key()` method querying `user_profiles` via SQLAlchemy ORM
+- `core/auth.py:87-136` — removed `import sqlite3` and file-based lookup; now uses `ProfileRepository.get_by_api_key()` against the existing PostgreSQL `user_profiles.api_key` column
 
 ```python
-def verify_api_key(x_api_key: Optional[str] = None) -> dict:
-    import sqlite3  # <-- STILL USING SQLITE
-    db_path = os.path.join(config_settings.data_directory, "settings", "cockpit_settings.db")
-    conn = sqlite3.connect(db_path)
-    user_row = conn.execute(
-        "SELECT username FROM user_profiles WHERE api_key = ? AND api_key IS NOT NULL",
-        (x_api_key,),
-    ).fetchone()
+# Before: SQLite file access
+import sqlite3
+conn = sqlite3.connect(db_path)
+user_row = conn.execute("SELECT username FROM user_profiles WHERE api_key = ?", ...)
+
+# After: PostgreSQL via repository
+profile_repo = ProfileRepository()
+profile = profile_repo.get_by_api_key(x_api_key)
 ```
 
-**Risks:**
-- Data inconsistency between SQLite and PostgreSQL user stores
-- SQLite file may become stale or missing after migration
-- Breaks the "single database" architecture principle
-- API key lookup uses a completely different auth path than JWT
-
-**Recommendation:** Migrate API key storage to the PostgreSQL `users` table (add `api_key` column) or a dedicated `api_keys` table. Route through the repository layer.
-
-### 3.3 CRITICAL: Unauthenticated Debug Endpoint
+### 3.3 ~~CRITICAL: Unauthenticated Debug Endpoint~~ ✅ RESOLVED
 
 **File:** `routers/auth/oidc.py:385-386`
-**Severity:** Critical
+**Severity:** ~~Critical~~ → **Fixed (2026-02-22)**
+
+The OIDC debug endpoint is now protected by `verify_admin_token`.
+
+**Changes made:**
+- `routers/auth/oidc.py` — added `Depends` to FastAPI import, added `verify_admin_token` to `core.auth` import, added `dependencies=[Depends(verify_admin_token)]` to the route decorator
 
 ```python
+# Before: no authentication
 @router.get("/debug")
-async def get_oidc_debug_info():
-    # NO AUTH DEPENDENCY -- exposed to anyone
+async def get_oidc_debug_info(): ...
+
+# After: admin-only
+@router.get("/debug", dependencies=[Depends(verify_admin_token)])
+async def get_oidc_debug_info(): ...
 ```
-
-This endpoint exposes:
-- OIDC provider configuration details
-- Discovery endpoint URLs
-- Client IDs
-- CA certificate paths and existence checks
-
-**Recommendation:** Add `dependencies=[Depends(require_permission("settings.common", "write"))]` or `Depends(verify_admin_token)`.
 
 ### 3.4 Credential Encryption (Good)
 
@@ -169,9 +166,9 @@ This endpoint exposes:
 - Passwords and SSH keys stored encrypted in database
 - Proper key derivation, no hardcoded encryption keys
 
-### 3.5 Permission Check Inconsistencies
+### 3.5 ~~Permission Check Inconsistencies~~ ✅ RESOLVED
 
-Auth dependency usage varies across routers:
+Auth dependency usage across routers (standardized):
 
 | Pattern | Example | Used In |
 |---------|---------|---------|
@@ -179,14 +176,12 @@ Auth dependency usage varies across routers:
 | `Depends(require_role("admin"))` | `settings/rbac.py` | Admin-only endpoints |
 | `Depends(verify_token)` | `auth/profile.py` | Profile endpoints |
 | `Depends(verify_admin_token)` | Some admin endpoints | Limited use |
-| No auth dependency | `auth/oidc.py:385` | Debug endpoint (BUG) |
+| `Depends(verify_admin_token)` | `auth/oidc.py:385` | Debug endpoint (fixed) |
 
-**Parameter naming is inconsistent:**
-- `user: dict = Depends(...)` -- some routers
-- `current_user: dict = Depends(...)` -- other routers
-- `user_info: dict = Depends(...)` -- yet others
+**Changes made (2026-02-22):** Renamed `user: dict = Depends(...)` to `current_user: dict = Depends(...)` in all 9 NiFi routers (61 occurrences):
+`certificates.py`, `deploy.py`, `flow_views.py`, `hierarchy.py`, `install.py`, `instances.py`, `nifi_flows.py`, `operations.py`, `registry_flows.py`
 
-**Recommendation:** Standardize on one naming convention (suggest `current_user`) and document the auth dependency selection guide.
+All routers now consistently use `current_user` as the auth parameter name.
 
 ### 3.6 Admin Permission Check
 
@@ -589,11 +584,13 @@ Task executors in `tasks/execution/` follow a consistent pattern:
 
 ### 10.3 Remaining Technical Debt
 
-1. **SQLite in API key auth** -- Critical, must migrate
-2. **Root-level manager files** -- Should be consolidated into services
-3. **F-string logging** -- 664 violations to fix
-4. **Broad exception catches** -- 488 instances to narrow
-5. **Deprecated FastAPI events** -- Migrate to lifespan
+1. ~~**SQLite in API key auth** -- Critical, must migrate~~ ✅ Fixed 2026-02-22
+2. ~~**Detached SQLAlchemy objects** -- `expire_on_commit=False` missing~~ ✅ Fixed 2026-02-22
+3. ~~**Token refresh no grace window** -- Expired tokens refreshable indefinitely~~ ✅ Fixed 2026-02-22
+4. **Root-level manager files** -- Should be consolidated into services
+5. **F-string logging** -- 664 violations to fix
+6. **Broad exception catches** -- 488 instances to narrow
+7. **Deprecated FastAPI events** -- Migrate to lifespan
 
 ---
 
@@ -601,22 +598,22 @@ Task executors in `tasks/execution/` follow a consistent pattern:
 
 ### By Severity
 
-#### Critical (Fix Immediately)
+#### Critical
 
-| # | Issue | File | Line |
-|---|-------|------|------|
-| C1 | SQLite3 used for API key authentication | `core/auth.py` | 87-149 |
-| C2 | `/auth/oidc/debug` endpoint has NO authentication | `routers/auth/oidc.py` | 385 |
+| # | Issue | File | Line | Status |
+|---|-------|------|------|--------|
+| C1 | ~~SQLite3 used for API key authentication~~ | `core/auth.py` | 87-149 | ✅ Fixed 2026-02-22 |
+| C2 | ~~`/auth/oidc/debug` endpoint has NO authentication~~ | `routers/auth/oidc.py` | 385 | ✅ Fixed 2026-02-22 |
 
 #### High (Fix Soon)
 
 | # | Issue | File |
 |---|-------|------|
-| H1 | Detached SQLAlchemy objects from closed sessions | `repositories/base.py` |
-| H2 | Token refresh has no expiry grace window | `routers/auth/auth.py:148-154` |
-| H3 | Error response returns 200 for errors | `routers/nifi/instances.py:159-163` |
-| H4 | Business logic in auth routers | `routers/auth/auth.py`, `routers/auth/oidc.py` |
-| H5 | N+1 queries in RBAC permission checks | `repositories/auth/rbac_repository.py` |
+| H1 | ~~Detached SQLAlchemy objects from closed sessions~~ | `repositories/base.py` | ✅ Fixed 2026-02-22 |
+| H2 | ~~Token refresh has no expiry grace window~~ | `routers/auth/auth.py:148-154` | ✅ Fixed 2026-02-22 |
+| H3 | ~~Error response returns 200 for errors~~ | `routers/nifi/instances.py:159-163` | ✅ Fixed 2026-02-22 |
+| H4 | ~~Business logic in auth routers~~ | `routers/auth/auth.py`, `routers/auth/oidc.py` | ✅ Fixed 2026-02-22 |
+| H5 | ~~N+1 queries in RBAC permission checks~~ | `repositories/auth/rbac_repository.py` | ✅ Fixed 2026-02-22 |
 
 #### Medium (Plan to Fix)
 
@@ -625,7 +622,7 @@ Task executors in `tasks/execution/` follow a consistent pattern:
 | M1 | F-string logging violations | 664 occurrences / 62 files |
 | M2 | Broad `except Exception` catches | 488 occurrences / 79 files |
 | M3 | Inconsistent API response formats | Multiple routers |
-| M4 | Inconsistent auth parameter naming | Multiple routers |
+| M4 | ~~Inconsistent auth parameter naming~~ | Multiple routers | ✅ Fixed 2026-02-22 |
 | M5 | Missing `201 Created` status codes | Multiple POST endpoints |
 | M6 | Duplicated role resolution logic | `routers/auth/auth.py` |
 | M7 | Missing database CHECK constraints | `core/models.py` |
@@ -658,35 +655,36 @@ Task executors in `tasks/execution/` follow a consistent pattern:
 
 ### Phase 1: Security Fixes (Week 1)
 
-1. **Migrate API key auth to PostgreSQL** (`core/auth.py`)
-   - Add `api_key` column to `users` table or create `api_keys` table
-   - Create `ApiKeyRepository` extending `BaseRepository`
-   - Remove SQLite3 imports and file access
+1. ~~**Migrate API key auth to PostgreSQL** (`core/auth.py`)~~ ✅ Done 2026-02-22
+   - ~~Add `api_key` column to `users` table or create `api_keys` table~~
+   - ~~Create `ApiKeyRepository` extending `BaseRepository`~~
+   - ~~Remove SQLite3 imports and file access~~
+   - Used existing `user_profiles.api_key` column + new `ProfileRepository.get_by_api_key()`
 
-2. **Secure OIDC debug endpoint** (`routers/auth/oidc.py:385`)
-   - Add `dependencies=[Depends(require_role("admin"))]`
+2. ~~**Secure OIDC debug endpoint** (`routers/auth/oidc.py:385`)~~ ✅ Done 2026-02-22
+   - ~~Add `dependencies=[Depends(require_role("admin"))]`~~
+   - Applied `dependencies=[Depends(verify_admin_token)]`
 
-3. **Enable token refresh grace window** (`routers/auth/auth.py`)
-   - Uncomment and configure the 1-hour grace window
-   - Consider implementing proper refresh tokens
+3. ~~**Enable token refresh grace window** (`routers/auth/auth.py`)~~ ✅ Done 2026-02-22
+   - Enabled 1-hour grace window: tokens expired >1h ago are rejected
+   - ~~Consider implementing proper refresh tokens~~
 
 ### Phase 2: Stability Fixes (Week 2-3)
 
-4. **Fix error response consistency**
-   - Replace dict error returns with `HTTPException` raises
-   - Define standard `ApiResponse` model
-   - Add `status_code=201` to all POST creation endpoints
+4. ~~**Fix error response consistency** (partial)~~ ✅ Done 2026-02-22
+   - Replaced dict error returns with `HTTPException(502)` in NiFi test-connection endpoints
+   - Remaining: define standard `ApiResponse` model; add `status_code=201` to POST creation endpoints
 
-5. **Extract business logic from routers**
-   - Create `services/auth/login_service.py`
-   - Move RBAC role resolution, token creation, audit logging
+5. ~~**Extract business logic from routers**~~ ✅ Done 2026-02-22
+   - Created `services/auth/login_service.py` with `get_user_with_rbac_safe()` and `build_user_response()`
+   - Eliminated duplicated RBAC role resolution from login, refresh, and OIDC callback endpoints
 
-6. **Fix session detachment risk**
-   - Add `expire_on_commit=False` to `SessionLocal`
-   - Add eager loading for frequently accessed relationships
+6. ~~**Fix session detachment risk**~~ ✅ Done 2026-02-22
+   - Added `expire_on_commit=False` to `SessionLocal` in `core/database.py`
+   - Column attributes now stay in memory after session close; lazy relationships still require eager loading if needed
 
-7. **Optimize RBAC queries**
-   - Replace two-query pattern with single JOIN in `rbac_repository.py`
+7. ~~**Optimize RBAC queries**~~ ✅ Done 2026-02-22
+   - Replaced two-query patterns with single JOINs in `get_role_permissions`, `get_user_roles`, `get_user_permissions`
 
 ### Phase 3: Code Quality (Week 4+)
 

@@ -141,7 +141,7 @@ async def _execute_with_retry(
 @router.get("/{instance_id}/ops/registries")
 async def get_registry_clients(
     instance_id: int,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     clients = await _execute_with_retry(instance_id, reg_ops.list_registry_clients)
     return {"status": "success", "registry_clients": clients, "count": len(clients)}
@@ -151,7 +151,7 @@ async def get_registry_clients(
 async def get_registry_buckets(
     instance_id: int,
     registry_id: str,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     result = await _execute_with_retry(
         instance_id,
@@ -164,7 +164,7 @@ async def get_registry_buckets(
 async def get_registry_details(
     instance_id: int,
     registry_id: str,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     try:
         result = await _execute_with_retry(
@@ -181,7 +181,7 @@ async def get_bucket_flows(
     instance_id: int,
     registry_id: str,
     bucket_id: str,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     result = await _execute_with_retry(
         instance_id,
@@ -196,7 +196,7 @@ async def get_flow_versions(
     registry_id: str,
     bucket_id: str,
     flow_id: str,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     result = await _execute_with_retry(
         instance_id,
@@ -218,7 +218,7 @@ async def export_flow(
     flow_id: str,
     version: str = None,
     mode: str = "json",
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     try:
         result = await _execute_with_retry(
@@ -242,7 +242,7 @@ async def import_flow(
     file: UploadFile = File(...),
     flow_name: str = Form(None),
     flow_id: str = Form(None),
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     if not flow_name and not flow_id:
         raise HTTPException(
@@ -275,7 +275,7 @@ async def get_parameter_contexts(
     instance_id: int,
     search: str = None,
     identifier_type: str = "name",
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     contexts = await _execute_with_retry(
         instance_id,
@@ -290,7 +290,7 @@ async def get_parameter_contexts(
 async def get_parameter_context(
     instance_id: int,
     context_id: str,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     try:
         context = await _execute_with_retry(
@@ -306,7 +306,7 @@ async def get_parameter_context(
 async def create_parameter_context(
     instance_id: int,
     data: ParameterContextCreate,
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     params = [p.model_dump() for p in data.parameters] if data.parameters else []
     result = await _execute_with_retry(
@@ -321,7 +321,7 @@ async def update_parameter_context(
     instance_id: int,
     context_id: str,
     data: ParameterContextUpdate,
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     params = [p.model_dump() for p in data.parameters] if data.parameters else None
     result = await _execute_with_retry(
@@ -337,7 +337,7 @@ async def update_parameter_context(
 async def delete_parameter_context(
     instance_id: int,
     context_id: str,
-    user: dict = Depends(require_permission("nifi", "delete")),
+    current_user: dict = Depends(require_permission("nifi", "delete")),
 ):
     await _execute_with_retry(
         instance_id,
@@ -357,7 +357,7 @@ async def get_process_group(
     id: str = None,
     name: str = None,
     greedy: bool = True,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     try:
         result = await _execute_with_retry(
@@ -373,7 +373,7 @@ async def get_process_group(
 async def list_child_process_groups(
     instance_id: int,
     pg_id: str,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     children = await _execute_with_retry(
         instance_id,
@@ -386,7 +386,7 @@ async def list_child_process_groups(
 async def get_all_process_group_paths(
     instance_id: int,
     start_pg_id: str = "root",
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """
     Get all process groups recursively with their full paths.
@@ -410,7 +410,7 @@ async def get_all_process_group_paths(
 async def get_output_ports(
     instance_id: int,
     pg_id: str,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     ports = await _execute_with_retry(
         instance_id,
@@ -423,7 +423,7 @@ async def get_output_ports(
 async def get_input_ports(
     instance_id: int,
     pg_id: str,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     ports = await _execute_with_retry(
         instance_id,
@@ -436,7 +436,7 @@ async def get_input_ports(
 async def list_processors(
     instance_id: int,
     pg_id: str,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     processors = await _execute_with_retry(
         instance_id,
@@ -450,7 +450,7 @@ async def create_connection(
     instance_id: int,
     pg_id: str,
     data: ConnectionRequest,
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     result = await _execute_with_retry(
         instance_id,
@@ -466,7 +466,7 @@ async def assign_parameter_context(
     instance_id: int,
     pg_id: str,
     data: AssignParameterContextRequest,
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     await _execute_with_retry(
         instance_id,
@@ -490,7 +490,7 @@ async def assign_parameter_context(
 async def get_processor_configuration(
     instance_id: int,
     processor_id: str,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     try:
         config = await _execute_with_retry(
@@ -507,7 +507,7 @@ async def update_processor_configuration(
     instance_id: int,
     processor_id: str,
     config_update: ProcessorConfigurationUpdate,
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     update_dict = config_update.model_dump(exclude_none=True)
     try:
@@ -532,7 +532,7 @@ async def update_process_group_version(
     instance_id: int,
     pg_id: str,
     version_request: dict,
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     await _execute_with_retry(
         instance_id,
@@ -546,7 +546,7 @@ async def update_process_group_version(
 async def stop_process_group_versioning(
     instance_id: int,
     pg_id: str,
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     try:
         was_versioned = await _execute_with_retry(
@@ -571,7 +571,7 @@ async def stop_process_group_versioning(
 @router.get("/{instance_id}/ops/system-diagnostics")
 async def get_system_diagnostics(
     instance_id: int,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Get system diagnostics (heap, CPU, threads, storage) for a NiFi instance."""
     import nipyapi
@@ -594,7 +594,7 @@ async def get_process_group_status(
     instance_id: int,
     pg_id: str,
     detail: str = "all",
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Get status of a specific NiFi process group."""
     import nipyapi
@@ -631,7 +631,7 @@ async def list_components_by_kind(
     kind: str,
     pg_id: str = "root",
     descendants: bool = True,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """List all NiFi components of a given kind (e.g. connections, processors)."""
     from nipyapi import canvas

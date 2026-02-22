@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/nifi/registry-flows", tags=["nifi-registry-flows
 @router.get("/", response_model=List[RegistryFlowResponse])
 async def list_registry_flows(
     nifi_instance: Optional[int] = Query(None, description="Filter by NiFi instance ID"),
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """List all registry flows, optionally filtered by NiFi instance."""
     return registry_flow_service.list_flows(nifi_instance)
@@ -24,7 +24,7 @@ async def list_registry_flows(
 
 @router.get("/templates/list")
 async def list_flow_templates(
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """List all flows formatted for template selection dropdown."""
     return registry_flow_service.list_templates()
@@ -33,7 +33,7 @@ async def list_flow_templates(
 @router.get("/{flow_id}", response_model=RegistryFlowResponse)
 async def get_registry_flow(
     flow_id: int,
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Get a specific registry flow."""
     flow = registry_flow_service.get_flow(flow_id)
@@ -48,7 +48,7 @@ async def get_registry_flow(
 @router.post("/")
 async def create_registry_flows(
     flows: List[RegistryFlowCreate],
-    user: dict = Depends(require_permission("nifi", "write")),
+    current_user: dict = Depends(require_permission("nifi", "write")),
 ):
     """Create one or more registry flows."""
     flows_data = [f.model_dump() for f in flows]
@@ -63,7 +63,7 @@ async def create_registry_flows(
 @router.delete("/{flow_id}")
 async def delete_registry_flow(
     flow_id: int,
-    user: dict = Depends(require_permission("nifi", "delete")),
+    current_user: dict = Depends(require_permission("nifi", "delete")),
 ):
     """Delete a registry flow."""
     if not registry_flow_service.delete_flow(flow_id):

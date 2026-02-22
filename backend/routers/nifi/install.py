@@ -33,7 +33,7 @@ async def check_path(
     path_type: Literal["source", "destination"] = Query(
         ..., description="Path type to check (source or destination)"
     ),
-    user: dict = Depends(require_permission("nifi", "read")),
+    current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Check if process groups exist for all managed flows.
 

@@ -83,14 +83,16 @@ def deploy_flow(instance_id: int, deployment_data: dict) -> dict:
     logger.info("="*60)
     logger.info("STEP 2: Resolve Parent Process Group")
     logger.info("="*60)
+    logger.info("parent_process_group_id (from request): %s", parent_pg_id)
+    logger.info("parent_process_group_path (from request): %s", parent_pg_path)
 
     if parent_pg_id:
         resolved_parent_pg_id = parent_pg_id
-        logger.info("Using provided parent process group ID: %s", resolved_parent_pg_id)
+        logger.info("✅ Using provided parent process group ID: %s", resolved_parent_pg_id)
     else:
-        logger.info("Resolving parent process group by path: %s", parent_pg_path)
+        logger.info("🔍 Resolving parent process group by path: '%s'", parent_pg_path)
         resolved_parent_pg_id = find_or_create_process_group_by_path(parent_pg_path or "")
-        logger.info("Resolved parent process group ID: %s", resolved_parent_pg_id)
+        logger.info("✅ Resolved parent process group ID: %s", resolved_parent_pg_id)
 
     logger.info("="*60)
     logger.info("STEP 3: Get Bucket and Flow Identifiers")

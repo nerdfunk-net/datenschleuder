@@ -27,7 +27,10 @@ engine = create_engine(
 )
 
 # Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# expire_on_commit=False: after a commit, objects are NOT expired, so their column
+# attributes remain accessible even after the session is closed. Without this,
+# committing expires all attributes and any post-close access raises DetachedInstanceError.
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
 
 # Base class for all models
 Base = declarative_base()

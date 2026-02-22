@@ -229,17 +229,12 @@ class RBACRepository(BaseRepository):
         """Get all permissions for a role."""
         db = get_db_session()
         try:
-            role_perms = (
-                db.query(RolePermission)
-                .filter(and_(RolePermission.role_id == role_id, RolePermission.granted))
+            return (
+                db.query(Permission)
+                .join(RolePermission, RolePermission.permission_id == Permission.id)
+                .filter(RolePermission.role_id == role_id, RolePermission.granted)
                 .all()
             )
-
-            permission_ids = [rp.permission_id for rp in role_perms]
-            if not permission_ids:
-                return []
-
-            return db.query(Permission).filter(Permission.id.in_(permission_ids)).all()
         finally:
             db.close()
 
@@ -292,13 +287,12 @@ class RBACRepository(BaseRepository):
         """Get all roles for a user."""
         db = get_db_session()
         try:
-            user_roles = db.query(UserRole).filter(UserRole.user_id == user_id).all()
-            role_ids = [ur.role_id for ur in user_roles]
-
-            if not role_ids:
-                return []
-
-            return db.query(Role).filter(Role.id.in_(role_ids)).all()
+            return (
+                db.query(Role)
+                .join(UserRole, UserRole.role_id == Role.id)
+                .filter(UserRole.user_id == user_id)
+                .all()
+            )
         finally:
             db.close()
 
@@ -377,17 +371,12 @@ class RBACRepository(BaseRepository):
         """Get all direct permissions for a user."""
         db = get_db_session()
         try:
-            user_perms = (
-                db.query(UserPermission)
-                .filter(and_(UserPermission.user_id == user_id, UserPermission.granted))
+            return (
+                db.query(Permission)
+                .join(UserPermission, UserPermission.permission_id == Permission.id)
+                .filter(UserPermission.user_id == user_id, UserPermission.granted)
                 .all()
             )
-
-            permission_ids = [up.permission_id for up in user_perms]
-            if not permission_ids:
-                return []
-
-            return db.query(Permission).filter(Permission.id.in_(permission_ids)).all()
         finally:
             db.close()
 
