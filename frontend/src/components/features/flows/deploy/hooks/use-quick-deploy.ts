@@ -223,7 +223,7 @@ export function useQuickDeploy({
           return
         }
 
-        let parentProcessGroupId: string | null = null
+        const parentProcessGroupId: string | null = null
         let parentProcessGroupPath: string | null = null
 
         if (savedPath.raw_path) {

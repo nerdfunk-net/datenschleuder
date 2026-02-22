@@ -451,18 +451,18 @@ export function FlowsTab() {
         console.log('⚙️ [DEBUG] Deployment paths:', deploymentPaths)
         console.log('📋 [DEBUG] Hierarchy config:', hierarchyConfig)
         console.log('🎯 [DEBUG] Instance deployment path:', instanceDeploymentPath)
-        console.log('🔍 [DEBUG] Source path object:', instanceDeploymentPath.source_path)
-        console.log('🔍 [DEBUG] Dest path object:', instanceDeploymentPath.dest_path)
 
         if (!instanceDeploymentPath) {
           setCheckError(`No deployment path configured for instance ${instanceId}`)
           return
         }
 
+        console.log('🔍 [DEBUG] Source path object:', instanceDeploymentPath.source_path)
+        console.log('🔍 [DEBUG] Dest path object:', instanceDeploymentPath.dest_path)
+
         const newStatuses: Record<string, ProcessGroupStatus> = {}
 
         const checkPart = async (flow: Flow, flowType: FlowType) => {
-          const prefix = flowType === 'source' ? 'src_' : 'dest_'
           const pathConfig =
             flowType === 'source'
               ? instanceDeploymentPath.source_path
@@ -471,31 +471,38 @@ export function FlowsTab() {
           console.log(`\n🔄 [DEBUG] Checking flow #${flow.id} (${flowType})`)
           console.log(`   Path config:`, pathConfig)
           
-          // Resolve the base path from the stored ID (like backend install service does)
+          // Resolve the base path from the stored raw_path (API path, not formatted)
           const storedId = pathConfig.id
           let basePath = idToPathMap.get(storedId)
           
           if (!basePath) {
-            console.warn(`   ⚠️ Could not resolve path from ID "${storedId}", falling back to stored path`)
-            basePath = pathConfig.path
-            // Strip leading slash if present
-            if (basePath.startsWith('/')) {
+            console.warn(`   ⚠️ Could not resolve path from ID "${storedId}", falling back to stored raw_path`)
+            // Use raw_path (API path) if available, otherwise fall back to path
+            const rawPath = (pathConfig as Record<string, unknown>).raw_path as string | undefined
+            basePath = (rawPath || pathConfig.path || '') as string
+            // Strip leading slash if present (make it relative)
+            if (basePath && basePath.startsWith('/')) {
               basePath = basePath.slice(1)
             }
-            // Strip "NiFi Flow → " prefix if present (formatted path)
-            basePath = basePath.replace(/^NiFi Flow → /, '')
+            // Strip "NiFi Flow → " prefix if present in case it's formatted path
+            if (basePath) {
+              basePath = basePath.replace(/^NiFi Flow → /, '')
+            }
           }
           
           console.log(`   Resolved basePath: "${basePath}"`)
           
           const hierarchyParts: string[] = []
+          const sourceOrDest = flowType === 'source' ? 'source' : 'destination'
 
           for (let i = 1; i < hierarchyConfig.length; i++) {
             const attr = hierarchyConfig[i]
             if (!attr) continue
-            const attrKey = `${prefix}${attr.name}`
-            const attrValue = flow[attrKey]
-            if (attrValue) hierarchyParts.push(attrValue as string)
+            // Extract from flow.hierarchy_values[hierarchyName][source|destination]
+            const hierarchyName = attr.name
+            const hierarchyValues = (flow as Record<string, unknown>).hierarchy_values as Record<string, Record<string, string>> | undefined
+            const attrValue = hierarchyValues?.[hierarchyName]?.[sourceOrDest]
+            if (attrValue) hierarchyParts.push(attrValue)
           }
 
           console.log(`   Hierarchy parts:`, hierarchyParts)

@@ -347,8 +347,8 @@ def get_all_process_group_paths(start_pg_id: str = "root") -> Dict[str, Any]:
         else:
             # Reverse to get root-to-leaf order
             names = [p["name"] for p in reversed(path_chain)]
-            # Skip root name for path string
-            path_str = "/" + "/".join(names[1:]) if len(names) > 1 else "/"
+            # Include all names in path string (including root)
+            path_str = "/" + "/".join(names) if len(names) > 0 else "/"
             formatted_path = " → ".join(names)
 
         process_groups.append(
