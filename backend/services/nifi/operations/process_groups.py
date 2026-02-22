@@ -258,10 +258,9 @@ def get_all_process_group_paths(start_pg_id: str = "root") -> Dict[str, Any]:
     - process_groups: flat list, each entry has:
         - id: Process group UUID
         - name: Process group name
-        - parent_group_id: Parent UUID (None for root)
-        - comments: Process group comments
-        - path: list of {id, name, parent_group_id} from leaf to root
-        - depth: Hierarchy depth (0 for root)
+        - path: Full path string (e.g., "/Parent/Child")
+        - level: Depth in hierarchy (0 for root)
+        - formatted_path: Display-friendly path (e.g., "Parent → Child")
     - root_id: UUID of the root process group
     """
     root_pg_id = canvas.get_root_pg_id()
@@ -304,14 +303,26 @@ def get_all_process_group_paths(start_pg_id: str = "root") -> Dict[str, Any]:
 
     process_groups = []
     for pg_info in pg_map.values():
-        path = _build_path(pg_info["id"])
+        path_chain = _build_path(pg_info["id"])
+        
+        # Build string path (e.g., "/Parent/Child") and formatted path (e.g., "Parent → Child")
+        if len(path_chain) <= 1:
+            # Root level
+            path_str = "/"
+            formatted_path = f"{pg_info['name']} (root)"
+        else:
+            # Reverse to get root-to-leaf order
+            names = [p["name"] for p in reversed(path_chain)]
+            # Skip root name for path string
+            path_str = "/" + "/".join(names[1:]) if len(names) > 1 else "/"
+            formatted_path = " → ".join(names)
+        
         process_groups.append({
             "id": pg_info["id"],
             "name": pg_info["name"],
-            "parent_group_id": pg_info["parent_group_id"],
-            "comments": pg_info["comments"],
-            "path": path,
-            "depth": len(path) - 1,
+            "path": path_str,
+            "level": len(path_chain) - 1,
+            "formatted_path": formatted_path,
         })
 
     return {"process_groups": process_groups, "root_id": root_pg_id}

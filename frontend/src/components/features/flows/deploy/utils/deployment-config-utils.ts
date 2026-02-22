@@ -95,6 +95,9 @@ function buildSingleConfig(
   // The template ID is the registry_flows.id
   const registryFlow = registryFlows.find((rf) => rf.id === templateId)
 
+  // Get parameter context name based on target
+  const parameterContextName = target === 'source' ? flow.src_connection_param : flow.dest_connection_param
+
   return {
     key: `${flow.id}-${target}`,
     flowId: flow.id,
@@ -108,7 +111,7 @@ function buildSingleConfig(
     templateId,
     templateName: registryFlow?.flow_name || null,
     processGroupName: hierarchyValue, // Default name (will be updated with template)
-    parameterContextName: null,
+    parameterContextName: parameterContextName || null,
     availableVersions: [],
     selectedVersion: null, // null = latest
     registryId: registryFlow?.registry_id || null,

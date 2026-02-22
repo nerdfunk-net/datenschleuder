@@ -104,16 +104,35 @@ export function Step5Review({
         </div>
         <div className="bg-gradient-to-b from-white to-gray-50 rounded-b-lg divide-y">
           {deploymentConfigs.map((config) => (
-            <div key={config.key} className="flex items-center justify-between px-6 py-4">
-              <div>
-                <p className="font-medium text-slate-900">{config.hierarchyValue}</p>
-                {config.processGroupName && config.processGroupName !== config.hierarchyValue && (
-                  <p className="mt-0.5 text-xs text-gray-500">{config.processGroupName}</p>
-                )}
+            <div key={config.key} className="px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-slate-900">{config.flowName}</p>
+                    <span className="text-xs font-semibold tracking-wide text-blue-600 uppercase bg-blue-50 px-2 py-1 rounded">
+                      {config.target}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Instance: <span className="font-medium">{config.hierarchyValue}</span>
+                  </p>
+                  {config.processGroupName && config.processGroupName !== config.hierarchyValue && (
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Process Group: {config.processGroupName}
+                    </p>
+                  )}
+                  {config.parameterContextName && (
+                    <p className="mt-0.5 text-xs text-blue-600">
+                      Parameter Context: {config.parameterContextName}
+                    </p>
+                  )}
+                  {config.selectedVersion && (
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Version: {config.selectedVersion}
+                    </p>
+                  )}
+                </div>
               </div>
-              <span className="text-xs font-semibold tracking-wide text-blue-600 uppercase bg-blue-50 px-2 py-1 rounded">
-                {config.target}
-              </span>
             </div>
           ))}
         </div>
