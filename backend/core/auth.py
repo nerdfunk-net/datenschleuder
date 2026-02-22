@@ -177,7 +177,7 @@ def require_permission(resource: str, action: str):
         import rbac_manager as rbac
 
         user_id = user_info.get("user_id")
-        if not user_id:
+        if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User ID not found in token",
@@ -207,7 +207,7 @@ def require_any_permission(resource: str, actions: list):
         import rbac_manager as rbac
 
         user_id = user_info.get("user_id")
-        if not user_id:
+        if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User ID not found in token",
@@ -237,7 +237,7 @@ def require_all_permissions(resource: str, actions: list):
         import rbac_manager as rbac
 
         user_id = user_info.get("user_id")
-        if not user_id:
+        if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User ID not found in token",
@@ -267,7 +267,7 @@ def require_role(role_name: str):
         import rbac_manager as rbac
 
         user_id = user_info.get("user_id")
-        if not user_id:
+        if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User ID not found in token",

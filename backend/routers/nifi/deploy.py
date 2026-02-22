@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/nifi/instances", tags=["nifi-deploy"])
 async def deploy_flow(
     instance_id: int,
     deployment: DeploymentRequest,
-    user: dict = Depends(require_permission("nifi", "write")),
+    user: dict = Depends(require_permission("nifi", "execute")),
 ):
     """Deploy a flow from registry to a NiFi instance."""
     try:
