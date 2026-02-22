@@ -430,16 +430,24 @@ export function FlowsTab() {
           `nifi/instances/${instanceId}/ops/process-groups/all-paths`,
         )
 
+        console.log('🔍 [DEBUG] All paths response:', allPathsResponse)
+
         const pathToIdMap = new Map<string, string>()
         allPathsResponse.process_groups.forEach((pg) => {
           // backend returns path as "/Parent/Child" string; strip leading slash
           const pathString = pg.path.startsWith('/') ? pg.path.slice(1) : pg.path
           pathToIdMap.set(pathString, pg.id)
         })
+        
+        console.log('🗺️ [DEBUG] Path to ID map:', Object.fromEntries(pathToIdMap))
 
         const deploymentPaths = settingsResponse.paths
         const hierarchyConfig = hierarchyResponse.hierarchy.sort((a, b) => a.order - b.order)
         const instanceDeploymentPath = deploymentPaths[instanceId.toString()]
+
+        console.log('⚙️ [DEBUG] Deployment paths:', deploymentPaths)
+        console.log('📋 [DEBUG] Hierarchy config:', hierarchyConfig)
+        console.log('🎯 [DEBUG] Instance deployment path:', instanceDeploymentPath)
 
         if (!instanceDeploymentPath) {
           setCheckError(`No deployment path configured for instance ${instanceId}`)
@@ -450,10 +458,21 @@ export function FlowsTab() {
 
         const checkPart = async (flow: Flow, flowType: FlowType) => {
           const prefix = flowType === 'source' ? 'src_' : 'dest_'
-          const basePath =
+          let basePath =
             flowType === 'source'
               ? instanceDeploymentPath.source_path.path
               : instanceDeploymentPath.dest_path.path
+          
+          console.log(`\n🔄 [DEBUG] Checking flow #${flow.id} (${flowType})`)
+          console.log(`   Original basePath: "${basePath}"`)
+          
+          // Strip leading slash from basePath to match the pathToIdMap format
+          if (basePath.startsWith('/')) {
+            basePath = basePath.slice(1)
+          }
+          
+          console.log(`   Stripped basePath: "${basePath}"`)
+          
           const hierarchyParts: string[] = []
 
           for (let i = 1; i < hierarchyConfig.length; i++) {
@@ -464,12 +483,18 @@ export function FlowsTab() {
             if (attrValue) hierarchyParts.push(attrValue as string)
           }
 
+          console.log(`   Hierarchy parts:`, hierarchyParts)
+
           const expectedPath =
             hierarchyParts.length > 0
               ? `${basePath}/${hierarchyParts.join('/')}`
               : basePath
 
+          console.log(`   Expected path: "${expectedPath}"`)
+
           const processGroupId = pathToIdMap.get(expectedPath)
+          console.log(`   Found process group ID: ${processGroupId || 'NOT FOUND'}`)
+          
           const flowKey = getFlowItemKey(flow.id, flowType)
 
           if (!processGroupId) {
@@ -512,6 +537,9 @@ export function FlowsTab() {
           await checkPart(flow, 'source')
           await checkPart(flow, 'destination')
         }
+
+        console.log('\n✅ [DEBUG] Final flow statuses:', newStatuses)
+        console.log(`📊 [DEBUG] Total statuses collected: ${Object.keys(newStatuses).length}`)
 
         setFlowStatuses(newStatuses)
       } catch (err: unknown) {

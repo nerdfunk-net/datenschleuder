@@ -621,21 +621,21 @@ Task executors in `tasks/execution/` follow a consistent pattern:
 |---|-------|------------|
 | M1 | F-string logging violations | 664 occurrences / 62 files |
 | M2 | Broad `except Exception` catches | 488 occurrences / 79 files |
-| M3 | Inconsistent API response formats | Multiple routers |
+| M3 | ~~Inconsistent API response formats~~ | Multiple routers | ✅ Fixed 2026-02-22 |
 | M4 | ~~Inconsistent auth parameter naming~~ | Multiple routers | ✅ Fixed 2026-02-22 |
-| M5 | Missing `201 Created` status codes | Multiple POST endpoints |
-| M6 | Duplicated role resolution logic | `routers/auth/auth.py` |
-| M7 | Missing database CHECK constraints | `core/models.py` |
+| M5 | ~~Missing `201 Created` status codes~~ | Multiple POST endpoints | ✅ Fixed 2026-02-22 |
+| M6 | ~~Duplicated role resolution logic~~ | `routers/auth/auth.py` | ✅ Fixed 2026-02-22 |
+| M7 | ~~Missing database CHECK constraints~~ | `core/models.py` | ✅ Fixed 2026-02-22 |
 | M8 | Legacy manager files at root level | 10 files |
 
 #### Low (Nice to Have)
 
 | # | Issue | File |
 |---|-------|------|
-| L1 | Deprecated `@app.on_event` usage | `main.py:185, 359` |
-| L2 | Duplicate `if __name__ == "__main__"` | `main.py:177, 366` |
-| L3 | Hardcoded magic numbers | Various files |
-| L4 | Missing composite database indexes | `core/models.py` |
+| L1 | ~~Deprecated `@app.on_event` usage~~ | ~~`main.py:185, 359`~~ ✅ Fixed 2026-02-22 |
+| L2 | ~~Duplicate `if __name__ == "__main__"`~~ | ~~`main.py:177, 366`~~ ✅ Fixed 2026-02-22 |
+| L3 | ~~Hardcoded magic numbers~~ | ~~Various files~~ ✅ Fixed 2026-02-22 |
+| L4 | ~~Missing composite database indexes~~ | ~~`core/models.py`~~ ✅ Fixed 2026-02-22 |
 
 ### Strengths
 
@@ -671,9 +671,10 @@ Task executors in `tasks/execution/` follow a consistent pattern:
 
 ### Phase 2: Stability Fixes (Week 2-3)
 
-4. ~~**Fix error response consistency** (partial)~~ ✅ Done 2026-02-22
+4. ~~**Fix error response consistency**~~ ✅ Done 2026-02-22
    - Replaced dict error returns with `HTTPException(502)` in NiFi test-connection endpoints
-   - Remaining: define standard `ApiResponse` model; add `status_code=201` to POST creation endpoints
+   - Defined standard `ApiResponse` model in `models/common.py` for future adoption
+   - Added `status_code=201` to creation POST endpoints: `nifi/instances`, `jobs/schedules`, `jobs/templates`
 
 5. ~~**Extract business logic from routers**~~ ✅ Done 2026-02-22
    - Created `services/auth/login_service.py` with `get_user_with_rbac_safe()` and `build_user_response()`
@@ -686,22 +687,31 @@ Task executors in `tasks/execution/` follow a consistent pattern:
 7. ~~**Optimize RBAC queries**~~ ✅ Done 2026-02-22
    - Replaced two-query patterns with single JOINs in `get_role_permissions`, `get_user_roles`, `get_user_permissions`
 
+8. ~~**Add missing database CHECK constraints** (`core/models.py`)~~ ✅ Done 2026-02-22
+   - Added `CheckConstraint` import to `core/models.py`
+   - `Credential.type` now enforces `IN ('ssh', 'tacacs', 'generic', 'token', 'ssh_key')`
+   - `JobTemplate.job_type` now enforces `IN ('backup', 'compare_devices', 'run_commands', 'sync_devices', 'scan_prefixes', 'deploy_agent')`
+   - Note: constraints apply to newly created tables; run a migration to enforce on existing tables
+
 ### Phase 3: Code Quality (Week 4+)
 
-8. **Fix f-string logging** (664 occurrences)
+9. **Fix f-string logging** (664 occurrences)
    - Automated find-and-replace with regex
    - `logger.info(f"msg {var}")` -> `logger.info("msg %s", var)`
 
-9. **Narrow exception catches** (488 occurrences)
-   - Use `@handle_errors` decorator where possible
-   - Replace `except Exception` with specific types
+10. **Narrow exception catches** (488 occurrences)
+    - Use `@handle_errors` decorator where possible
+    - Replace `except Exception` with specific types
 
-10. **Standardize auth parameter naming**
-    - Adopt `current_user` consistently across all routers
+11. ~~**Standardize auth parameter naming**~~ ✅ Done 2026-02-22
 
-11. **Deprecate root-level managers**
+12. **Deprecate root-level managers**
     - Migrate callers to use services/repositories directly
     - Add deprecation warnings to manager functions
 
-12. **Migrate to FastAPI lifespan**
-    - Replace `@app.on_event("startup/shutdown")` with `lifespan` context manager
+13. ~~**Migrate to FastAPI lifespan**~~ ✅ Done 2026-02-22
+    - Replaced `@app.on_event("startup/shutdown")` with `@asynccontextmanager lifespan` in `main.py`
+    - Removed duplicate `if __name__ == "__main__"` block (kept second, added `settings.port`)
+    - Extracted `DEFAULT_TOKEN_EXPIRY_MINUTES = 15` constant in `core/auth.py`
+    - Extracted `API_KEY_LENGTH = 42` constant in `routers/auth/profile.py`
+    - Added composite `Index("idx_job_templates_user_type", "user_id", "job_type")` to `JobTemplate` in `core/models.py`

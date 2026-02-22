@@ -4,6 +4,7 @@ Defines the schema for PostgreSQL database.
 """
 
 from sqlalchemy import (
+    CheckConstraint,
     Column,
     Integer,
     String,
@@ -258,6 +259,10 @@ class Credential(Base):
         UniqueConstraint("name", "source", name="uq_credentials_name_source"),
         Index("idx_credentials_source", "source"),
         Index("idx_credentials_owner", "owner"),
+        CheckConstraint(
+            "type IN ('ssh', 'tacacs', 'generic', 'token', 'ssh_key')",
+            name="ck_credentials_type",
+        ),
     )
 
 
@@ -471,6 +476,11 @@ class JobTemplate(Base):
     __table_args__ = (
         Index("idx_job_templates_type", "job_type"),
         Index("idx_job_templates_user", "user_id"),
+        Index("idx_job_templates_user_type", "user_id", "job_type"),
+        CheckConstraint(
+            "job_type IN ('backup', 'compare_devices', 'run_commands', 'sync_devices', 'scan_prefixes', 'deploy_agent')",
+            name="ck_job_templates_job_type",
+        ),
     )
 
 

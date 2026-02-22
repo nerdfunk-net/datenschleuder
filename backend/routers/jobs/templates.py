@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/job-templates", tags=["job-templates"])
 
 
-@router.post("", response_model=JobTemplateResponse)
+@router.post("", response_model=JobTemplateResponse, status_code=status.HTTP_201_CREATED)
 async def create_job_template(
     template_data: JobTemplateCreate, current_user: dict = Depends(verify_token)
 ):

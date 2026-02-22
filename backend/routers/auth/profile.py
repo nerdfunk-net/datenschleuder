@@ -14,6 +14,8 @@ import credentials_manager
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/profile", tags=["profile"])
 
+API_KEY_LENGTH = 42
+
 
 class PersonalCredentialData(BaseModel):
     id: str
@@ -128,11 +130,11 @@ async def update_profile(
         if (
             update_data.api_key is not None
             and update_data.api_key != ""
-            and len(update_data.api_key) != 42
+            and len(update_data.api_key) != API_KEY_LENGTH
         ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="API key must be exactly 42 characters long",
+                detail=f"API key must be exactly {API_KEY_LENGTH} characters long",
             )
 
         # Update user in new database

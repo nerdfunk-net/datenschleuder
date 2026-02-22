@@ -282,7 +282,6 @@ export function useQuickDeploy({
             title: 'Deployment settings outdated',
             description: 'Please go to Settings → Deploy, click "Load Paths" for this instance, re-select your paths, and save. This will fix the missing raw_path field.',
             variant: 'destructive',
-            duration: 10000, // Show for 10 seconds
           })
           
           // STOP deployment - don't proceed with wrong path

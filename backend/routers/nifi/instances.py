@@ -70,7 +70,7 @@ async def get_nifi_instance(
     return instance
 
 
-@router.post("/", response_model=NifiInstanceResponse)
+@router.post("/", response_model=NifiInstanceResponse, status_code=status.HTTP_201_CREATED)
 async def create_nifi_instance(
     data: NifiInstanceCreate,
     current_user: dict = Depends(require_permission("nifi", "write")),

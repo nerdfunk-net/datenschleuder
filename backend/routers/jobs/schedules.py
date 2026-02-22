@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/job-schedules", tags=["job-schedules"])
 
 
-@router.post("", response_model=JobScheduleResponse)
+@router.post("", response_model=JobScheduleResponse, status_code=status.HTTP_201_CREATED)
 async def create_job_schedule(
     job_data: JobScheduleCreate, current_user: dict = Depends(verify_token)
 ):
