@@ -433,13 +433,16 @@ export function FlowsTab() {
         console.log('🔍 [DEBUG] All paths response:', allPathsResponse)
 
         const pathToIdMap = new Map<string, string>()
+        const idToPathMap = new Map<string, string>()
         allPathsResponse.process_groups.forEach((pg) => {
           // backend returns path as "/Parent/Child" string; strip leading slash
           const pathString = pg.path.startsWith('/') ? pg.path.slice(1) : pg.path
           pathToIdMap.set(pathString, pg.id)
+          idToPathMap.set(pg.id, pathString)
         })
         
         console.log('🗺️ [DEBUG] Path to ID map:', Object.fromEntries(pathToIdMap))
+        console.log('🗺️ [DEBUG] ID to Path map:', Object.fromEntries(idToPathMap))
 
         const deploymentPaths = settingsResponse.paths
         const hierarchyConfig = hierarchyResponse.hierarchy.sort((a, b) => a.order - b.order)
@@ -448,6 +451,8 @@ export function FlowsTab() {
         console.log('⚙️ [DEBUG] Deployment paths:', deploymentPaths)
         console.log('📋 [DEBUG] Hierarchy config:', hierarchyConfig)
         console.log('🎯 [DEBUG] Instance deployment path:', instanceDeploymentPath)
+        console.log('🔍 [DEBUG] Source path object:', instanceDeploymentPath.source_path)
+        console.log('🔍 [DEBUG] Dest path object:', instanceDeploymentPath.dest_path)
 
         if (!instanceDeploymentPath) {
           setCheckError(`No deployment path configured for instance ${instanceId}`)
@@ -458,20 +463,30 @@ export function FlowsTab() {
 
         const checkPart = async (flow: Flow, flowType: FlowType) => {
           const prefix = flowType === 'source' ? 'src_' : 'dest_'
-          let basePath =
+          const pathConfig =
             flowType === 'source'
-              ? instanceDeploymentPath.source_path.path
-              : instanceDeploymentPath.dest_path.path
+              ? instanceDeploymentPath.source_path
+              : instanceDeploymentPath.dest_path
           
           console.log(`\n🔄 [DEBUG] Checking flow #${flow.id} (${flowType})`)
-          console.log(`   Original basePath: "${basePath}"`)
+          console.log(`   Path config:`, pathConfig)
           
-          // Strip leading slash from basePath to match the pathToIdMap format
-          if (basePath.startsWith('/')) {
-            basePath = basePath.slice(1)
+          // Resolve the base path from the stored ID (like backend install service does)
+          const storedId = pathConfig.id
+          let basePath = idToPathMap.get(storedId)
+          
+          if (!basePath) {
+            console.warn(`   ⚠️ Could not resolve path from ID "${storedId}", falling back to stored path`)
+            basePath = pathConfig.path
+            // Strip leading slash if present
+            if (basePath.startsWith('/')) {
+              basePath = basePath.slice(1)
+            }
+            // Strip "NiFi Flow → " prefix if present (formatted path)
+            basePath = basePath.replace(/^NiFi Flow → /, '')
           }
           
-          console.log(`   Stripped basePath: "${basePath}"`)
+          console.log(`   Resolved basePath: "${basePath}"`)
           
           const hierarchyParts: string[] = []
 
