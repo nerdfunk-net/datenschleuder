@@ -21,8 +21,15 @@ _creds_repo = CredentialsRepository()
 
 
 def _build_key(secret: str) -> bytes:
-    digest = hashlib.sha256(secret.encode("utf-8")).digest()
-    return base64.urlsafe_b64encode(digest)
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    from cryptography.hazmat.primitives import hashes
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=b"datenschleuder-credential-encryption",
+        iterations=100_000,
+    )
+    return base64.urlsafe_b64encode(kdf.derive(secret.encode("utf-8")))
 
 
 class EncryptionService:

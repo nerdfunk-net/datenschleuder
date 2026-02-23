@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Request
 from models.auth import UserLogin, LoginResponse
 from core.auth import create_access_token, get_api_key_user
 from services.auth.login_service import get_user_with_rbac_safe, build_user_response
+from limiter import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,8 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(user_data: UserLogin):
+@limiter.limit("5/minute")
+async def login(request: Request, user_data: UserLogin):
     """
     Authenticate user against new user database.
     """

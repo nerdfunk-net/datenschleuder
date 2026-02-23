@@ -8,11 +8,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Debug: Print Redis configuration
-print(f"Celery Redis URL: {settings.redis_url}")
-print(f"Celery Broker URL: {settings.celery_broker_url}")
-print(f"Celery Result Backend: {settings.celery_result_backend}")
-
 # Create Celery application
 celery_app = Celery(
     "datenschleuder",

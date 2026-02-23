@@ -13,6 +13,9 @@ from datetime import datetime
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from limiter import limiter
 import asyncio
 
 # Import routers
@@ -63,6 +66,21 @@ async def lifespan(app: FastAPI):
     """Manage application startup and shutdown lifecycle."""
     # ── Startup ──────────────────────────────────────────────────────────────
     logger.info("=== Application startup - initializing services ===")
+
+    # Validate SECRET_KEY is not the insecure default value
+    from config import settings as _settings
+    if _settings.secret_key == "your-secret-key-change-in-production":
+        raise RuntimeError(
+            "FATAL: SECRET_KEY is set to the insecure default value. "
+            "Set the SECRET_KEY environment variable to a strong random value before running."
+        )
+
+    # Warn if default admin credentials are still in use
+    if _settings.initial_password == "admin":
+        logger.warning(
+            "SECURITY WARNING: Default admin credentials (admin/admin) are in use. "
+            "Change the admin password immediately after first login."
+        )
 
     # Initialize database tables first
     try:
@@ -245,7 +263,7 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutdown completed")
 
 
-# Initialize FastAPI app
+# Initialize FastAPI app with rate limiter
 app = FastAPI(
     title="Datenschleuder API",
     description="Network Device Management Dashboard API",
@@ -255,6 +273,20 @@ app = FastAPI(
     redirect_slashes=True,
     lifespan=lifespan,
 )
+
+# Attach rate limiter to app state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Security headers middleware
+@app.middleware("http")
+async def security_headers(request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    return response
+
 
 # Mount swagger-ui static files for air-gapped environments
 # This serves Swagger UI assets locally instead of from CDN
@@ -352,11 +384,6 @@ async def health_check():
         "version": "2.0.0",
     }
 
-
-@app.get("/api/test")
-async def test_endpoint():
-    """Simple test endpoint."""
-    return {"message": "Test endpoint working", "timestamp": datetime.now().isoformat()}
 
 
 if __name__ == "__main__":
