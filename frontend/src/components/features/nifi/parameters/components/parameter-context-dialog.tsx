@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2, Link, Loader2, Home, RefreshCw } from 'lucide-react'
+import { Plus, Trash2, Link, Loader2, Home, RefreshCw, FileText, List } from 'lucide-react'
 import { InheritanceDialog } from './inheritance-dialog'
 import type { ParameterContext, ParameterContextForm, FormParameter, ModalMode } from '../types'
 import type { NifiInstance } from '@/components/features/settings/nifi/types'
@@ -174,7 +174,7 @@ export function ParameterContextDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSave} className="space-y-4">
+          <form onSubmit={handleSave} className="space-y-6">
             {/* NiFi Instance (create only) */}
             {mode === 'create' && (
               <div className="space-y-2">
@@ -197,36 +197,59 @@ export function ParameterContextDialog({
               </div>
             )}
 
-            {/* Name */}
-            <div className="space-y-2">
-              <Label htmlFor="ctx-name">
-                Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="ctx-name"
-                value={form.name}
-                onChange={(e) => setField('name', e.target.value)}
-                placeholder="Enter parameter context name"
-                required
-              />
+            {/* Basic Info Section */}
+            <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
+              <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
+                <div className="flex items-center space-x-2">
+                  <FileText className="h-4 w-4" />
+                  <span className="text-sm font-medium">Basic Information</span>
+                </div>
+                <div className="text-xs text-blue-100">
+                  Context name and description
+                </div>
+              </div>
+              <div className="p-6 bg-gradient-to-b from-white to-gray-50 space-y-4">
+                {/* Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="ctx-name">
+                    Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="ctx-name"
+                    value={form.name}
+                    onChange={(e) => setField('name', e.target.value)}
+                    placeholder="Enter parameter context name"
+                    required
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <Label htmlFor="ctx-desc">Description</Label>
+                  <Textarea
+                    id="ctx-desc"
+                    value={form.description}
+                    onChange={(e) => setField('description', e.target.value)}
+                    rows={2}
+                    placeholder="Enter description (optional)"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="ctx-desc">Description</Label>
-              <Textarea
-                id="ctx-desc"
-                value={form.description}
-                onChange={(e) => setField('description', e.target.value)}
-                rows={2}
-                placeholder="Enter description (optional)"
-              />
-            </div>
-
-            {/* Parameters table */}
-            <div className="space-y-2">
-              <Label>Parameters</Label>
-              <div className="border border-gray-200 rounded-md overflow-auto">
+            {/* Parameters Section */}
+            <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
+              <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
+                <div className="flex items-center space-x-2">
+                  <List className="h-4 w-4" />
+                  <span className="text-sm font-medium">Parameters</span>
+                </div>
+                <div className="text-xs text-blue-100">
+                  {form.parameters.length} parameter{form.parameters.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+              <div className="p-6 bg-gradient-to-b from-white to-gray-50 space-y-4">
+                <div className="border border-gray-200 rounded-md overflow-auto">
                 <table
                   className="text-sm"
                   style={{ tableLayout: 'fixed', borderCollapse: 'collapse', width: '100%' }}
@@ -364,30 +387,31 @@ export function ParameterContextDialog({
                     )}
                   </tbody>
                 </table>
-              </div>
+                </div>
 
-              {/* Action buttons below table */}
-              <div className="flex items-center gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={addParameter}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Parameter
-                </Button>
-                {mode === 'edit' && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowInheritance(true)}
-                  >
-                    <Link className="h-4 w-4 mr-1" />
-                    Edit Inheritance
-                    {form.inherited_parameter_contexts.length > 0 && (
-                      <Badge className="ml-1 bg-blue-100 text-blue-800 border-blue-300 text-xs">
-                        {form.inherited_parameter_contexts.length}
-                      </Badge>
-                    )}
+                {/* Action buttons below table */}
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={addParameter}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Parameter
                   </Button>
-                )}
+                  {mode === 'edit' && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowInheritance(true)}
+                    >
+                      <Link className="h-4 w-4 mr-1" />
+                      Edit Inheritance
+                      {form.inherited_parameter_contexts.length > 0 && (
+                        <Badge className="ml-1 bg-blue-100 text-blue-800 border-blue-300 text-xs">
+                          {form.inherited_parameter_contexts.length}
+                        </Badge>
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </form>
