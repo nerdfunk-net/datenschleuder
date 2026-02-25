@@ -81,6 +81,7 @@ def _credential_to_dict(cred: Credential) -> Dict[str, Any]:
         "has_password": cred.password_encrypted is not None,
         "has_ssh_key": cred.ssh_key_encrypted is not None,
         "has_ssh_passphrase": cred.ssh_passphrase_encrypted is not None,
+        "ssh_keyfile_path": cred.ssh_keyfile_path,
     }
 
 
@@ -134,6 +135,7 @@ def create_credential(
     owner: Optional[str] = None,
     ssh_private_key: Optional[str] = None,
     ssh_passphrase: Optional[str] = None,
+    ssh_keyfile_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Create a new credential with encrypted password or SSH key.
 
@@ -175,6 +177,7 @@ def create_credential(
         password_encrypted=encrypted_password,
         ssh_key_encrypted=encrypted_ssh_key,
         ssh_passphrase_encrypted=encrypted_ssh_passphrase,
+        ssh_keyfile_path=ssh_keyfile_path or None,
         valid_until=valid_until,
         source=source,
         owner=owner,
@@ -201,6 +204,7 @@ def update_credential(
     owner: Optional[str] = None,
     ssh_private_key: Optional[str] = None,
     ssh_passphrase: Optional[str] = None,
+    ssh_keyfile_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Update an existing credential.
 
@@ -248,6 +252,8 @@ def update_credential(
         update_kwargs["ssh_passphrase_encrypted"] = encryption_service.encrypt(
             ssh_passphrase
         )
+    if ssh_keyfile_path is not None:
+        update_kwargs["ssh_keyfile_path"] = ssh_keyfile_path or None
 
     update_kwargs["updated_at"] = datetime.utcnow()
 

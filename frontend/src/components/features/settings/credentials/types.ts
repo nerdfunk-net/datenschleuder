@@ -9,6 +9,7 @@ export interface Credential {
   updated_at?: string
   has_ssh_key?: boolean
   has_ssh_passphrase?: boolean
+  ssh_keyfile_path?: string
 }
 
 export interface CredentialFormData {
@@ -18,6 +19,7 @@ export interface CredentialFormData {
   password: string
   ssh_private_key: string
   ssh_passphrase: string
+  ssh_keyfile_path: string
   valid_until?: string
 }
 
@@ -29,6 +31,7 @@ export interface CredentialCreatePayload {
   password?: string
   ssh_private_key?: string
   ssh_passphrase?: string
+  ssh_keyfile_path?: string
 }
 
 export interface CredentialUpdatePayload extends CredentialCreatePayload {

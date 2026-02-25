@@ -161,6 +161,8 @@ export const queryKeys = {
       instanceId !== undefined
         ? ([...queryKeys.registryFlows.all, 'list', instanceId] as const)
         : ([...queryKeys.registryFlows.all, 'list'] as const),
+    metadata: (flowId: number) =>
+      [...queryKeys.registryFlows.all, 'metadata', flowId] as const,
   },
 
   // NiFi Flows (managed flows in DB)

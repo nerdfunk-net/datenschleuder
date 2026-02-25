@@ -241,6 +241,7 @@ class Credential(Base):
     ssh_passphrase_encrypted = Column(
         LargeBinary, nullable=True
     )  # Encrypted passphrase
+    ssh_keyfile_path = Column(String(1024), nullable=True)  # Path to SSH key file on disk
     valid_until = Column(String(255))  # ISO8601 datetime string
     is_active = Column(Boolean, nullable=False, default=True)
     source = Column(String(50), nullable=False, default="general")  # general or private
@@ -883,9 +884,46 @@ class RegistryFlow(Base):
 
     # Relationships
     nifi_instance = relationship("NifiInstance", back_populates="registry_flows")
+    flow_metadata = relationship(
+        "RegistryFlowMetadata",
+        back_populates="registry_flow",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         Index("idx_registry_flows_instance_flow", "nifi_instance_id", "flow_id"),
+    )
+
+
+class RegistryFlowMetadata(Base):
+    """Per-flow key-value metadata stored locally (not in NiFi)."""
+
+    __tablename__ = "registry_flow_metadata"
+
+    id = Column(Integer, primary_key=True, index=True)
+    registry_flow_id = Column(
+        Integer,
+        ForeignKey("registry_flows.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    key = Column(String(255), nullable=False)
+    value = Column(Text, nullable=False)
+    is_mandatory = Column(Boolean, nullable=False, default=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    registry_flow = relationship("RegistryFlow", back_populates="flow_metadata")
+
+    __table_args__ = (
+        Index("idx_registry_flow_metadata_flow_id", "registry_flow_id"),
     )
 
 

@@ -45,3 +45,20 @@ export interface RegistryDetails {
   github_url?: string
   type?: string
 }
+
+export interface FlowMetadataItem {
+  _clientKey: string
+  key: string
+  value: string
+  is_mandatory: boolean
+}
+
+export interface FlowMetadataResponse {
+  id: number
+  registry_flow_id: number
+  key: string
+  value: string
+  is_mandatory: boolean
+  created_at: string
+  updated_at: string
+}

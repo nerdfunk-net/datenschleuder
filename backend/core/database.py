@@ -106,8 +106,17 @@ def init_db():
         else:
             logger.info("✓ Database schema is up to date - all tables exist")
 
+        # Run versioned migrations (adds/alters columns, indexes, etc.)
+        try:
+            from migrations.runner import MigrationRunner
+            runner = MigrationRunner(engine, Base)
+            runner.run_migrations()
+        except Exception as migration_error:
+            logger.error("Migration runner failed: %s", migration_error)
+            raise
+
         logger.info(
-            f"Database initialized successfully ({len(model_tables)} tables total)"
+            "Database initialized successfully (%s tables total)", len(model_tables)
         )
     except Exception as e:
         logger.error("Error initializing database: %s", e)

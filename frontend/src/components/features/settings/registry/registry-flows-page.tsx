@@ -16,7 +16,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { GitFork, Plus, Upload, Trash2, Download, ChevronDown, Loader2 } from 'lucide-react'
+import { GitFork, Plus, Upload, Trash2, Download, ChevronDown, Loader2, Tags } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
 import { useNifiInstancesQuery } from '../nifi/hooks/use-nifi-instances-query'
@@ -25,6 +25,7 @@ import { useRegistryFlowsMutations } from './hooks/use-registry-flows-mutations'
 import { AddFlowDialog } from './dialogs/add-flow-dialog'
 import { ImportFlowDialog } from './dialogs/import-flow-dialog'
 import { FlowVersionsDialog } from './dialogs/flow-versions-dialog'
+import { FlowMetadataDialog } from './dialogs/flow-metadata-dialog'
 import type { RegistryFlow } from './types'
 import type { NifiInstance } from '../nifi/types'
 
@@ -41,6 +42,7 @@ export function RegistryFlowsPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [versionsFlow, setVersionsFlow] = useState<RegistryFlow | null>(null)
   const [deleteFlow, setDeleteFlow] = useState<RegistryFlow | null>(null)
+  const [metadataFlow, setMetadataFlow] = useState<RegistryFlow | null>(null)
   const [exportingIds, setExportingIds] = useState<Set<string>>(new Set())
 
   const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
@@ -196,6 +198,17 @@ export function RegistryFlowsPage() {
                           {(canWrite || canDelete) ? (
                             <div className="flex items-center justify-end gap-1">
                               {canWrite && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-slate-400 hover:text-blue-500"
+                                  title="Manage metadata"
+                                  onClick={() => setMetadataFlow(flow)}
+                                >
+                                  <Tags className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                              {canWrite && (
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="outline" size="sm" disabled={isExporting}>
@@ -242,6 +255,7 @@ export function RegistryFlowsPage() {
       {/* Dialogs */}
       <AddFlowDialog open={addOpen} onOpenChange={setAddOpen} />
       <ImportFlowDialog open={importOpen} onOpenChange={setImportOpen} />
+      <FlowMetadataDialog flow={metadataFlow} onClose={() => setMetadataFlow(null)} />
       <FlowVersionsDialog
         flow={versionsFlow}
         instanceId={versionsInstanceId}

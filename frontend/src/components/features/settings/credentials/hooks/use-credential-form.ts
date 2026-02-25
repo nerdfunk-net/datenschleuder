@@ -27,6 +27,7 @@ export function useCredentialForm(
     password: '',
     ssh_private_key: '',
     ssh_passphrase: '',
+    ssh_keyfile_path: credential?.ssh_keyfile_path || '',
     valid_until: credential?.valid_until || '',
   }
 

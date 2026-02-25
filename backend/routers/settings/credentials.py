@@ -71,6 +71,7 @@ def create_credential(payload: CredentialCreate) -> dict:
             source="general",  # Force general source for admin credentials interface
             ssh_private_key=payload.ssh_private_key,
             ssh_passphrase=payload.ssh_passphrase,
+            ssh_keyfile_path=payload.ssh_keyfile_path,
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -94,6 +95,7 @@ def update_credential(cred_id: int, payload: CredentialUpdate) -> dict:
             source="general",  # Force general source for admin credentials interface
             ssh_private_key=payload.ssh_private_key,
             ssh_passphrase=payload.ssh_passphrase,
+            ssh_keyfile_path=payload.ssh_keyfile_path,
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

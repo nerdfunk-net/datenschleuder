@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useCallback } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import type { Path } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
@@ -29,15 +29,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { ChevronDown } from 'lucide-react'
-import { useNifiHierarchyValuesQuery, useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
+import { useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
 import { useParameterContextsQuery } from '../hooks/use-parameter-contexts-query'
+import { HierarchyCombobox } from '../components/hierarchy-combobox'
 import type { NifiFlow, RegistryFlow, FlowFormValues } from '../types'
 import type { HierarchyAttribute, NifiInstance } from '@/components/features/settings/nifi/types'
 
@@ -78,55 +72,6 @@ function buildDefaultValues(
     active: flow?.active ?? true,
     description: flow?.description ?? '',
   }
-}
-
-// ─── Combobox: dropdown of saved values + free-text input ─────────────────────
-
-interface HierarchyComboboxProps {
-  attributeName: string
-  value: string
-  onChange: (value: string) => void
-  disabled?: boolean
-}
-
-function HierarchyCombobox({ attributeName, value, onChange, disabled }: HierarchyComboboxProps) {
-  const { data } = useNifiHierarchyValuesQuery(attributeName)
-  const savedValues = data?.values ?? []
-
-  const handleChange = useCallback((newValue: string) => {
-    onChange(newValue)
-  }, [onChange])
-
-  return (
-    <div className="flex h-9">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-9 w-8 px-0 rounded-r-none border-r-0 shrink-0"
-            disabled={disabled || savedValues.length === 0}
-          >
-            <ChevronDown className="h-3.5 w-3.5" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="max-h-48 overflow-y-auto">
-          {savedValues.map(v => (
-            <DropdownMenuItem key={v} onSelect={() => handleChange(v)}>
-              {v}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <Input
-        value={value}
-        onChange={e => handleChange(e.target.value)}
-        placeholder={`Select or type ${attributeName}`}
-        disabled={disabled}
-        className="rounded-l-none h-9 min-w-0"
-      />
-    </div>
-  )
 }
 
 // ─── Parameter context select (fetches contexts from the matched NiFi instance) ─

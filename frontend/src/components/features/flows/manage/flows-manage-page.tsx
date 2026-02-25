@@ -47,6 +47,7 @@ import {
   ArrowRightCircle,
   ArrowLeftCircle,
   Loader2,
+  Wand2,
 } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
@@ -56,6 +57,7 @@ import { useFlowsMutations } from './hooks/use-flows-mutations'
 import { useFlowViewsQuery } from './hooks/use-flow-views-query'
 import { useFlowViewsMutations } from './hooks/use-flow-views-mutations'
 import { FlowDialog } from './dialogs/flow-dialog'
+import { FlowWizardDialog } from './dialogs/flow-wizard-dialog'
 import { SaveViewDialog } from './dialogs/save-view-dialog'
 import { ConflictResolutionDialog } from '@/components/features/flows/deploy/dialogs/conflict-resolution-dialog'
 import { useQuickDeploy } from '@/components/features/flows/deploy/hooks/use-quick-deploy'
@@ -236,6 +238,7 @@ export function FlowsManagePage() {
   }, [filters])
 
   // Dialog state
+  const [wizardOpen, setWizardOpen] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingFlow, setEditingFlow] = useState<NifiFlow | null>(null)
   const [viewOnly, setViewOnly] = useState(false)
@@ -517,10 +520,16 @@ export function FlowsManagePage() {
       </DropdownMenu>
 
       {canWrite && (
-        <Button size="sm" onClick={handleAdd}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Flow
-        </Button>
+        <>
+          <Button size="sm" variant="outline" onClick={() => setWizardOpen(true)}>
+            <Wand2 className="mr-2 h-4 w-4" />
+            Wizard
+          </Button>
+          <Button size="sm" onClick={handleAdd}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Flow
+          </Button>
+        </>
       )}
     </div>
   )
@@ -773,6 +782,13 @@ export function FlowsManagePage() {
         registryFlows={registryFlows}
         onSubmit={handleDialogSubmit}
         isSubmitting={isSubmitting}
+      />
+
+      {/* Flow creation wizard */}
+      <FlowWizardDialog
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        hierarchy={hierarchy}
       />
 
       {/* Save view dialog */}

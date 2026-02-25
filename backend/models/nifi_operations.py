@@ -1,6 +1,6 @@
 """Pydantic schemas for NiFi flow operations."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional, List
 
@@ -104,6 +104,39 @@ class RegistryFlowResponse(BaseModel):
 # ============================================================================
 # Flow View Schemas
 # ============================================================================
+
+
+# ============================================================================
+# Registry Flow Metadata Schemas
+# ============================================================================
+
+
+class RegistryFlowMetadataItem(BaseModel):
+    """A single metadata key-value pair for a registry flow."""
+
+    key: str
+    value: str
+    is_mandatory: bool = False
+
+
+class RegistryFlowMetadataResponse(BaseModel):
+    """Response schema for a registry flow metadata entry."""
+
+    id: int
+    registry_flow_id: int
+    key: str
+    value: str
+    is_mandatory: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RegistryFlowMetadataSetRequest(BaseModel):
+    """Request schema for setting (replacing) all metadata for a flow."""
+
+    items: List[RegistryFlowMetadataItem]
 
 
 class FlowViewCreate(BaseModel):

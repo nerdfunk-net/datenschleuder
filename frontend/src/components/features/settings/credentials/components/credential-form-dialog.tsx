@@ -53,6 +53,7 @@ export function CredentialFormDialog({
           password: '',
           ssh_private_key: '',
           ssh_passphrase: '',
+          ssh_keyfile_path: credential.ssh_keyfile_path || '',
           valid_until: credential.valid_until || '',
         })
       } else {
@@ -64,6 +65,7 @@ export function CredentialFormDialog({
           password: '',
           ssh_private_key: '',
           ssh_passphrase: '',
+          ssh_keyfile_path: '',
           valid_until: '',
         })
       }
@@ -99,6 +101,10 @@ export function CredentialFormDialog({
     if (data.type === 'ssh_key') {
       if (data.ssh_private_key?.trim()) {
         payload.ssh_private_key = data.ssh_private_key
+        // Clear any stored keyfile path when an actual key is provided
+        payload.ssh_keyfile_path = ''
+      } else if (data.ssh_keyfile_path?.trim()) {
+        payload.ssh_keyfile_path = data.ssh_keyfile_path
       }
       if (data.ssh_passphrase?.trim()) {
         payload.ssh_passphrase = data.ssh_passphrase
@@ -123,6 +129,7 @@ export function CredentialFormDialog({
 
   const watchedType = form.watch('type')
   const watchedSshKey = form.watch('ssh_private_key')
+  const sshKeyProvided = !!(watchedSshKey?.trim())
 
   const getPasswordLabel = () => {
     if (watchedType === 'token') {
@@ -267,6 +274,32 @@ export function CredentialFormDialog({
                   )}
                 />
 
+                {/* SSH Keyfile Path — shown when no key is uploaded/pasted */}
+                {!sshKeyProvided && (
+                  <FormField
+                    control={form.control}
+                    name="ssh_keyfile_path"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          SSH Keyfile Path
+                          {!isEditing && <span className="text-destructive ml-1">*</span>}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="/home/user/.ssh/id_rsa"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Absolute path to the SSH private key file on the server. Required when no key is uploaded or pasted above.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
                 {/* SSH Passphrase */}
                 <FormField
                   control={form.control}
@@ -319,19 +352,21 @@ export function CredentialFormDialog({
               />
             )}
 
-            <FormField
-              control={form.control}
-              name="valid_until"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valid Until (optional)</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="date" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {watchedType !== 'ssh_key' && (
+              <FormField
+                control={form.control}
+                name="valid_until"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valid Until (optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="date" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <Separator />
 

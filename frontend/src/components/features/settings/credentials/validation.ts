@@ -7,19 +7,20 @@ export const credentialFormSchema = z.object({
   password: z.string().optional(),
   ssh_private_key: z.string().optional(),
   ssh_passphrase: z.string().optional(),
+  ssh_keyfile_path: z.string().optional(),
   valid_until: z.string().optional(),
 }).refine(
   (data) => {
-    // For SSH key type, require SSH private key
     if (data.type === 'ssh_key') {
-      return !!data.ssh_private_key?.trim()
+      // Require either an SSH private key or a keyfile path
+      return !!data.ssh_private_key?.trim() || !!data.ssh_keyfile_path?.trim()
     }
     // For other types, require password
     return !!data.password?.trim()
   },
   {
-    message: 'SSH private key required for SSH Key type, password required for other types',
-    path: ['password'],
+    message: 'Provide an SSH private key, upload a key file, or enter the SSH keyfile path',
+    path: ['ssh_keyfile_path'],
   }
 )
 
@@ -33,6 +34,7 @@ export const credentialEditSchema = z.object({
   password: z.string().optional(),
   ssh_private_key: z.string().optional(),
   ssh_passphrase: z.string().optional(),
+  ssh_keyfile_path: z.string().optional(),
   valid_until: z.string().optional(),
 })
 

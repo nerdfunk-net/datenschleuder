@@ -5,8 +5,14 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 
 from core.auth import require_permission
-from models.nifi_operations import RegistryFlowCreate, RegistryFlowResponse
+from models.nifi_operations import (
+    RegistryFlowCreate,
+    RegistryFlowResponse,
+    RegistryFlowMetadataResponse,
+    RegistryFlowMetadataSetRequest,
+)
 from services.nifi import registry_flow_service
+from services.nifi import registry_flow_metadata_service
 
 logger = logging.getLogger(__name__)
 
@@ -74,3 +80,23 @@ async def delete_registry_flow(
             detail="Registry flow with id %d not found" % flow_id,
         )
     return {"message": "Registry flow deleted successfully"}
+
+
+@router.get("/{flow_id}/metadata", response_model=List[RegistryFlowMetadataResponse])
+async def get_flow_metadata(
+    flow_id: int,
+    current_user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Get all metadata entries for a registry flow."""
+    return registry_flow_metadata_service.list_metadata(flow_id)
+
+
+@router.put("/{flow_id}/metadata", response_model=List[RegistryFlowMetadataResponse])
+async def set_flow_metadata(
+    flow_id: int,
+    request: RegistryFlowMetadataSetRequest,
+    current_user: dict = Depends(require_permission("nifi", "write")),
+):
+    """Replace all metadata for a registry flow."""
+    items = [item.model_dump() for item in request.items]
+    return registry_flow_metadata_service.set_metadata(flow_id, items)
