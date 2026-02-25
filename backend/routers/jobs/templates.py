@@ -183,21 +183,17 @@ async def update_job_template(
             )
 
         # Check permissions
-        if template.get("is_global"):
-            has_permission = rbac_manager.has_permission(
-                current_user["user_id"], "jobs", "write"
+        is_admin = current_user.get("role") == "admin"
+        has_write = rbac_manager.has_permission(
+            current_user["user_id"], "jobs.templates", "write"
+        )
+        is_owner = template.get("user_id") == current_user["user_id"]
+
+        if not (is_admin or has_write or is_owner):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied: jobs.templates:write required to edit this template",
             )
-            if not has_permission and current_user.get("role") != "admin":
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Permission denied: jobs:write required for global templates",
-                )
-        else:
-            if template.get("user_id") != current_user["user_id"]:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied: You can only edit your own private templates",
-                )
 
         # Update the template
         updated_template = job_template_manager.update_job_template(
@@ -234,6 +230,11 @@ async def update_job_template(
             if update_data.deploy_templates
             else None,
             nifi_instance_ids=update_data.nifi_instance_ids,
+            check_queues_mode=update_data.check_queues_mode,
+            check_queues_count_yellow=update_data.check_queues_count_yellow,
+            check_queues_count_red=update_data.check_queues_count_red,
+            check_queues_bytes_yellow=update_data.check_queues_bytes_yellow,
+            check_queues_bytes_red=update_data.check_queues_bytes_red,
             is_global=update_data.is_global,
             user_id=current_user["user_id"],
         )
@@ -271,21 +272,17 @@ async def delete_job_template(
             )
 
         # Check permissions
-        if template.get("is_global"):
-            has_permission = rbac_manager.has_permission(
-                current_user["user_id"], "jobs", "write"
+        is_admin = current_user.get("role") == "admin"
+        has_delete = rbac_manager.has_permission(
+            current_user["user_id"], "jobs.templates", "delete"
+        )
+        is_owner = template.get("user_id") == current_user["user_id"]
+
+        if not (is_admin or has_delete or is_owner):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied: jobs.templates:delete required to delete this template",
             )
-            if not has_permission and current_user.get("role") != "admin":
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Permission denied: jobs:write required for global templates",
-                )
-        else:
-            if template.get("user_id") != current_user["user_id"]:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied: You can only delete your own private templates",
-                )
 
         deleted = job_template_manager.delete_job_template(template_id)
 

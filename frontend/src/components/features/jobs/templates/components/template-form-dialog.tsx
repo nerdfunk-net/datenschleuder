@@ -34,6 +34,11 @@ export function TemplateFormDialog({
 
   // check_queues specific state: null = all instances, array = specific instance IDs
   const [nifiInstanceIds, setNifiInstanceIds] = useState<number[] | null>(null)
+  const [checkMode, setCheckMode] = useState<'count' | 'bytes' | 'both'>('count')
+  const [countYellow, setCountYellow] = useState(1000)
+  const [countRed, setCountRed] = useState(10000)
+  const [bytesYellow, setBytesYellow] = useState(10)
+  const [bytesRed, setBytesRed] = useState(100)
 
   const resetForm = useCallback(() => {
     setFormName("")
@@ -41,6 +46,11 @@ export function TemplateFormDialog({
     setFormDescription("")
     setFormIsGlobal(false)
     setNifiInstanceIds(null)
+    setCheckMode('count')
+    setCountYellow(1000)
+    setCountRed(10000)
+    setBytesYellow(10)
+    setBytesRed(100)
   }, [])
 
   // Load editing template data
@@ -52,6 +62,11 @@ export function TemplateFormDialog({
       setFormIsGlobal(editingTemplate.is_global)
       // Restore nifi_instance_ids: undefined/null → null (all), array → specific
       setNifiInstanceIds(editingTemplate.nifi_instance_ids ?? null)
+      setCheckMode((editingTemplate.check_queues_mode as 'count' | 'bytes' | 'both') ?? 'count')
+      setCountYellow(editingTemplate.check_queues_count_yellow ?? 1000)
+      setCountRed(editingTemplate.check_queues_count_red ?? 10000)
+      setBytesYellow(editingTemplate.check_queues_bytes_yellow ?? 10)
+      setBytesRed(editingTemplate.check_queues_bytes_red ?? 100)
     } else if (open && !editingTemplate) {
       resetForm()
     }
@@ -75,7 +90,15 @@ export function TemplateFormDialog({
     // Add type-specific fields
     const payload =
       formJobType === "check_queues"
-        ? { ...basePayload, nifi_instance_ids: nifiInstanceIds }
+        ? {
+            ...basePayload,
+            nifi_instance_ids: nifiInstanceIds,
+            check_queues_mode: checkMode,
+            check_queues_count_yellow: countYellow,
+            check_queues_count_red: countRed,
+            check_queues_bytes_yellow: bytesYellow,
+            check_queues_bytes_red: bytesRed,
+          }
         : basePayload
 
     if (editingTemplate) {
@@ -125,6 +148,16 @@ export function TemplateFormDialog({
             <CheckQueuesFields
               nifiInstanceIds={nifiInstanceIds}
               onNifiInstanceIdsChange={setNifiInstanceIds}
+              checkMode={checkMode}
+              onCheckModeChange={setCheckMode}
+              countYellow={countYellow}
+              onCountYellowChange={setCountYellow}
+              countRed={countRed}
+              onCountRedChange={setCountRed}
+              bytesYellow={bytesYellow}
+              onBytesYellowChange={setBytesYellow}
+              bytesRed={bytesRed}
+              onBytesRedChange={setBytesRed}
             />
           )}
         </div>

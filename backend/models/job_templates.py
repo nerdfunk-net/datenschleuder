@@ -179,6 +179,30 @@ class JobTemplateBase(BaseModel):
         None,
         description="List of NiFi instance IDs to run the job against; None or empty means all instances (only applies to check_queues type)",
     )
+    check_queues_mode: Optional[str] = Field(
+        "count",
+        description="Metric to evaluate: 'count' (flow-file count), 'bytes' (queue size in MB), or 'both' (only applies to check_queues type)",
+    )
+    check_queues_count_yellow: Optional[int] = Field(
+        1000,
+        ge=0,
+        description="Flow-file count at which the queue status turns yellow (only applies to check_queues type)",
+    )
+    check_queues_count_red: Optional[int] = Field(
+        10000,
+        ge=0,
+        description="Flow-file count at which the queue status turns red (only applies to check_queues type)",
+    )
+    check_queues_bytes_yellow: Optional[int] = Field(
+        10,
+        ge=0,
+        description="Queue size in MB at which the status turns yellow (only applies to check_queues type)",
+    )
+    check_queues_bytes_red: Optional[int] = Field(
+        100,
+        ge=0,
+        description="Queue size in MB at which the status turns red (only applies to check_queues type)",
+    )
     is_global: bool = Field(
         False,
         description="Whether this template is global (available to all users) or private",
@@ -224,6 +248,11 @@ class JobTemplateUpdate(BaseModel):
     activate_after_deploy: Optional[bool] = None
     deploy_templates: Optional[List[DeployTemplateEntry]] = None
     nifi_instance_ids: Optional[List[int]] = None
+    check_queues_mode: Optional[str] = None
+    check_queues_count_yellow: Optional[int] = Field(None, ge=0)
+    check_queues_count_red: Optional[int] = Field(None, ge=0)
+    check_queues_bytes_yellow: Optional[int] = Field(None, ge=0)
+    check_queues_bytes_red: Optional[int] = Field(None, ge=0)
     is_global: Optional[bool] = None
 
 

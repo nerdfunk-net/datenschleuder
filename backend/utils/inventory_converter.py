@@ -12,10 +12,28 @@ Used by:
 """
 
 import logging
+from dataclasses import dataclass, field
 from typing import List, Dict, Any
-from models.inventory import LogicalOperation, LogicalCondition
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class LogicalCondition:
+    """A single field/operator/value predicate."""
+
+    field: str
+    operator: str
+    value: str
+
+
+@dataclass
+class LogicalOperation:
+    """A logical group of conditions and/or nested operations."""
+
+    operation_type: str  # 'AND', 'OR', 'NOT'
+    conditions: List[LogicalCondition] = field(default_factory=list)
+    nested_operations: List["LogicalOperation"] = field(default_factory=list)
 
 
 def tree_to_operations(tree_data: Dict[str, Any]) -> List[LogicalOperation]:

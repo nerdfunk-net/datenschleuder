@@ -499,6 +499,91 @@ async def trigger_cache_demo(
     )
 
 
+# ---------------------------------------------------------------------------
+# NiFi queue check task
+# ---------------------------------------------------------------------------
+
+
+class CheckQueuesRequest(BaseModel):
+    """Request body for the NiFi queue-check task endpoint.
+
+    Fields:
+        instance_ids:        NiFi instance IDs to check.  ``None`` or an empty list
+                             means *all* configured instances.
+        check_queues_mode:   Metric to evaluate – ``'count'``, ``'bytes'``, or ``'both'``.
+        count_yellow:        Flow-file count threshold for yellow status (default 1 000).
+        count_red:           Flow-file count threshold for red status (default 10 000).
+        bytes_yellow:        Queue size in MB for yellow status (default 10 MB).
+        bytes_red:           Queue size in MB for red status (default 100 MB).
+    """
+
+    instance_ids: Optional[List[int]] = None
+    check_queues_mode: str = "count"
+    count_yellow: int = 1_000
+    count_red: int = 10_000
+    bytes_yellow: int = 10
+    bytes_red: int = 100
+
+
+@router.post("/tasks/check-queues", response_model=TaskResponse)
+@handle_celery_errors("trigger NiFi check-queues task")
+async def trigger_check_queues(
+    request: CheckQueuesRequest,
+    current_user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Trigger a NiFi queue-depth check as a tracked Celery background task.
+
+    The task iterates over every specified NiFi instance (or all instances when
+    ``instance_ids`` is omitted) and evaluates the queue depth of each connection
+    against the supplied thresholds.
+
+    Each connection receives a ``queue_check.status`` of ``"green"``, ``"yellow"``,
+    or ``"red"``.  The worst individual status is promoted to the instance-level
+    ``overall_status`` and then to the top-level ``overall_status`` in the result.
+
+    Trigger rules (both thresholds inclusive on the upper bound):
+    - ``queued_count >= red_threshold``    → red
+    - ``queued_count >= yellow_threshold`` → yellow
+    - otherwise                            → green
+
+    The job result is stored in the job-runs table and can be inspected in the
+    **Jobs → View** section of the UI.
+    """
+    from tasks import dispatch_job
+
+    job_params: Dict[str, Any] = {
+        "check_queues_mode": request.check_queues_mode,
+        "check_queues_count_yellow": request.count_yellow,
+        "check_queues_count_red": request.count_red,
+        "check_queues_bytes_yellow": request.bytes_yellow,
+        "check_queues_bytes_red": request.bytes_red,
+    }
+    if request.instance_ids:
+        job_params["nifi_instance_ids"] = request.instance_ids
+
+    task = dispatch_job.delay(
+        job_name="check-queues",
+        job_type="check_queues",
+        job_parameters=job_params,
+        triggered_by="manual",
+        executed_by=current_user.get("username"),
+    )
+
+    logger.info(
+        "check-queues task %s submitted by %s (instances=%s, mode=%s)",
+        task.id,
+        current_user.get("username"),
+        request.instance_ids or "all",
+        request.check_queues_mode,
+    )
+
+    return TaskResponse(
+        task_id=task.id,
+        status="queued",
+        message="NiFi queue-check task queued: %s" % task.id,
+    )
+
+
 # ============================================================================
 # Celery Settings Endpoints
 # ============================================================================

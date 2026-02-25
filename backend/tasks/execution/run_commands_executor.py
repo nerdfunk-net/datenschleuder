@@ -1,8 +1,6 @@
 """
-Run commands job executor.
-Executes commands on network devices using templates.
-
-Moved from job_tasks.py to improve code organization.
+Run commands executor.
+Executes commands on network devices using a command template.
 """
 
 import logging
@@ -34,10 +32,12 @@ def execute_run_commands(
         target_devices: List of device UUIDs to run commands on
         task_context: Celery task context for progress updates
         template: Job template configuration
+        job_run_id: Job run ID for result tracking
 
     Returns:
         dict: Command execution results with detailed per-device output
     """
+    import asyncio
     from services.nautobot import NautobotService
     from services.network.automation.netmiko import NetmikoService
     from services.network.automation.render import RenderService
@@ -85,43 +85,8 @@ def execute_run_commands(
                 "credential_info": credential_info,
             }
 
-        # If no target devices provided, fetch all from Nautobot
-        device_ids = target_devices
-        if not device_ids:
-            logger.info(
-                "No target devices specified, fetching all devices from Nautobot"
-            )
-            task_context.update_state(
-                state="PROGRESS",
-                meta={
-                    "current": 5,
-                    "total": 100,
-                    "status": "Fetching devices from Nautobot...",
-                },
-            )
-
-            import asyncio
-            from services.nautobot.devices.query import device_query_service
-
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                devices_result = loop.run_until_complete(
-                    device_query_service.get_devices()
-                )
-                if devices_result and devices_result.get("devices"):
-                    device_ids = [
-                        device.get("id") for device in devices_result["devices"]
-                    ]
-                    logger.info("Fetched %s devices from Nautobot", len(device_ids))
-                else:
-                    logger.warning("No devices found in Nautobot")
-                    device_ids = []
-            finally:
-                loop.close()
-
-        if not device_ids:
-            logger.error("ERROR: No devices found to run commands on")
+        if not target_devices:
+            logger.error("ERROR: No target devices specified")
             return {
                 "success": False,
                 "error": "No devices to run commands on",
@@ -200,7 +165,8 @@ def execute_run_commands(
         )
         if not template_content:
             logger.error(
-                f"ERROR: Command template content not found for '{command_template_name}'"
+                "ERROR: Command template content not found for '%s'",
+                command_template_name,
             )
             return {
                 "success": False,
@@ -219,13 +185,13 @@ def execute_run_commands(
             meta={
                 "current": 10,
                 "total": 100,
-                "status": f"Running commands on {len(device_ids)} devices...",
+                "status": f"Running commands on {len(target_devices)} devices...",
             },
         )
 
         # STEP 2: Execute commands on each device
         logger.info("-" * 80)
-        logger.info("STEP 2: EXECUTING COMMANDS ON %s DEVICES", len(device_ids))
+        logger.info("STEP 2: EXECUTING COMMANDS ON %s DEVICES", len(target_devices))
         logger.info("-" * 80)
 
         nautobot_service = NautobotService()
@@ -238,10 +204,10 @@ def execute_run_commands(
 
         successful_devices = []
         failed_devices = []
-        total_devices = len(device_ids)
+        total_devices = len(target_devices)
 
         try:
-            for idx, device_id in enumerate(device_ids, 1):
+            for idx, device_id in enumerate(target_devices, 1):
                 device_result = {
                     "device_id": device_id,
                     "device_name": None,
@@ -289,7 +255,6 @@ def execute_run_commands(
                         platform {
                           id
                           name
-                          network_driver
                           manufacturer {
                             id
                             name
@@ -345,7 +310,7 @@ def execute_run_commands(
                         or not device_data["data"].get("device")
                     ):
                         logger.error(
-                            f"[{idx}] ✗ Failed to get device data from Nautobot"
+                            "[%s] ✗ Failed to get device data from Nautobot", idx
                         )
                         device_result["error"] = (
                             "Failed to fetch device data from Nautobot"
@@ -360,37 +325,11 @@ def execute_run_commands(
                         if device.get("primary_ip4")
                         else None
                     )
-
-                    # Get platform information from Nautobot
-                    platform_obj = device.get("platform", {})
-                    network_driver = (
-                        platform_obj.get("network_driver") if platform_obj else None
-                    )
-                    platform_name = (
-                        platform_obj.get("name", "unknown")
-                        if platform_obj
+                    platform = (
+                        device.get("platform", {}).get("name", "unknown")
+                        if device.get("platform")
                         else "unknown"
                     )
-
-                    # Determine device type for Netmiko
-                    if network_driver:
-                        # Use authoritative network_driver from Nautobot (already correct Netmiko format)
-                        device_type = network_driver
-                        platform = network_driver
-                        logger.info(
-                            f"[{idx}] Using network_driver from Nautobot: {network_driver}"
-                        )
-                    else:
-                        # Fallback: map platform name to Netmiko device type (best guess)
-                        platform = platform_name
-                        from utils.netmiko_platform_mapper import (
-                            map_platform_to_netmiko,
-                        )
-
-                        device_type = map_platform_to_netmiko(platform)
-                        logger.info(
-                            f"[{idx}] No network_driver, mapped platform '{platform}' to: {device_type}"
-                        )
 
                     device_result["device_name"] = device_name
                     device_result["device_ip"] = primary_ip
@@ -400,7 +339,6 @@ def execute_run_commands(
                     logger.info("[%s]   - Name: %s", idx, device_name)
                     logger.info("[%s]   - IP: %s", idx, primary_ip or "NOT SET")
                     logger.info("[%s]   - Platform: %s", idx, platform)
-                    logger.info("[%s]   - Netmiko device type: %s", idx, device_type)
 
                     if not primary_ip:
                         logger.error("[%s] ✗ No primary IP", idx)
@@ -425,7 +363,7 @@ def execute_run_commands(
                         logger.info("[%s] ✓ Template rendered successfully", idx)
                     except Exception as render_error:
                         logger.error(
-                            f"[{idx}] ✗ Template rendering failed: {render_error}"
+                            "[%s] ✗ Template rendering failed: %s", idx, render_error
                         )
                         device_result["error"] = (
                             f"Template rendering failed: {str(render_error)}"
@@ -441,8 +379,8 @@ def execute_run_commands(
                     ]
 
                     if not commands:
-                        logger.error(
-                            f"[{idx}] ✗ No commands to execute after template rendering"
+                        logger.warning(
+                            "[%s] ⚠ No commands to execute after rendering", idx
                         )
                         device_result["error"] = (
                             "No commands to execute after template rendering"
@@ -476,7 +414,9 @@ def execute_run_commands(
                         device_result["output"] = result["output"]
                         logger.info("[%s] ✓ Commands executed successfully", idx)
                         logger.info(
-                            f"[{idx}]   - Output length: {len(result['output'])} chars"
+                            "[%s]   - Output length: %s chars",
+                            idx,
+                            len(result["output"]),
                         )
                         successful_devices.append(device_result)
                     else:
@@ -484,7 +424,9 @@ def execute_run_commands(
                             "error", "Command execution failed"
                         )
                         logger.error(
-                            f"[{idx}] ✗ Command execution failed: {result.get('error')}"
+                            "[%s] ✗ Command execution failed: %s",
+                            idx,
+                            result.get("error"),
                         )
                         failed_devices.append(device_result)
 

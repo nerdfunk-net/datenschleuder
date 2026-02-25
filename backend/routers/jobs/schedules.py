@@ -34,21 +34,21 @@ async def create_job_schedule(
     - Private jobs can be created by any authenticated user
     """
     try:
-        # Check permissions for global jobs
-        if job_data.is_global:
-            # For global jobs, require admin role or jobs:write permission
-            import rbac_manager
+        # Check permissions
+        import rbac_manager
 
-            has_permission = rbac_manager.has_permission(
-                current_user["user_id"], "jobs", "write"
-            )
-            if not has_permission and current_user.get("role") != "admin":
+        is_admin = current_user.get("role") == "admin"
+        has_write = rbac_manager.has_permission(
+            current_user["user_id"], "jobs.schedules", "write"
+        )
+        if job_data.is_global:
+            if not (is_admin or has_write):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Permission denied: jobs:write required for global jobs",
+                    detail="Permission denied: jobs.schedules:write required for global schedules",
                 )
         else:
-            # For private jobs, set the user_id to current user
+            # For private schedules, set the user_id to current user
             job_data.user_id = current_user["user_id"]
 
         # Create the job schedule
@@ -158,25 +158,19 @@ async def update_job_schedule(
             )
 
         # Check permissions
-        if job.get("is_global"):
-            # Global jobs require write permission
-            import rbac_manager
+        import rbac_manager
 
-            has_permission = rbac_manager.has_permission(
-                current_user["user_id"], "jobs", "write"
+        is_admin = current_user.get("role") == "admin"
+        has_write = rbac_manager.has_permission(
+            current_user["user_id"], "jobs.schedules", "write"
+        )
+        is_owner = job.get("user_id") == current_user["user_id"]
+
+        if not (is_admin or has_write or is_owner):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied: jobs.schedules:write required to edit this schedule",
             )
-            if not has_permission and current_user.get("role") != "admin":
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Permission denied: jobs:write required for global jobs",
-                )
-        else:
-            # Private jobs can only be edited by owner
-            if job.get("user_id") != current_user["user_id"]:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied: You can only edit your own private jobs",
-                )
 
         # Update the job
         updated_job = jobs_manager.update_job_schedule(
@@ -217,25 +211,19 @@ async def delete_job_schedule(job_id: int, current_user: dict = Depends(verify_t
             )
 
         # Check permissions
-        if job.get("is_global"):
-            # Global jobs require write permission
-            import rbac_manager
+        import rbac_manager
 
-            has_permission = rbac_manager.has_permission(
-                current_user["user_id"], "jobs", "write"
+        is_admin = current_user.get("role") == "admin"
+        has_delete = rbac_manager.has_permission(
+            current_user["user_id"], "jobs.schedules", "delete"
+        )
+        is_owner = job.get("user_id") == current_user["user_id"]
+
+        if not (is_admin or has_delete or is_owner):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied: jobs.schedules:delete required to delete this schedule",
             )
-            if not has_permission and current_user.get("role") != "admin":
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Permission denied: jobs:write required for global jobs",
-                )
-        else:
-            # Private jobs can only be deleted by owner
-            if job.get("user_id") != current_user["user_id"]:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied: You can only delete your own private jobs",
-                )
 
         # Delete the job
         deleted = jobs_manager.delete_job_schedule(job_id)
@@ -284,53 +272,51 @@ async def execute_job(
                 detail="Access denied: You cannot execute this private job",
             )
 
-        # Get the task for this job type
-        from tasks.job_tasks import get_task_for_job
+        # Resolve the template — required to know the job_type
+        import job_template_manager
+        from tasks import dispatch_job
 
-        task_func = get_task_for_job(job.get("job_identifier"))
-
-        if not task_func:
+        template_id = job.get("job_template_id")
+        if not template_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"No task implementation found for job type: {job.get('job_identifier')}",
+                detail="Schedule has no associated template. Please edit the schedule and select a job template.",
             )
 
-        # Prepare task parameters
-        task_kwargs = {
-            "job_schedule_id": execution_request.job_schedule_id,
-        }
+        template = job_template_manager.get_job_template(template_id)
+        if not template:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Template {template_id} not found",
+            )
 
-        # Add credential_id if present
-        if job.get("credential_id"):
-            task_kwargs["credential_id"] = job.get("credential_id")
-
-        # Add any additional job parameters
-        if job.get("job_parameters"):
-            task_kwargs.update(job.get("job_parameters"))
-
-        # Override with execution request parameters if provided
+        # Merge parameters: schedule base + optional request overrides
+        job_parameters = job.get("job_parameters") or {}
         if execution_request.override_parameters:
-            task_kwargs.update(execution_request.override_parameters)
+            job_parameters.update(execution_request.override_parameters)
 
-        # Execute the Celery task
-        celery_task = task_func.delay(**task_kwargs)
-
-        logger.info(
-            f"Job execution started: {job.get('job_name')} "
-            f"(Celery task ID: {celery_task.id}) by user {current_user['username']}"
+        celery_task = dispatch_job.delay(
+            schedule_id=execution_request.job_schedule_id,
+            template_id=template_id,
+            job_name=job.get("job_identifier", f"manual-{execution_request.job_schedule_id}"),
+            job_type=template.get("job_type"),
+            credential_id=job.get("credential_id"),
+            job_parameters=job_parameters if job_parameters else None,
+            triggered_by="manual",
+            executed_by=current_user.get("username", "unknown"),
         )
 
-        # Update last_run timestamp
-        from datetime import datetime
-
-        jobs_manager.update_job_run_times(
-            execution_request.job_schedule_id, last_run=datetime.now()
+        logger.info(
+            "Job execution started: %s (Celery task ID: %s) by user %s",
+            job.get("job_identifier"),
+            celery_task.id,
+            current_user["username"],
         )
 
         return {
             "message": "Job execution started",
             "job_id": execution_request.job_schedule_id,
-            "job_name": job.get("job_name"),
+            "job_name": job.get("job_identifier"),
             "celery_task_id": celery_task.id,
             "status": "queued",
         }

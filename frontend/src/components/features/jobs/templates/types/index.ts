@@ -46,6 +46,11 @@ export interface JobTemplate {
   activate_after_deploy?: boolean
   deploy_templates?: DeployTemplateEntry[]
   nifi_instance_ids?: number[] | null
+  check_queues_mode?: 'count' | 'bytes' | 'both'
+  check_queues_count_yellow?: number
+  check_queues_count_red?: number
+  check_queues_bytes_yellow?: number
+  check_queues_bytes_red?: number
   is_global: boolean
   user_id?: number
   created_by?: string

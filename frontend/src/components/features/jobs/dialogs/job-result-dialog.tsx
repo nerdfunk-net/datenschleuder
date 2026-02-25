@@ -23,6 +23,7 @@ import {
   isCheckIPJobResult,
   isScanPrefixJobResult,
   isDeployAgentJobResult,
+  isCheckQueuesJobResult,
   GenericJobResult,
 } from "../types/job-results"
 import { BackupJobResultView } from "../components/results/backup-job-result"
@@ -35,6 +36,7 @@ import { CheckIPResultView } from "../components/results/check-ip-result"
 import { ScanPrefixResultView } from "../components/results/scan-prefix-result"
 import { DeployAgentResultView } from "../components/results/deploy-agent-result"
 import { GenericJobResultView } from "../components/results/generic-job-result"
+import { CheckQueuesResultView } from "../components/results/check-queues-result"
 
 interface JobResultDialogProps {
   jobRun: JobRun | null
@@ -48,6 +50,11 @@ interface JobResultDialogProps {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function renderJobResult(result: Record<string, any>, taskId?: string): React.ReactElement {
   // Check type guards in order of specificity
+  // Check queues has a unique instances + summary(green/yellow/red) structure
+  if (isCheckQueuesJobResult(result)) {
+    return <CheckQueuesResultView result={result} />
+  }
+
   // Export devices must be checked first to avoid conflicts
   if (isExportDevicesJobResult(result)) {
     return <ExportDevicesResultView result={result} taskId={taskId} />

@@ -616,7 +616,7 @@ async def execute_job_manually(
     try:
         import jobs_manager
         import job_template_manager
-        from tasks.job_tasks import dispatch_job
+        from tasks import dispatch_job
 
         # Get the schedule
         logger.info("Executing schedule %s manually", schedule_id)

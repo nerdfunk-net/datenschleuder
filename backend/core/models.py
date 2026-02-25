@@ -464,6 +464,21 @@ class JobTemplate(Base):
     nifi_instance_ids = Column(
         Text, nullable=True
     )  # JSON array of NiFi instance IDs to run against (check_queues type)
+    check_queues_mode = Column(
+        String(10), nullable=True, default="count"
+    )  # Metric to evaluate: 'count', 'bytes', or 'both' (check_queues type)
+    check_queues_count_yellow = Column(
+        Integer, nullable=True, default=1000
+    )  # Flow-file count threshold for yellow status (check_queues type)
+    check_queues_count_red = Column(
+        Integer, nullable=True, default=10000
+    )  # Flow-file count threshold for red status (check_queues type)
+    check_queues_bytes_yellow = Column(
+        Integer, nullable=True, default=10
+    )  # Queue size threshold for yellow status in MB (check_queues type)
+    check_queues_bytes_red = Column(
+        Integer, nullable=True, default=100
+    )  # Queue size threshold for red status in MB (check_queues type)
     is_global = Column(Boolean, nullable=False, default=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
     created_by = Column(String(255))  # Username of creator

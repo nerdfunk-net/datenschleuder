@@ -774,7 +774,6 @@ async def advanced_render_template(
     """
     try:
         from services.nautobot.devices import device_query_service
-        from services.checkmk.config import config_service
         from jinja2 import Template, TemplateError, UndefinedError
         import re
 
@@ -975,16 +974,8 @@ async def advanced_render_template(
 
             # Load SNMP mapping if requested
             if render_request.pass_snmp_mapping:
-                try:
-                    snmp_mapping = config_service.load_snmp_mapping()
-                    context["snmp_mapping"] = snmp_mapping
-                    logger.info(
-                        "Loaded SNMP mapping with %s entries", len(snmp_mapping)
-                    )
-                except Exception as e:
-                    error_msg = f"Failed to load SNMP mapping: {str(e)}"
-                    logger.error(error_msg)
-                    warnings.append(error_msg)
+                logger.warning("SNMP mapping loading skipped: services.checkmk has been removed")
+                context["snmp_mapping"] = {}
 
             # Add path if provided
             if render_request.path:

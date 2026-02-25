@@ -29,6 +29,7 @@ from services.nifi.operations import (
     process_groups as pg_ops,
     processors as proc_ops,
     versions as ver_ops,
+    management as mgmt_ops,
 )
 
 logger = logging.getLogger(__name__)
@@ -713,46 +714,7 @@ async def list_components_by_kind(
             detail="Failed to list components by kind: %s" % str(exc),
         )
 
-    components = []
-    for item in raw_list:
-        comp_data: dict = {}
-        if hasattr(item, "id"):
-            comp_data["id"] = item.id
-        comp = getattr(item, "component", None)
-        if comp:
-            comp_data["name"] = getattr(comp, "name", None)
-            comp_data["parent_group_id"] = getattr(comp, "parent_group_id", None)
-            comp_data["type"] = getattr(comp, "type", None)
-            comp_data["comments"] = getattr(comp, "comments", None)
-            if kind in ("connections", "connection"):
-                for side in ("source", "destination"):
-                    node = getattr(comp, side, None)
-                    if node:
-                        comp_data[side] = {
-                            "id": getattr(node, "id", None),
-                            "name": getattr(node, "name", None),
-                            "type": getattr(node, "type", None),
-                            "group_id": getattr(node, "group_id", None),
-                        }
-        item_status = getattr(item, "status", None)
-        if item_status:
-            snapshot = getattr(item_status, "aggregate_snapshot", None)
-            comp_data["status"] = {
-                "run_status": getattr(item_status, "run_status", None),
-                "aggregate_snapshot": {
-                    "active_thread_count": getattr(
-                        snapshot, "active_thread_count", None
-                    ),
-                    "bytes_in": getattr(snapshot, "bytes_in", None),
-                    "bytes_out": getattr(snapshot, "bytes_out", None),
-                    "flow_files_in": getattr(snapshot, "flow_files_in", None),
-                    "flow_files_out": getattr(snapshot, "flow_files_out", None),
-                    "queued": getattr(snapshot, "queued", None),
-                }
-                if snapshot
-                else {},
-            }
-        components.append(comp_data)
+    components = [mgmt_ops.serialize_component_by_kind(item, kind) for item in raw_list]
 
     return {
         "status": "success",

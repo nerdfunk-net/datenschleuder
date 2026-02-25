@@ -179,6 +179,11 @@ def update_job_template(
     activate_after_deploy: Optional[bool] = None,
     deploy_templates: Optional[List[Dict[str, Any]]] = None,
     nifi_instance_ids: Optional[List[int]] = None,
+    check_queues_mode: Optional[str] = None,
+    check_queues_count_yellow: Optional[int] = None,
+    check_queues_count_red: Optional[int] = None,
+    check_queues_bytes_yellow: Optional[int] = None,
+    check_queues_bytes_red: Optional[int] = None,
     is_global: Optional[bool] = None,
     user_id: Optional[int] = None,
 ) -> Optional[Dict[str, Any]]:
@@ -252,6 +257,16 @@ def update_job_template(
         update_data["deploy_templates"] = json.dumps(deploy_templates)
     if nifi_instance_ids is not None:
         update_data["nifi_instance_ids"] = json.dumps(nifi_instance_ids)
+    if check_queues_mode is not None:
+        update_data["check_queues_mode"] = check_queues_mode
+    if check_queues_count_yellow is not None:
+        update_data["check_queues_count_yellow"] = check_queues_count_yellow
+    if check_queues_count_red is not None:
+        update_data["check_queues_count_red"] = check_queues_count_red
+    if check_queues_bytes_yellow is not None:
+        update_data["check_queues_bytes_yellow"] = check_queues_bytes_yellow
+    if check_queues_bytes_red is not None:
+        update_data["check_queues_bytes_red"] = check_queues_bytes_red
     if is_global is not None:
         update_data["is_global"] = is_global
         if is_global:
@@ -359,6 +374,11 @@ def _model_to_dict(template) -> Dict[str, Any]:
         "nifi_instance_ids": (
             json.loads(template.nifi_instance_ids) if template.nifi_instance_ids else None
         ),
+        "check_queues_mode": template.check_queues_mode,
+        "check_queues_count_yellow": template.check_queues_count_yellow,
+        "check_queues_count_red": template.check_queues_count_red,
+        "check_queues_bytes_yellow": template.check_queues_bytes_yellow,
+        "check_queues_bytes_red": template.check_queues_bytes_red,
         "is_global": template.is_global,
         "user_id": template.user_id,
         "created_by": template.created_by,

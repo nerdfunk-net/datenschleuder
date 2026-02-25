@@ -1,8 +1,6 @@
 """
 Base executor and job type dispatcher.
 Routes job execution to appropriate executor based on job type.
-
-Moved from job_tasks.py to improve code organization.
 """
 
 import logging
@@ -33,29 +31,32 @@ def execute_job_type(
         job_parameters: Additional job parameters
         target_devices: List of target device UUIDs
         task_context: Celery task context (self)
-        template: Job template configuration (for settings like activate_changes_after_sync)
+        template: Job template configuration
         job_run_id: Job run ID for result tracking
 
     Returns:
         dict: Execution results
     """
-    from .cache_executor import execute_cache_devices
-    from .sync_executor import execute_sync_devices
+    from .check_queues_executor import execute_check_queues
+    from .run_commands_executor import execute_run_commands
     from .backup_executor import execute_backup
-    from .command_executor import execute_run_commands
-    from .compare_executor import execute_compare_devices
-    from .scan_prefixes_executor import execute_scan_prefixes
-    from .deploy_agent_executor import execute_deploy_agent
 
-    # Map job_type to execution function
+    def _stub_sync_devices(schedule_id, credential_id, job_parameters,
+                           target_devices, task_context, template=None, job_run_id=None):
+        logger.warning("execute_job_type: sync_devices is not available (CheckMK removed)")
+        return {"success": False, "error": "CheckMK sync service is not available in this version"}
+
+    def _stub_compare_devices(schedule_id, credential_id, job_parameters,
+                              target_devices, task_context, template=None, job_run_id=None):
+        logger.warning("execute_job_type: compare_devices is not available (CheckMK removed)")
+        return {"success": False, "error": "CheckMK comparison service is not available in this version"}
+
     job_executors = {
-        "cache_devices": execute_cache_devices,
-        "sync_devices": execute_sync_devices,
-        "backup": execute_backup,
+        "check_queues": execute_check_queues,
         "run_commands": execute_run_commands,
-        "compare_devices": execute_compare_devices,
-        "scan_prefixes": execute_scan_prefixes,
-        "deploy_agent": execute_deploy_agent,
+        "backup": execute_backup,
+        "sync_devices": _stub_sync_devices,
+        "compare_devices": _stub_compare_devices,
     }
 
     executor = job_executors.get(job_type)

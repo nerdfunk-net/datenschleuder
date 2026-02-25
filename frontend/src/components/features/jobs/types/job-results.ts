@@ -496,6 +496,111 @@ export function isScanPrefixJobResult(result: Record<string, unknown>): result i
 
 
 // ============================================================================
+// Check Queues Job Result Types (NiFi queue depth monitoring)
+// ============================================================================
+
+export interface CheckQueuesConnectionEndpoint {
+  id: string
+  name: string
+  type: string | null
+  group_id: string
+}
+
+export interface CheckQueuesConnectionStatus {
+  run_status: string | null
+  aggregate_snapshot: {
+    active_thread_count: number | null
+    bytes_in: number
+    bytes_out: number
+    flow_files_in: number
+    flow_files_out: number
+    queued: string
+  }
+}
+
+export interface CheckQueuesCountCheck {
+  queued_count: number
+  yellow_threshold: number
+  red_threshold: number
+  status: 'green' | 'yellow' | 'red'
+}
+
+export interface CheckQueuesBytesCheck {
+  queued_mb: number
+  yellow_threshold_mb: number
+  red_threshold_mb: number
+  status: 'green' | 'yellow' | 'red'
+}
+
+export interface CheckQueuesConnectionQueueCheck {
+  mode: 'count' | 'bytes' | 'both'
+  count?: CheckQueuesCountCheck
+  bytes?: CheckQueuesBytesCheck
+  status: 'green' | 'yellow' | 'red'
+}
+
+export interface CheckQueuesConnection {
+  id: string
+  name: string
+  parent_group_id: string
+  type: string | null
+  comments: string | null
+  source: CheckQueuesConnectionEndpoint
+  destination: CheckQueuesConnectionEndpoint
+  status: CheckQueuesConnectionStatus
+  queue_check: CheckQueuesConnectionQueueCheck
+}
+
+export interface CheckQueuesInstanceResult {
+  instance_id: number
+  instance_name: string
+  overall_status: 'green' | 'yellow' | 'red'
+  connections: CheckQueuesConnection[]
+  connection_count: number
+  error?: string
+}
+
+export interface CheckQueuesJobResult {
+  success: boolean
+  overall_status: 'green' | 'yellow' | 'red'
+  instances: CheckQueuesInstanceResult[]
+  summary: {
+    green: number
+    yellow: number
+    red: number
+  }
+  thresholds: {
+    mode: 'count' | 'bytes' | 'both'
+    count_yellow: number
+    count_red: number
+    bytes_yellow_mb: number
+    bytes_red_mb: number
+  }
+  message?: string
+  // Index signature for compatibility with Record<string, unknown>
+  [key: string]: unknown
+}
+
+/**
+ * Check if result is a check_queues job result.
+ * Has instances array and overall_status with green/yellow/red values,
+ * plus a summary object with green/yellow/red counts.
+ */
+export function isCheckQueuesJobResult(result: Record<string, unknown>): result is CheckQueuesJobResult {
+  return (
+    'instances' in result &&
+    Array.isArray(result.instances) &&
+    'overall_status' in result &&
+    'summary' in result &&
+    typeof result.summary === 'object' &&
+    result.summary !== null &&
+    'green' in result.summary &&
+    'yellow' in result.summary &&
+    'red' in result.summary
+  )
+}
+
+// ============================================================================
 // Utility Functions
 // ============================================================================
 
