@@ -7,6 +7,7 @@ import { Plus, Edit } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { useTemplateMutations } from '../hooks/use-template-mutations'
 import { JobTemplateCommonFields } from '../../components/JobTemplateCommonFields'
+import { CheckQueuesFields } from './check-queues-fields'
 import type { JobTemplate } from '../types'
 
 interface TemplateFormDialogProps {
@@ -25,17 +26,21 @@ export function TemplateFormDialog({
   const user = useAuthStore(state => state.user)
   const { createTemplate, updateTemplate } = useTemplateMutations()
 
-  // Form state - simplified for example type only
+  // Common form state
   const [formName, setFormName] = useState("")
   const [formJobType, setFormJobType] = useState("")
   const [formDescription, setFormDescription] = useState("")
   const [formIsGlobal, setFormIsGlobal] = useState(false)
+
+  // check_queues specific state: null = all instances, array = specific instance IDs
+  const [nifiInstanceIds, setNifiInstanceIds] = useState<number[] | null>(null)
 
   const resetForm = useCallback(() => {
     setFormName("")
     setFormJobType("")
     setFormDescription("")
     setFormIsGlobal(false)
+    setNifiInstanceIds(null)
   }, [])
 
   // Load editing template data
@@ -45,6 +50,8 @@ export function TemplateFormDialog({
       setFormJobType(editingTemplate.job_type)
       setFormDescription(editingTemplate.description || "")
       setFormIsGlobal(editingTemplate.is_global)
+      // Restore nifi_instance_ids: undefined/null → null (all), array → specific
+      setNifiInstanceIds(editingTemplate.nifi_instance_ids ?? null)
     } else if (open && !editingTemplate) {
       resetForm()
     }
@@ -52,17 +59,24 @@ export function TemplateFormDialog({
 
   const isFormValid = useCallback(() => {
     if (!formName.trim() || !formJobType) return false
+    // check_queues: warn but don't block (user may intentionally select 0 for later)
     return true
   }, [formName, formJobType])
 
   const handleSubmit = async () => {
-    const payload = {
+    const basePayload = {
       name: formName,
       job_type: formJobType,
       description: formDescription || undefined,
       is_global: formIsGlobal,
-      inventory_source: "all" as const, // Default for simplified example type
+      inventory_source: "all" as const,
     }
+
+    // Add type-specific fields
+    const payload =
+      formJobType === "check_queues"
+        ? { ...basePayload, nifi_instance_ids: nifiInstanceIds }
+        : basePayload
 
     if (editingTemplate) {
       await updateTemplate.mutateAsync({ id: editingTemplate.id, data: payload })
@@ -106,7 +120,13 @@ export function TemplateFormDialog({
             editingTemplate={!!editingTemplate}
           />
 
-          {/* No job-specific sections for example type */}
+          {/* Job-type specific sections */}
+          {formJobType === "check_queues" && (
+            <CheckQueuesFields
+              nifiInstanceIds={nifiInstanceIds}
+              onNifiInstanceIdsChange={setNifiInstanceIds}
+            />
+          )}
         </div>
 
         {/* Footer */}

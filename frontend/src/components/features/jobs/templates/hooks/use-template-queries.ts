@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useApi } from '@/hooks/use-api'
 import { queryKeys } from '@/lib/query-keys'
-import type { JobTemplate, JobType, GitRepository, CommandTemplate, CustomField } from '../types'
-import { STALE_TIME, EMPTY_TEMPLATES, EMPTY_TYPES, EMPTY_REPOS, EMPTY_CMD_TEMPLATES, EMPTY_CUSTOM_FIELDS } from '../utils/constants'
+import type { JobTemplate, JobType, GitRepository, CommandTemplate, CustomField, NifiInstance } from '../types'
+import { STALE_TIME, EMPTY_TEMPLATES, EMPTY_TYPES, EMPTY_REPOS, EMPTY_CMD_TEMPLATES, EMPTY_CUSTOM_FIELDS, EMPTY_NIFI_INSTANCES } from '../utils/constants'
 
 interface UseQueryOptions {
   enabled?: boolean
@@ -115,5 +115,23 @@ export function useCustomFields(options: UseQueryOptions = DEFAULT_OPTIONS) {
     },
     enabled,
     staleTime: STALE_TIME.CUSTOM_FIELDS,
+  })
+}
+
+/**
+ * Fetch all NiFi instances (used for check_queues template type)
+ */
+export function useNifiInstances(options: UseQueryOptions = DEFAULT_OPTIONS) {
+  const { apiCall } = useApi()
+  const { enabled = true } = options
+
+  return useQuery({
+    queryKey: queryKeys.nifi.instances(),
+    queryFn: async () => {
+      const response = await apiCall<NifiInstance[]>('/api/nifi/instances/', { method: 'GET' })
+      return Array.isArray(response) ? response : EMPTY_NIFI_INSTANCES
+    },
+    enabled,
+    staleTime: 2 * 60 * 1000, // 2 minutes - instances rarely change
   })
 }

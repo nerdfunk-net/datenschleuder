@@ -15,6 +15,7 @@ JobTemplateType = Literal[
     "sync_devices",
     "scan_prefixes",
     "deploy_agent",
+    "check_queues",
 ]
 
 # Inventory source options
@@ -174,6 +175,10 @@ class JobTemplateBase(BaseModel):
         None,
         description="Array of template entries for multi-template deployment (only applies to deploy_agent type)",
     )
+    nifi_instance_ids: Optional[List[int]] = Field(
+        None,
+        description="List of NiFi instance IDs to run the job against; None or empty means all instances (only applies to check_queues type)",
+    )
     is_global: bool = Field(
         False,
         description="Whether this template is global (available to all users) or private",
@@ -218,6 +223,7 @@ class JobTemplateUpdate(BaseModel):
     deploy_custom_variables: Optional[Dict[str, Any]] = None
     activate_after_deploy: Optional[bool] = None
     deploy_templates: Optional[List[DeployTemplateEntry]] = None
+    nifi_instance_ids: Optional[List[int]] = None
     is_global: Optional[bool] = None
 
 

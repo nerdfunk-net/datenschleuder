@@ -33,7 +33,7 @@ export function JobTemplateCommonFields({
   user,
   editingTemplate,
 }: JobTemplateCommonFieldsProps) {
-  const canCreateGlobalTemplate = hasPermission(user, 'jobs', 'write')
+  const canCreateGlobalTemplate = hasPermission(user, 'jobs.templates', 'write')
 
   return (
     <>
@@ -65,10 +65,10 @@ export function JobTemplateCommonFields({
               <SelectValue placeholder="Select job type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="example">
+              <SelectItem value="check_queues">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-blue-500" />
-                  <span>Example</span>
+                  <span>Check Queues</span>
                 </div>
               </SelectItem>
             </SelectContent>
@@ -130,7 +130,7 @@ export function JobTemplateCommonFields({
           <div className="flex items-start gap-2 mt-2 p-2 rounded-md bg-amber-50 border border-amber-200">
             <ShieldAlert className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-700">
-              You don&apos;t have permission to create global templates. Contact your administrator to request <span className="font-mono font-semibold">jobs:write</span> permission.
+              You don&apos;t have permission to create global templates. Contact your administrator to request <span className="font-mono font-semibold">jobs.templates:write</span> permission.
             </p>
           </div>
         )}

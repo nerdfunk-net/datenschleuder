@@ -5,6 +5,14 @@ export interface DeployTemplateEntry {
   custom_variables: Record<string, string>
 }
 
+export interface NifiInstance {
+  id: number
+  name: string | null
+  nifi_url: string
+  hierarchy_attribute: string
+  hierarchy_value: string
+}
+
 export interface JobTemplate {
   id: number
   name: string
@@ -37,6 +45,7 @@ export interface JobTemplate {
   deploy_custom_variables?: Record<string, string>
   activate_after_deploy?: boolean
   deploy_templates?: DeployTemplateEntry[]
+  nifi_instance_ids?: number[] | null
   is_global: boolean
   user_id?: number
   created_by?: string

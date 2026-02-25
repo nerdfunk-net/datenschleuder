@@ -1,4 +1,4 @@
-import type { JobTemplate, JobType, GitRepository, CommandTemplate, CustomField } from '../types'
+import type { JobTemplate, JobType, GitRepository, CommandTemplate, CustomField, NifiInstance } from '../types'
 
 // React best practice: Extract default objects to prevent re-render loops
 export const EMPTY_TEMPLATES: JobTemplate[] = []
@@ -7,6 +7,7 @@ export const EMPTY_REPOS: GitRepository[] = []
 // EMPTY_INVENTORIES removed - inventory feature no longer exists
 export const EMPTY_CMD_TEMPLATES: CommandTemplate[] = []
 export const EMPTY_CUSTOM_FIELDS: CustomField[] = []
+export const EMPTY_NIFI_INSTANCES: NifiInstance[] = []
 
 export const JOB_TYPE_LABELS: Record<string, string> = {
   backup: 'Backup',
@@ -15,6 +16,7 @@ export const JOB_TYPE_LABELS: Record<string, string> = {
   sync_devices: 'Sync Devices',
   scan_prefixes: 'Scan Prefixes',
   deploy_agent: 'Deploy Agent',
+  check_queues: 'Check Queues',
 } as const
 
 export const JOB_TYPE_COLORS: Record<string, string> = {
@@ -24,6 +26,7 @@ export const JOB_TYPE_COLORS: Record<string, string> = {
   sync_devices: 'bg-orange-500',
   scan_prefixes: 'bg-purple-500',
   deploy_agent: 'bg-teal-500',
+  check_queues: 'bg-cyan-500',
 } as const
 
 export const DEFAULT_TEMPLATE: Partial<JobTemplate> = {

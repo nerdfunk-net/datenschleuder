@@ -30,19 +30,19 @@ async def create_job_template(
     """
     Create a new job template
 
-    - Global templates require 'jobs:write' permission
+    - Global templates require 'jobs.templates:write' permission
     - Private templates can be created by any authenticated user
     """
     try:
         # Check permissions for global templates
         if template_data.is_global:
             has_permission = rbac_manager.has_permission(
-                current_user["user_id"], "jobs", "write"
+                current_user["user_id"], "jobs.templates", "write"
             )
             if not has_permission and current_user.get("role") != "admin":
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Permission denied: jobs:write required for global templates",
+                    detail="Permission denied: jobs.templates:write required for global templates",
                 )
 
         # Create the template
@@ -81,6 +81,7 @@ async def create_job_template(
             deploy_templates=[e.model_dump() for e in template_data.deploy_templates]
             if template_data.deploy_templates
             else None,
+            nifi_instance_ids=template_data.nifi_instance_ids,
             is_global=template_data.is_global,
         )
 
@@ -232,6 +233,7 @@ async def update_job_template(
             deploy_templates=[e.model_dump() for e in update_data.deploy_templates]
             if update_data.deploy_templates
             else None,
+            nifi_instance_ids=update_data.nifi_instance_ids,
             is_global=update_data.is_global,
             user_id=current_user["user_id"],
         )

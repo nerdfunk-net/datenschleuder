@@ -15,7 +15,7 @@ export const STATUS_OPTIONS: readonly FilterOption[] = [
 ] as const
 
 export const JOB_TYPE_OPTIONS: readonly FilterOption[] = [
-  { value: "example", label: "Example" },
+  { value: "check_queues", label: "Check Queues" },
 ] as const
 
 export const TRIGGER_OPTIONS: readonly FilterOption[] = [

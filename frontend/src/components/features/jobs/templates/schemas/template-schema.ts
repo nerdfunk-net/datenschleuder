@@ -7,14 +7,16 @@ const baseTemplateSchema = z.object({
   is_global: z.boolean(),
 })
 
-// Example job type schema (simplified)
-const exampleTemplateSchema = baseTemplateSchema.extend({
-  job_type: z.literal("example"),
+// Check Queues job type schema
+const checkQueuesTemplateSchema = baseTemplateSchema.extend({
+  job_type: z.literal("check_queues"),
+  // null = all instances; array of IDs = specific instances
+  nifi_instance_ids: z.array(z.number()).nullable().optional(),
 })
 
 // Discriminated union for all job types
 export const jobTemplateSchema = z.discriminatedUnion("job_type", [
-  exampleTemplateSchema,
+  checkQueuesTemplateSchema,
 ])
 
 export type JobTemplateFormData = z.infer<typeof jobTemplateSchema>

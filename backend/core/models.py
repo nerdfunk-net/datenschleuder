@@ -461,6 +461,9 @@ class JobTemplate(Base):
     activate_after_deploy = Column(
         Boolean, nullable=False, default=True
     )  # Whether to activate (pull and restart) the agent after deployment (deploy_agent type)
+    nifi_instance_ids = Column(
+        Text, nullable=True
+    )  # JSON array of NiFi instance IDs to run against (check_queues type)
     is_global = Column(Boolean, nullable=False, default=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
     created_by = Column(String(255))  # Username of creator
@@ -479,7 +482,7 @@ class JobTemplate(Base):
         Index("idx_job_templates_user", "user_id"),
         Index("idx_job_templates_user_type", "user_id", "job_type"),
         CheckConstraint(
-            "job_type IN ('backup', 'compare_devices', 'run_commands', 'sync_devices', 'scan_prefixes', 'deploy_agent')",
+            "job_type IN ('backup', 'compare_devices', 'run_commands', 'sync_devices', 'scan_prefixes', 'deploy_agent', 'check_queues')",
             name="ck_job_templates_job_type",
         ),
     )
