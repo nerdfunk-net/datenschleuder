@@ -70,7 +70,7 @@ function determineFlowStatus(statusData: ProcessGroupStatus): FlowStatus {
   ) {
     return 'healthy'
   }
-  if (bulletins.length > 0 || stoppedCount > 0) return 'unhealthy'
+  if (bulletins.length > 0 || stoppedCount > 0) return 'issues'
   return 'warning'
 }
 
@@ -99,6 +99,8 @@ function getStatusText(statusData: ProcessGroupStatus | undefined, status: FlowS
     case 'healthy':
       return 'Healthy'
     case 'unhealthy':
+      return 'Not Deployed'
+    case 'issues':
       return 'Issues Detected'
     case 'warning':
       return 'Warning'
@@ -164,6 +166,7 @@ function getNiFiUrlFromStatus(
 const WIDGET_STATUS_CLASSES: Record<FlowStatus, string> = {
   healthy: 'bg-green-50 border border-green-200',
   unhealthy: 'bg-red-50 border border-red-200',
+  issues: 'bg-amber-50 border border-amber-200',
   warning: 'bg-amber-50 border border-amber-200',
   unknown: 'bg-gray-100 border border-gray-200',
 }
@@ -171,6 +174,7 @@ const WIDGET_STATUS_CLASSES: Record<FlowStatus, string> = {
 const WIDGET_ICON: Record<FlowStatus, React.ReactNode> = {
   healthy: <CheckCircle2 className="h-4 w-4 text-green-700" />,
   unhealthy: <XCircle className="h-4 w-4 text-red-700" />,
+  issues: <AlertTriangle className="h-4 w-4 text-amber-700" />,
   warning: <AlertTriangle className="h-4 w-4 text-amber-700" />,
   unknown: <HelpCircle className="h-4 w-4 text-gray-500" />,
 }
@@ -315,8 +319,9 @@ function FlowWidget({
 
 const STATUS_FILTER_OPTIONS: { value: FlowStatus; label: string; color: string }[] = [
   { value: 'healthy', label: 'Green (Healthy)', color: 'bg-green-500' },
+  { value: 'issues', label: 'Yellow (Issues Detected)', color: 'bg-amber-500' },
   { value: 'warning', label: 'Yellow (Warning)', color: 'bg-amber-500' },
-  { value: 'unhealthy', label: 'Red (Issues)', color: 'bg-red-500' },
+  { value: 'unhealthy', label: 'Red (Not Deployed)', color: 'bg-red-500' },
   { value: 'unknown', label: 'Unknown', color: 'bg-gray-400' },
 ]
 
@@ -406,7 +411,7 @@ export function FlowsTab() {
     [flowStatuses],
   )
   const unhealthyCount = useMemo(
-    () => Object.values(flowStatuses).filter((s) => determineFlowStatus(s) === 'unhealthy').length,
+    () => Object.values(flowStatuses).filter((s) => ['unhealthy', 'issues'].includes(determineFlowStatus(s))).length,
     [flowStatuses],
   )
   const unknownCount = useMemo(

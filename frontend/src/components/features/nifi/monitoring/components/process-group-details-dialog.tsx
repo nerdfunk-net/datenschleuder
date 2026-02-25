@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { AlertTriangle, CheckCircle2, Network } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { ProcessGroupStatus, FlowType } from '../types'
 
 interface ProcessGroupDetailsDialogProps {
@@ -73,7 +74,7 @@ export function ProcessGroupDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={cn('!max-w-5xl max-h-[90vh] overflow-y-auto')}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Network className="h-5 w-5 text-blue-600" />

@@ -33,6 +33,7 @@ function DetailItem({ label, value }: { label: string; value: string }) {
 const STATUS_BADGE_CLASSES: Record<FlowStatus, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300',
   unhealthy: 'bg-red-100 text-red-800 border-red-300',
+  issues: 'bg-amber-100 text-amber-800 border-amber-300',
   warning: 'bg-amber-100 text-amber-800 border-amber-300',
   unknown: 'bg-gray-100 text-gray-800 border-gray-300',
 }

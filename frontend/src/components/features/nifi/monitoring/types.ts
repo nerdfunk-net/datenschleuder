@@ -82,7 +82,7 @@ export interface AggregateSnapshot {
   flow_files_sent?: number
 }
 
-export type FlowStatus = 'healthy' | 'unhealthy' | 'warning' | 'unknown'
+export type FlowStatus = 'healthy' | 'unhealthy' | 'warning' | 'issues' | 'unknown'
 export type FlowType = 'source' | 'destination'
 
 // Instances monitoring types
