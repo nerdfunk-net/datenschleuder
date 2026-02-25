@@ -38,6 +38,7 @@ def execute_job_type(
         dict: Execution results
     """
     from .check_queues_executor import execute_check_queues
+    from .check_process_group_executor import execute_check_process_group
     from .run_commands_executor import execute_run_commands
     from .backup_executor import execute_backup
 
@@ -53,6 +54,7 @@ def execute_job_type(
 
     job_executors = {
         "check_queues": execute_check_queues,
+        "check_progress_group": execute_check_process_group,
         "run_commands": execute_run_commands,
         "backup": execute_backup,
         "sync_devices": _stub_sync_devices,

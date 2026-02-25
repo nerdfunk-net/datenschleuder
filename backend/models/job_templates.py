@@ -16,6 +16,7 @@ JobTemplateType = Literal[
     "scan_prefixes",
     "deploy_agent",
     "check_queues",
+    "check_progress_group",
 ]
 
 # Inventory source options
@@ -203,6 +204,28 @@ class JobTemplateBase(BaseModel):
         ge=0,
         description="Queue size in MB at which the status turns red (only applies to check_queues type)",
     )
+    check_progress_group_nifi_instance_id: Optional[int] = Field(
+        None,
+        description="ID of the single NiFi instance to target (only applies to check_progress_group type)",
+    )
+    check_progress_group_process_group_id: Optional[str] = Field(
+        None,
+        max_length=255,
+        description="UUID of the process group to check (only applies to check_progress_group type)",
+    )
+    check_progress_group_process_group_path: Optional[str] = Field(
+        None,
+        max_length=1000,
+        description="Human-readable formatted path of the process group (only applies to check_progress_group type)",
+    )
+    check_progress_group_check_children: Optional[bool] = Field(
+        True,
+        description="When True, also check all child process groups (only applies to check_progress_group type)",
+    )
+    check_progress_group_expected_status: Optional[str] = Field(
+        "Running",
+        description="Expected operational status: 'Running', 'Stopped', 'Enabled', or 'Disabled' (only applies to check_progress_group type)",
+    )
     is_global: bool = Field(
         False,
         description="Whether this template is global (available to all users) or private",
@@ -253,6 +276,11 @@ class JobTemplateUpdate(BaseModel):
     check_queues_count_red: Optional[int] = Field(None, ge=0)
     check_queues_bytes_yellow: Optional[int] = Field(None, ge=0)
     check_queues_bytes_red: Optional[int] = Field(None, ge=0)
+    check_progress_group_nifi_instance_id: Optional[int] = None
+    check_progress_group_process_group_id: Optional[str] = Field(None, max_length=255)
+    check_progress_group_process_group_path: Optional[str] = Field(None, max_length=1000)
+    check_progress_group_check_children: Optional[bool] = None
+    check_progress_group_expected_status: Optional[str] = None
     is_global: Optional[bool] = None
 
 

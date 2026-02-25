@@ -13,6 +13,14 @@ export interface NifiInstance {
   hierarchy_value: string
 }
 
+export interface ProcessGroup {
+  id: string
+  name: string
+  path: string
+  level: number
+  formatted_path: string
+}
+
 export interface JobTemplate {
   id: number
   name: string
@@ -51,6 +59,11 @@ export interface JobTemplate {
   check_queues_count_red?: number
   check_queues_bytes_yellow?: number
   check_queues_bytes_red?: number
+  check_progress_group_nifi_instance_id?: number | null
+  check_progress_group_process_group_id?: string | null
+  check_progress_group_process_group_path?: string | null
+  check_progress_group_check_children?: boolean
+  check_progress_group_expected_status?: 'Running' | 'Stopped' | 'Enabled' | 'Disabled'
   is_global: boolean
   user_id?: number
   created_by?: string

@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useApi } from '@/hooks/use-api'
 import { queryKeys } from '@/lib/query-keys'
-import type { JobTemplate, JobType, GitRepository, CommandTemplate, CustomField, NifiInstance } from '../types'
-import { STALE_TIME, EMPTY_TEMPLATES, EMPTY_TYPES, EMPTY_REPOS, EMPTY_CMD_TEMPLATES, EMPTY_CUSTOM_FIELDS, EMPTY_NIFI_INSTANCES } from '../utils/constants'
+import type { JobTemplate, JobType, GitRepository, CommandTemplate, CustomField, NifiInstance, ProcessGroup } from '../types'
+import { STALE_TIME, EMPTY_TEMPLATES, EMPTY_TYPES, EMPTY_REPOS, EMPTY_CMD_TEMPLATES, EMPTY_CUSTOM_FIELDS, EMPTY_NIFI_INSTANCES, EMPTY_PROCESS_GROUPS } from '../utils/constants'
 
 interface UseQueryOptions {
   enabled?: boolean
@@ -133,5 +133,33 @@ export function useNifiInstances(options: UseQueryOptions = DEFAULT_OPTIONS) {
     },
     enabled,
     staleTime: 2 * 60 * 1000, // 2 minutes - instances rarely change
+  })
+}
+
+interface UseProcessGroupsOptions extends UseQueryOptions {
+  instanceId: number | null
+}
+
+const DEFAULT_PROCESS_GROUPS_OPTIONS: UseProcessGroupsOptions = { enabled: true, instanceId: null }
+
+/**
+ * Fetch all process groups (with full paths) for a given NiFi instance.
+ * Used for the check_progress_group template type.
+ */
+export function useNifiProcessGroups(options: UseProcessGroupsOptions = DEFAULT_PROCESS_GROUPS_OPTIONS) {
+  const { apiCall } = useApi()
+  const { instanceId, enabled = true } = options
+
+  return useQuery({
+    queryKey: queryKeys.nifi.processGroupsAllPaths(instanceId ?? 0),
+    queryFn: async () => {
+      const response = await apiCall<{ status: string; process_groups: ProcessGroup[]; count: number; root_id: string }>(
+        `/api/nifi/instances/${instanceId}/ops/process-groups/all-paths`,
+        { method: 'GET' }
+      )
+      return response?.process_groups ?? EMPTY_PROCESS_GROUPS
+    },
+    enabled: enabled && instanceId !== null,
+    staleTime: 30 * 1000, // 30 seconds - process groups may change
   })
 }

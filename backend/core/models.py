@@ -479,6 +479,21 @@ class JobTemplate(Base):
     check_queues_bytes_red = Column(
         Integer, nullable=True, default=100
     )  # Queue size threshold for red status in MB (check_queues type)
+    check_progress_group_nifi_instance_id = Column(
+        Integer, nullable=True
+    )  # Single NiFi instance ID to target (check_progress_group type)
+    check_progress_group_process_group_id = Column(
+        String(255), nullable=True
+    )  # UUID of the process group (check_progress_group type)
+    check_progress_group_process_group_path = Column(
+        String(1000), nullable=True
+    )  # Formatted path of the process group for display (check_progress_group type)
+    check_progress_group_check_children = Column(
+        Boolean, nullable=True, default=True
+    )  # Whether to check child process groups (check_progress_group type)
+    check_progress_group_expected_status = Column(
+        String(20), nullable=True, default="Running"
+    )  # Expected status: Running|Stopped|Enabled|Disabled (check_progress_group type)
     is_global = Column(Boolean, nullable=False, default=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
     created_by = Column(String(255))  # Username of creator
@@ -497,7 +512,7 @@ class JobTemplate(Base):
         Index("idx_job_templates_user", "user_id"),
         Index("idx_job_templates_user_type", "user_id", "job_type"),
         CheckConstraint(
-            "job_type IN ('backup', 'compare_devices', 'run_commands', 'sync_devices', 'scan_prefixes', 'deploy_agent', 'check_queues')",
+            "job_type IN ('backup', 'compare_devices', 'run_commands', 'sync_devices', 'scan_prefixes', 'deploy_agent', 'check_queues', 'check_progress_group')",
             name="ck_job_templates_job_type",
         ),
     )

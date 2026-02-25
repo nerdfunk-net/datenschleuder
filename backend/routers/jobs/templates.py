@@ -83,6 +83,11 @@ async def create_job_template(
             else None,
             nifi_instance_ids=template_data.nifi_instance_ids,
             is_global=template_data.is_global,
+            check_progress_group_nifi_instance_id=template_data.check_progress_group_nifi_instance_id,
+            check_progress_group_process_group_id=template_data.check_progress_group_process_group_id,
+            check_progress_group_process_group_path=template_data.check_progress_group_process_group_path,
+            check_progress_group_check_children=template_data.check_progress_group_check_children if template_data.check_progress_group_check_children is not None else True,
+            check_progress_group_expected_status=template_data.check_progress_group_expected_status or "Running",
         )
 
         return JobTemplateResponse(**template)
@@ -235,6 +240,11 @@ async def update_job_template(
             check_queues_count_red=update_data.check_queues_count_red,
             check_queues_bytes_yellow=update_data.check_queues_bytes_yellow,
             check_queues_bytes_red=update_data.check_queues_bytes_red,
+            check_progress_group_nifi_instance_id=update_data.check_progress_group_nifi_instance_id,
+            check_progress_group_process_group_id=update_data.check_progress_group_process_group_id,
+            check_progress_group_process_group_path=update_data.check_progress_group_process_group_path,
+            check_progress_group_check_children=update_data.check_progress_group_check_children,
+            check_progress_group_expected_status=update_data.check_progress_group_expected_status,
             is_global=update_data.is_global,
             user_id=current_user["user_id"],
         )

@@ -8,6 +8,8 @@ import { useAuthStore } from '@/lib/auth-store'
 import { useTemplateMutations } from '../hooks/use-template-mutations'
 import { JobTemplateCommonFields } from '../../components/JobTemplateCommonFields'
 import { CheckQueuesFields } from './check-queues-fields'
+import { CheckProgressGroupFields } from './check-progress-group-fields'
+import type { ExpectedStatus } from './check-progress-group-fields'
 import type { JobTemplate } from '../types'
 
 interface TemplateFormDialogProps {
@@ -40,6 +42,13 @@ export function TemplateFormDialog({
   const [bytesYellow, setBytesYellow] = useState(10)
   const [bytesRed, setBytesRed] = useState(100)
 
+  // check_progress_group specific state
+  const [pgNifiInstanceId, setPgNifiInstanceId] = useState<number | null>(null)
+  const [pgProcessGroupId, setPgProcessGroupId] = useState<string | null>(null)
+  const [pgProcessGroupPath, setPgProcessGroupPath] = useState<string | null>(null)
+  const [pgCheckChildren, setPgCheckChildren] = useState(true)
+  const [pgExpectedStatus, setPgExpectedStatus] = useState<ExpectedStatus>('Running')
+
   const resetForm = useCallback(() => {
     setFormName("")
     setFormJobType("")
@@ -51,6 +60,11 @@ export function TemplateFormDialog({
     setCountRed(10000)
     setBytesYellow(10)
     setBytesRed(100)
+    setPgNifiInstanceId(null)
+    setPgProcessGroupId(null)
+    setPgProcessGroupPath(null)
+    setPgCheckChildren(true)
+    setPgExpectedStatus('Running')
   }, [])
 
   // Load editing template data
@@ -67,6 +81,11 @@ export function TemplateFormDialog({
       setCountRed(editingTemplate.check_queues_count_red ?? 10000)
       setBytesYellow(editingTemplate.check_queues_bytes_yellow ?? 10)
       setBytesRed(editingTemplate.check_queues_bytes_red ?? 100)
+      setPgNifiInstanceId(editingTemplate.check_progress_group_nifi_instance_id ?? null)
+      setPgProcessGroupId(editingTemplate.check_progress_group_process_group_id ?? null)
+      setPgProcessGroupPath(editingTemplate.check_progress_group_process_group_path ?? null)
+      setPgCheckChildren(editingTemplate.check_progress_group_check_children ?? true)
+      setPgExpectedStatus((editingTemplate.check_progress_group_expected_status as ExpectedStatus) ?? 'Running')
     } else if (open && !editingTemplate) {
       resetForm()
     }
@@ -99,7 +118,16 @@ export function TemplateFormDialog({
             check_queues_bytes_yellow: bytesYellow,
             check_queues_bytes_red: bytesRed,
           }
-        : basePayload
+        : formJobType === "check_progress_group"
+          ? {
+              ...basePayload,
+              check_progress_group_nifi_instance_id: pgNifiInstanceId,
+              check_progress_group_process_group_id: pgProcessGroupId,
+              check_progress_group_process_group_path: pgProcessGroupPath,
+              check_progress_group_check_children: pgCheckChildren,
+              check_progress_group_expected_status: pgExpectedStatus,
+            }
+          : basePayload
 
     if (editingTemplate) {
       await updateTemplate.mutateAsync({ id: editingTemplate.id, data: payload })
@@ -158,6 +186,23 @@ export function TemplateFormDialog({
               onBytesYellowChange={setBytesYellow}
               bytesRed={bytesRed}
               onBytesRedChange={setBytesRed}
+            />
+          )}
+
+          {formJobType === "check_progress_group" && (
+            <CheckProgressGroupFields
+              nifiInstanceId={pgNifiInstanceId}
+              onNifiInstanceIdChange={setPgNifiInstanceId}
+              processGroupId={pgProcessGroupId}
+              processGroupPath={pgProcessGroupPath}
+              onProcessGroupChange={(id, path) => {
+                setPgProcessGroupId(id)
+                setPgProcessGroupPath(path)
+              }}
+              checkChildren={pgCheckChildren}
+              onCheckChildrenChange={setPgCheckChildren}
+              expectedStatus={pgExpectedStatus}
+              onExpectedStatusChange={setPgExpectedStatus}
             />
           )}
         </div>

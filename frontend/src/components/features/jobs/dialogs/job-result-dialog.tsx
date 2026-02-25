@@ -24,6 +24,7 @@ import {
   isScanPrefixJobResult,
   isDeployAgentJobResult,
   isCheckQueuesJobResult,
+  isCheckProcessGroupJobResult,
   GenericJobResult,
 } from "../types/job-results"
 import { BackupJobResultView } from "../components/results/backup-job-result"
@@ -37,6 +38,7 @@ import { ScanPrefixResultView } from "../components/results/scan-prefix-result"
 import { DeployAgentResultView } from "../components/results/deploy-agent-result"
 import { GenericJobResultView } from "../components/results/generic-job-result"
 import { CheckQueuesResultView } from "../components/results/check-queues-result"
+import { CheckProcessGroupResultView } from "../components/results/check-process-group-result"
 
 interface JobResultDialogProps {
   jobRun: JobRun | null
@@ -53,6 +55,10 @@ function renderJobResult(result: Record<string, any>, taskId?: string): React.Re
   // Check queues has a unique instances + summary(green/yellow/red) structure
   if (isCheckQueuesJobResult(result)) {
     return <CheckQueuesResultView result={result} />
+  }
+
+  if (isCheckProcessGroupJobResult(result)) {
+    return <CheckProcessGroupResultView result={result} />
   }
 
   // Export devices must be checked first to avoid conflicts

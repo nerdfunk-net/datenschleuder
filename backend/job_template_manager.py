@@ -50,6 +50,12 @@ def create_job_template(
     deploy_templates: Optional[List[Dict[str, Any]]] = None,
     nifi_instance_ids: Optional[List[int]] = None,
     is_global: bool = False,
+    # check_progress_group specific parameters
+    check_progress_group_nifi_instance_id: Optional[int] = None,
+    check_progress_group_process_group_id: Optional[str] = None,
+    check_progress_group_process_group_path: Optional[str] = None,
+    check_progress_group_check_children: bool = True,
+    check_progress_group_expected_status: str = "Running",
 ) -> Dict[str, Any]:
     """Create a new job template"""
 
@@ -103,6 +109,11 @@ def create_job_template(
         is_global=is_global,
         user_id=user_id if not is_global else None,
         created_by=created_by,
+        check_progress_group_nifi_instance_id=check_progress_group_nifi_instance_id,
+        check_progress_group_process_group_id=check_progress_group_process_group_id,
+        check_progress_group_process_group_path=check_progress_group_process_group_path,
+        check_progress_group_check_children=check_progress_group_check_children,
+        check_progress_group_expected_status=check_progress_group_expected_status,
     )
 
     logger.info("Created job template: %s (ID: %s)", name, template.id)
@@ -186,6 +197,12 @@ def update_job_template(
     check_queues_bytes_red: Optional[int] = None,
     is_global: Optional[bool] = None,
     user_id: Optional[int] = None,
+    # check_progress_group specific parameters
+    check_progress_group_nifi_instance_id: Optional[int] = None,
+    check_progress_group_process_group_id: Optional[str] = None,
+    check_progress_group_process_group_path: Optional[str] = None,
+    check_progress_group_check_children: Optional[bool] = None,
+    check_progress_group_expected_status: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """Update a job template"""
 
@@ -267,6 +284,16 @@ def update_job_template(
         update_data["check_queues_bytes_yellow"] = check_queues_bytes_yellow
     if check_queues_bytes_red is not None:
         update_data["check_queues_bytes_red"] = check_queues_bytes_red
+    if check_progress_group_nifi_instance_id is not None:
+        update_data["check_progress_group_nifi_instance_id"] = check_progress_group_nifi_instance_id
+    if check_progress_group_process_group_id is not None:
+        update_data["check_progress_group_process_group_id"] = check_progress_group_process_group_id
+    if check_progress_group_process_group_path is not None:
+        update_data["check_progress_group_process_group_path"] = check_progress_group_process_group_path
+    if check_progress_group_check_children is not None:
+        update_data["check_progress_group_check_children"] = check_progress_group_check_children
+    if check_progress_group_expected_status is not None:
+        update_data["check_progress_group_expected_status"] = check_progress_group_expected_status
     if is_global is not None:
         update_data["is_global"] = is_global
         if is_global:
@@ -328,6 +355,16 @@ def get_job_types() -> List[Dict[str, str]]:
             "label": "Deploy Agent",
             "description": "Deploy agent configurations to Git repository",
         },
+        {
+            "value": "check_queues",
+            "label": "Check Queues",
+            "description": "Monitor NiFi connection queue depths and alert on thresholds",
+        },
+        {
+            "value": "check_progress_group",
+            "label": "Check ProcessGroup",
+            "description": "Check the operational status of a NiFi process group",
+        },
     ]
 
 
@@ -379,6 +416,11 @@ def _model_to_dict(template) -> Dict[str, Any]:
         "check_queues_count_red": template.check_queues_count_red,
         "check_queues_bytes_yellow": template.check_queues_bytes_yellow,
         "check_queues_bytes_red": template.check_queues_bytes_red,
+        "check_progress_group_nifi_instance_id": template.check_progress_group_nifi_instance_id,
+        "check_progress_group_process_group_id": template.check_progress_group_process_group_id,
+        "check_progress_group_process_group_path": template.check_progress_group_process_group_path,
+        "check_progress_group_check_children": template.check_progress_group_check_children,
+        "check_progress_group_expected_status": template.check_progress_group_expected_status,
         "is_global": template.is_global,
         "user_id": template.user_id,
         "created_by": template.created_by,

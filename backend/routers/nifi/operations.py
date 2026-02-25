@@ -656,9 +656,20 @@ async def get_process_group_status(
     instance_id: int,
     pg_id: str,
     detail: str = "all",
+    recursive: bool = False,
+    nodewise: bool = False,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
-    """Get status of a specific NiFi process group."""
+    """Get status of a specific NiFi process group.
+
+    Parameters:
+
+    - **detail**: `names` returns a simple `{name: id}` mapping; `all` returns the full status entity.
+    - **recursive**: Whether all descendant groups and the status of their content will be included.
+      When invoked on the root group with `recursive=true`, it returns the current status of every
+      component in the flow. Defaults to `false`.
+    - **nodewise**: Whether to include the per-node breakdown. Defaults to `false`.
+    """
     import nipyapi
 
     if detail not in ("names", "all"):
@@ -668,13 +679,24 @@ async def get_process_group_status(
         )
     _setup_instance(instance_id)
     try:
-        pg_status = nipyapi.canvas.get_process_group_status(pg_id=pg_id, detail=detail)
-        data = pg_status.to_dict() if hasattr(pg_status, "to_dict") else pg_status
+        pg_status = nipyapi.nifi.FlowApi().get_process_group_status(
+            id=pg_id,
+            recursive=recursive,
+            nodewise=nodewise,
+        )
+        if detail == "names":
+            inner = getattr(pg_status, "process_group_status", None)
+            name = getattr(inner, "name", pg_id) if inner else pg_id
+            data = {name: pg_id}
+        else:
+            data = pg_status.to_dict() if hasattr(pg_status, "to_dict") else pg_status
         return {
             "status": "success",
             "instance_id": instance_id,
             "process_group_id": pg_id,
             "detail": detail,
+            "recursive": recursive,
+            "nodewise": nodewise,
             "data": data,
         }
     except Exception as exc:
@@ -690,6 +712,61 @@ async def get_process_group_status(
         )
 
 
+@router.get("/{instance_id}/ops/process-groups/{pg_id}/status/canvas")
+async def get_process_group_status_canvas(
+    instance_id: int,
+    pg_id: str,
+    detail: str = "all",
+    current_user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Get status of a specific NiFi process group using the canvas API.
+
+    Uses `nipyapi.canvas.get_process_group_status()`, which returns a
+    `ProcessGroupEntity` (richer component-level detail) rather than the
+    `ProcessGroupStatusEntity` returned by the low-level Flow API endpoint
+    (`/status`).
+
+    Parameters:
+
+    - **detail**: `names` returns a simple `{name: id}` mapping; `all` returns
+      the full `ProcessGroupEntity` including component status snapshots.
+    """
+    from services.nifi.operations.process_groups import (
+        get_process_group_status_canvas as _canvas_status,
+    )
+
+    if detail not in ("names", "all"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="detail must be 'names' or 'all'",
+        )
+    _setup_instance(instance_id)
+    try:
+        pg_status = _canvas_status(pg_id)
+        if detail == "names":
+            data = {pg_status["name"]: pg_id}
+        else:
+            data = pg_status["raw"]
+        return {
+            "status": "success",
+            "instance_id": instance_id,
+            "process_group_id": pg_id,
+            "detail": detail,
+            "data": data,
+        }
+    except Exception as exc:
+        logger.error(
+            "Error getting canvas process group %s status for instance %d: %s",
+            pg_id,
+            instance_id,
+            exc,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get process group canvas status: %s" % str(exc),
+        )
+
+
 @router.get("/{instance_id}/ops/components")
 async def list_components_by_kind(
     instance_id: int,
@@ -698,7 +775,17 @@ async def list_components_by_kind(
     descendants: bool = True,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
-    """List all NiFi components of a given kind (e.g. connections, processors)."""
+    """List all NiFi components of a given kind.
+
+    Valid values for **kind**:
+
+    - `input_ports` – Input ports within process groups
+    - `output_ports` – Output ports within process groups
+    - `funnels` – Funnels
+    - `controllers` – Controller services
+    - `connections` – Connections between components
+    - `remote_process_groups` – Remote process groups (RPGs)
+    """
     from nipyapi import canvas
 
     _setup_instance(instance_id)

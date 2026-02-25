@@ -584,6 +584,101 @@ async def trigger_check_queues(
     )
 
 
+# ---------------------------------------------------------------------------
+# NiFi check-process-group task
+# ---------------------------------------------------------------------------
+
+
+class CheckProcessGroupRequest(BaseModel):
+    """Request body for the NiFi check-process-group task endpoint.
+
+    Fields:
+        nifi_instance_id:   ID of the NiFi instance to connect to.
+        process_group_id:   UUID of the process group to inspect.
+        process_group_path: Human-readable path (used in logs/results only).
+        check_children:     When ``True``, each direct child process group is
+                            also evaluated individually. Defaults to ``True``.
+        expected_status:    One of ``"Running"``, ``"Stopped"``, ``"Disabled"``,
+                            ``"Enabled"``.  Evaluation logic:
+
+                            - ``"Running"``  → stale_count, stopped_count, disabled_count must all be 0.
+                            - ``"Stopped"``  → running_count, stale_count, disabled_count must all be 0.
+                            - ``"Disabled"`` → running_count, stale_count, stopped_count must all be 0.
+                            - ``"Enabled"``  → disabled_count must be 0.
+    """
+
+    nifi_instance_id: int
+    process_group_id: str
+    process_group_path: Optional[str] = None
+    check_children: bool = True
+    expected_status: str = "Running"
+
+
+@router.post("/tasks/check-process-group", response_model=TaskResponse)
+@handle_celery_errors("trigger NiFi check-process-group task")
+async def trigger_check_process_group(
+    request: CheckProcessGroupRequest,
+    current_user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Trigger a NiFi process-group status check as a tracked Celery background task.
+
+    The task connects to the specified NiFi instance, fetches the
+    ``ProcessGroupEntity`` via the canvas API, and evaluates the component
+    counters (``running_count``, ``stopped_count``, ``disabled_count``,
+    ``stale_count``) against the configured *expected_status*.
+
+    Valid values for **expected_status**:
+
+    - ``"Running"``  → stale_count, stopped_count, and disabled_count must all be 0.
+    - ``"Stopped"``  → running_count, stale_count, and disabled_count must all be 0.
+    - ``"Disabled"`` → running_count, stale_count, and stopped_count must all be 0.
+    - ``"Enabled"``  → disabled_count must be 0.
+
+    When **check_children** is ``true``, each direct child process group is
+    evaluated individually using the same expected status.  The overall result
+    fails if any child does not match.
+    """
+    from tasks import dispatch_job
+
+    valid_statuses = {"Running", "Stopped", "Disabled", "Enabled"}
+    if request.expected_status not in valid_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="expected_status must be one of: %s" % ", ".join(sorted(valid_statuses)),
+        )
+
+    job_params: Dict[str, Any] = {
+        "nifi_instance_id": request.nifi_instance_id,
+        "process_group_id": request.process_group_id,
+        "process_group_path": request.process_group_path,
+        "check_children": request.check_children,
+        "expected_status": request.expected_status,
+    }
+
+    task = dispatch_job.delay(
+        job_name="check-process-group",
+        job_type="check_progress_group",
+        job_parameters=job_params,
+        triggered_by="manual",
+        executed_by=current_user.get("username"),
+    )
+
+    logger.info(
+        "check-process-group task %s submitted by %s (instance=%d, pg=%s, expected=%s)",
+        task.id,
+        current_user.get("username"),
+        request.nifi_instance_id,
+        request.process_group_id,
+        request.expected_status,
+    )
+
+    return TaskResponse(
+        task_id=task.id,
+        status="queued",
+        message="NiFi check-process-group task queued: %s" % task.id,
+    )
+
+
 # ============================================================================
 # Celery Settings Endpoints
 # ============================================================================

@@ -195,6 +195,8 @@ export const queryKeys = {
       [...queryKeys.nifi.all, 'system-diagnostics', instanceId] as const,
     queues: (instanceId: number) => [...queryKeys.nifi.all, 'queues', instanceId] as const,
     monitoringFlows: () => [...queryKeys.nifi.all, 'monitoring-flows'] as const,
+    processGroupsAllPaths: (instanceId: number) =>
+      [...queryKeys.nifi.all, 'process-groups-all-paths', instanceId] as const,
   },
 
   // NiFi Install

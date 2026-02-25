@@ -283,6 +283,100 @@ def stop_versioning(process_group_id: str) -> bool:
     return True
 
 
+def get_process_group_status_canvas(pg_id: str) -> Dict[str, Any]:
+    """Fetch a process group entity via the canvas API and return its status counters.
+
+    Uses ``nipyapi.canvas.get_process_group_status(pg_id, detail='all')`` which
+    returns a ``ProcessGroupEntity``.  The relevant counter fields are extracted
+    from the ``component`` sub-object:
+
+    - ``running_count``
+    - ``stopped_count``
+    - ``disabled_count``
+    - ``stale_count``
+
+    Args:
+        pg_id: UUID of the process group to inspect.
+
+    Returns:
+        dict with keys ``id``, ``name``, ``running_count``, ``stopped_count``,
+        ``disabled_count``, ``stale_count``, and the full ``raw`` entity as a dict.
+
+    Raises:
+        ValueError: If the process group is not found.
+    """
+    import nipyapi
+
+    pg_entity = nipyapi.canvas.get_process_group_status(pg_id=pg_id, detail="all")
+
+    if not pg_entity:
+        raise ValueError("Process group '%s' not found" % pg_id)
+
+    comp = getattr(pg_entity, "component", None)
+
+    raw = pg_entity.to_dict() if hasattr(pg_entity, "to_dict") else {}
+
+    return {
+        "id": pg_id,
+        "name": getattr(comp, "name", None) if comp else None,
+        "running_count": int(getattr(comp, "running_count", 0) or 0) if comp else 0,
+        "stopped_count": int(getattr(comp, "stopped_count", 0) or 0) if comp else 0,
+        "disabled_count": int(getattr(comp, "disabled_count", 0) or 0) if comp else 0,
+        "stale_count": int(getattr(comp, "stale_count", 0) or 0) if comp else 0,
+        "raw": raw,
+    }
+
+
+def evaluate_process_group_status(
+    counters: Dict[str, int],
+    expected_status: str,
+) -> Dict[str, Any]:
+    """Evaluate whether a process group's counters match the expected status.
+
+    Logic:
+
+    - ``"Running"``  → stale_count, stopped_count, and disabled_count must all be 0.
+    - ``"Stopped"``  → running_count, stale_count, and disabled_count must all be 0.
+    - ``"Disabled"`` → running_count, stale_count, and stopped_count must all be 0.
+    - ``"Enabled"``  → disabled_count must be 0.
+
+    Args:
+        counters:        Dict with ``running_count``, ``stopped_count``,
+                         ``disabled_count``, ``stale_count``.
+        expected_status: One of ``"Running"``, ``"Stopped"``, ``"Disabled"``,
+                         ``"Enabled"``.
+
+    Returns:
+        dict with keys ``passed`` (bool), ``expected_status``, ``violations``
+        (list of counter names that are non-zero when they should be 0).
+    """
+    running = counters.get("running_count", 0)
+    stopped = counters.get("stopped_count", 0)
+    disabled = counters.get("disabled_count", 0)
+    stale = counters.get("stale_count", 0)
+
+    checks: Dict[str, int] = {
+        "Running": {"stale_count": stale, "stopped_count": stopped, "disabled_count": disabled},
+        "Stopped": {"running_count": running, "stale_count": stale, "disabled_count": disabled},
+        "Disabled": {"running_count": running, "stale_count": stale, "stopped_count": stopped},
+        "Enabled": {"disabled_count": disabled},
+    }.get(expected_status, {})
+
+    violations = [name for name, value in checks.items() if value > 0]
+
+    return {
+        "passed": len(violations) == 0,
+        "expected_status": expected_status,
+        "violations": violations,
+        "counters": {
+            "running_count": running,
+            "stopped_count": stopped,
+            "disabled_count": disabled,
+            "stale_count": stale,
+        },
+    }
+
+
 def get_all_process_group_paths(start_pg_id: str = "root") -> Dict[str, Any]:
     """Get all process groups with their full hierarchical paths.
 

@@ -604,6 +604,69 @@ export function isCheckQueuesJobResult(result: Record<string, unknown>): result 
 // Utility Functions
 // ============================================================================
 
+// ============================================================================
+// Check Process Group Result
+// ============================================================================
+
+export interface CheckProcessGroupCounters {
+  running_count: number
+  stopped_count: number
+  disabled_count: number
+  stale_count: number
+}
+
+export interface CheckProcessGroupChild {
+  id: string
+  name: string
+  passed: boolean
+  counters?: CheckProcessGroupCounters
+  violations?: string[]
+  error?: string
+}
+
+export interface CheckProcessGroupJobResult {
+  success: boolean
+  passed: boolean
+  instance_id: number
+  instance_name: string
+  process_group_id: string
+  process_group_name?: string | null
+  process_group_path?: string | null
+  expected_status: 'Running' | 'Stopped' | 'Disabled' | 'Enabled'
+  check_children: boolean
+  counters: CheckProcessGroupCounters
+  violations: string[]
+  children?: CheckProcessGroupChild[]
+  children_count?: number
+  [key: string]: unknown
+}
+
+/**
+ * Check if result is a check_process_group job result.
+ * Identified by the unique combination of `passed`, `counters` (object with
+ * running_count / stopped_count / disabled_count / stale_count), and
+ * `violations` (array).
+ */
+export function isCheckProcessGroupJobResult(
+  result: Record<string, unknown>,
+): result is CheckProcessGroupJobResult {
+  return (
+    'passed' in result &&
+    typeof result.passed === 'boolean' &&
+    'counters' in result &&
+    typeof result.counters === 'object' &&
+    result.counters !== null &&
+    'running_count' in result.counters &&
+    'violations' in result &&
+    Array.isArray(result.violations) &&
+    'process_group_id' in result
+  )
+}
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
 /**
  * Format bytes to human readable string (e.g., "1.5 KB")
  */
