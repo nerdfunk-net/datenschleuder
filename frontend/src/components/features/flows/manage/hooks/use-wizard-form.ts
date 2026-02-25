@@ -187,16 +187,8 @@ export function useWizardForm(hierarchy: HierarchyAttribute[]) {
       hierarchy_values: state.hierarchy_values,
       name: state.name || null,
       contact: state.contact || null,
-      src_connection_param: JSON.stringify({
-        server_name: state.src_connection.server_name,
-        credential_id: state.src_connection.credential_id,
-        parameter_context: state.src_connection.parameter_context,
-      }),
-      dest_connection_param: JSON.stringify({
-        server_name: state.dest_connection.server_name,
-        credential_id: state.dest_connection.credential_id,
-        parameter_context: state.dest_connection.parameter_context,
-      }),
+      src_connection_param: state.src_connection.parameter_context,
+      dest_connection_param: state.dest_connection.parameter_context,
       src_template_id: state.src_template_id ? parseInt(state.src_template_id) : null,
       dest_template_id: state.dest_template_id ? parseInt(state.dest_template_id) : null,
       active: state.active,
