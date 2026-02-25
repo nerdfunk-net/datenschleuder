@@ -299,7 +299,7 @@ class GitService:
                         commits_pulled = len(pull_info) if pull_info else 0
 
                         logger.info(
-                            f"Pulled {commits_pulled} commits from {repository.get('name')}"
+                            "Pulled %s commits from %s", commits_pulled, repository.get('name')
                         )
 
                         return PullResult(
@@ -387,7 +387,7 @@ class GitService:
                                     )
 
                         logger.info(
-                            f"Successfully pushed to {repository.get('name')} branch {push_branch}"
+                            "Successfully pushed to %s branch %s", repository.get('name'), push_branch
                         )
 
                         return PushResult(
@@ -477,7 +477,7 @@ class GitService:
                 commit = repo.index.commit(message)
 
             logger.info(
-                f"Created commit {commit.hexsha[:8]} with {len(changed_files)} files"
+                "Created commit %s with %s files", commit.hexsha[:8], len(changed_files)
             )
 
             return CommitResult(

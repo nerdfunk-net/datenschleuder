@@ -193,7 +193,7 @@ class GitDiffService:
             except KeyError:
                 content1 = ""
                 logger.warning(
-                    f"File {file_path} not found in repo1 at commit {commit1}"
+                    "File %s not found in repo1 at commit %s", file_path, commit1
                 )
 
             try:
@@ -203,7 +203,7 @@ class GitDiffService:
             except KeyError:
                 content2 = ""
                 logger.warning(
-                    f"File {file_path} not found in repo2 at commit {commit2}"
+                    "File %s not found in repo2 at commit %s", file_path, commit2
                 )
 
             # Generate diff

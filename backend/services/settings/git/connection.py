@@ -84,13 +84,13 @@ class GitConnectionService:
                 # Log resolved credentials (without exposing secrets)
                 logger.info("Credential resolution results:")
                 logger.info(
-                    f"  - Username: {resolved_username if resolved_username else 'None'}"
+                    "  - Username: %s", resolved_username if resolved_username else 'None'
                 )
                 logger.info(
-                    f"  - Token/Password: {'<present>' if resolved_token else 'None'}"
+                    "  - Token/Password: %s", '<present>' if resolved_token else 'None'
                 )
                 logger.info(
-                    f"  - SSH Key Path: {ssh_key_path if ssh_key_path else 'None'}"
+                    "  - SSH Key Path: %s", ssh_key_path if ssh_key_path else 'None'
                 )
 
                 # Validate credential resolution
@@ -218,7 +218,7 @@ class GitConnectionService:
             logger.debug("Authentication added to URL (credentials hidden)")
         else:
             logger.info(
-                f"No authentication added to URL (auth_type={auth_type}, has_username={bool(resolved_username)}, has_token={bool(resolved_token)})"
+                "No authentication added to URL (auth_type=%s, has_username=%s, has_token=%s)", auth_type, bool(resolved_username), bool(resolved_token)
             )
 
         return clone_url
@@ -268,10 +268,10 @@ class GitConnectionService:
 
         logger.info("Executing git clone command...")
         logger.debug(
-            f"Command: git clone --depth 1 --branch {branch} <url> {test_path}"
+            "Command: git clone --depth 1 --branch %s <url> %s", branch, test_path
         )
         logger.debug(
-            f"Environment SSH_COMMAND: {env.get('GIT_SSH_COMMAND', 'not set')}"
+            "Environment SSH_COMMAND: %s", env.get('GIT_SSH_COMMAND', 'not set')
         )
 
         # Execute clone with timeout
@@ -286,7 +286,7 @@ class GitConnectionService:
         # Parse result
         if result.returncode == 0:
             logger.info(
-                f"Git connection test successful for {test_request.url} (branch: {branch})"
+                "Git connection test successful for %s (branch: %s)", test_request.url, branch
             )
             return GitConnectionTestResponse(
                 success=True,
@@ -299,7 +299,7 @@ class GitConnectionService:
             )
         else:
             logger.warning(
-                f"Git connection test failed for {test_request.url}: {result.stderr}"
+                "Git connection test failed for %s: %s", test_request.url, result.stderr
             )
             return GitConnectionTestResponse(
                 success=False,

@@ -467,7 +467,7 @@ async def get_file_content(
             )
 
         logger.info(
-            f"User {current_user.get('username')} read file {path} from repository {repository['name']}"
+            "User %s read file %s from repository %s", current_user.get('username'), path, repository['name']
         )
 
         # Return plain text content

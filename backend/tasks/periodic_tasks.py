@@ -177,7 +177,7 @@ def cleanup_celery_data_task() -> dict:
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=cleanup_age_hours)
 
         logger.info(
-            f"Starting Celery cleanup: removing data older than {cleanup_age_hours} hours"
+            "Starting Celery cleanup: removing data older than %s hours", cleanup_age_hours
         )
 
         # Connect to Redis
@@ -219,7 +219,7 @@ def cleanup_celery_data_task() -> dict:
             logger.warning("Error cleaning up job runs: %s", e)
 
         logger.info(
-            f"Cleanup completed: {removed_results} results, {removed_job_runs} job runs removed"
+            "Cleanup completed: %s results, %s job runs removed", removed_results, removed_job_runs
         )
 
         return {
@@ -300,7 +300,7 @@ def check_stale_jobs_task() -> dict:
                         }
                     )
                     logger.warning(
-                        f"Marked stale job {job['id']} ({job['job_name']}) as failed - running for {int(running_duration / 60)} minutes"
+                        "Marked stale job %s (%s) as failed - running for %s minutes", job['id'], job['job_name'], int(running_duration / 60)
                     )
 
         # Check pending jobs
@@ -328,12 +328,12 @@ def check_stale_jobs_task() -> dict:
                     }
                 )
                 logger.warning(
-                    f"Marked pending job {job['id']} ({job['job_name']}) as failed - pending for {int(pending_duration / 60)} minutes"
+                    "Marked pending job %s (%s) as failed - pending for %s minutes", job['id'], job['job_name'], int(pending_duration / 60)
                 )
 
         if marked_failed:
             logger.info(
-                f"Stale job check: marked {len(marked_failed)} job(s) as failed"
+                "Stale job check: marked %s job(s) as failed", len(marked_failed)
             )
 
         return {

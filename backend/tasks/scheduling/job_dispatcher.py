@@ -58,19 +58,19 @@ def dispatch_job(
 
     try:
         logger.info(
-            f"Dispatching job: {job_name} (type: {job_type}, triggered_by: {triggered_by})"
+            "Dispatching job: %s (type: %s, triggered_by: %s)", job_name, job_type, triggered_by
         )
 
         # Get template details if needed
         if template_id:
             template = job_template_manager.get_job_template(template_id)
             logger.info(
-                f"[DISPATCH] Template ID {template_id} loaded: {template is not None}"
+                "[DISPATCH] Template ID %s loaded: %s", template_id, template is not None
             )
             if template:
                 logger.info("[DISPATCH] Template name: %s", template.get("name"))
                 logger.info(
-                    f"[DISPATCH] Template activate_changes_after_sync: {template.get('activate_changes_after_sync')}"
+                    "[DISPATCH] Template activate_changes_after_sync: %s", template.get('activate_changes_after_sync')
                 )
                 if not target_devices:
                     # Get target devices based on inventory_source
@@ -110,7 +110,7 @@ def dispatch_job(
         result_status = result.get("status")
         if result_status == "running":
             logger.info(
-                f"Job {job_name} is running asynchronously - callback will handle completion"
+                "Job %s is running asynchronously - callback will handle completion", job_name
             )
         elif result.get("success") or result_status == "completed":
             job_run_manager.mark_completed(job_run_id, result=result)

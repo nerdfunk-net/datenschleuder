@@ -110,7 +110,7 @@ def init_worker_process(**kwargs):
         # 4. Lazy connection creation avoids immediate psycopg2 calls after fork
 
         logger.info(
-            f"[Worker Init] Database engine initialized successfully for PID={pid}"
+            "[Worker Init] Database engine initialized successfully for PID=%s", pid
         )
 
     except Exception as e:
@@ -137,7 +137,7 @@ def shutdown_worker_process(**kwargs):
     from core import database
 
     logger.info(
-        f"[Worker Shutdown] Cleaning up database connections for worker {kwargs.get('sender')}"
+        "[Worker Shutdown] Cleaning up database connections for worker %s", kwargs.get('sender')
     )
 
     if hasattr(database, "engine") and database.engine:

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 # Create database engine
 DATABASE_URL = settings.database_url
 logger.info(
-    f"Connecting to database: postgresql://{settings.database_username}:***@{settings.database_host}:{settings.database_port}/{settings.database_name}"
+    "Connecting to database: postgresql://%s:***@%s:%s/%s", settings.database_username, settings.database_host, settings.database_port, settings.database_name
 )
 
 engine = create_engine(

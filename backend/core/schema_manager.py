@@ -25,7 +25,7 @@ class SchemaManager:
 
         self.metadata = Base.metadata
         logger.info(
-            f"SchemaManager initialized with {len(self.metadata.tables)} model definitions"
+            "SchemaManager initialized with %s model definitions", len(self.metadata.tables)
         )
 
     def _check_migration_system_exists(self) -> bool:

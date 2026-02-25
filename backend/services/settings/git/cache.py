@@ -90,7 +90,7 @@ class GitCacheService:
             cached_commits = cache_service.get(cache_key)
             if cached_commits is not None:
                 logger.debug(
-                    f"Cache hit for commits: repo {repo_id}, branch {branch_name}"
+                    "Cache hit for commits: repo %s, branch %s", repo_id, branch_name
                 )
                 limited_commits = cached_commits[:limit]
                 if use_models:
@@ -148,7 +148,7 @@ class GitCacheService:
                     cache_key = self._build_cache_key(repo_id, "commits", branch_name)
                     cache_service.set(cache_key, full_commits, ttl)
                     logger.debug(
-                        f"Cached {len(full_commits)} commits for repo {repo_id}, branch {branch_name}"
+                        "Cached %s commits for repo %s, branch %s", len(full_commits), repo_id, branch_name
                     )
 
             return commits
@@ -156,7 +156,7 @@ class GitCacheService:
         except Exception as git_error:
             # Fallback to subprocess if GitPython fails
             logger.warning(
-                f"GitPython failed for repo {repo_id}, falling back to subprocess: {git_error}"
+                "GitPython failed for repo %s, falling back to subprocess: %s", repo_id, git_error
             )
             return self._fetch_commits_subprocess(repo_path, branch_name, limit)
 
@@ -248,7 +248,7 @@ class GitCacheService:
             cached_history = cache_service.get(cache_key)
             if cached_history is not None:
                 logger.debug(
-                    f"Cache hit for file history: repo {repo_id}, file {file_path}"
+                    "Cache hit for file history: repo %s, file %s", repo_id, file_path
                 )
                 return cached_history
 
@@ -288,7 +288,7 @@ class GitCacheService:
                 ttl = int(cache_cfg.get("ttl_seconds", 600))
                 cache_service.set(cache_key, history_commits, ttl)
                 logger.debug(
-                    f"Cached {len(history_commits)} commits for file {file_path} in repo {repo_id}"
+                    "Cached %s commits for file %s in repo %s", len(history_commits), file_path, repo_id
                 )
 
             return history_commits

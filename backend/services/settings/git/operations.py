@@ -84,7 +84,7 @@ class GitOperationsService:
                         )
                     with set_ssl_env(repository):
                         logger.info(
-                            f"Cloning branch {repository['branch']} into {repo_path}"
+                            "Cloning branch %s into %s", repository['branch'], repo_path
                         )
                         Repo.clone_from(
                             clone_url, repo_path, branch=repository["branch"]
@@ -122,7 +122,7 @@ class GitOperationsService:
                         ):
                             shutil.rmtree(repo_path)
                             logger.info(
-                                f"Removed empty directory after failed clone: {repo_path}"
+                                "Removed empty directory after failed clone: %s", repo_path
                             )
                     except Exception as ce:
                         logger.warning("Cleanup after failed clone skipped: %s", ce)
@@ -169,7 +169,7 @@ class GitOperationsService:
         """
         repo_path = str(get_repo_path(repository))
         logger.info(
-            f"Removing and re-syncing repository '{repository['name']}' at {repo_path}"
+            "Removing and re-syncing repository '%s' at %s", repository['name'], repo_path
         )
 
         # Remove existing repository if present
@@ -201,7 +201,7 @@ class GitOperationsService:
 
                 with set_ssl_env(repository):
                     logger.info(
-                        f"Cloning fresh copy of branch {repository['branch']} into {repo_path}"
+                        "Cloning fresh copy of branch %s into %s", repository['branch'], repo_path
                     )
                     Repo.clone_from(clone_url, repo_path, branch=repository["branch"])
 
@@ -238,7 +238,7 @@ class GitOperationsService:
                     ):
                         shutil.rmtree(repo_path)
                         logger.info(
-                            f"Removed empty directory after failed clone: {repo_path}"
+                            "Removed empty directory after failed clone: %s", repo_path
                         )
                 except Exception as ce:
                     logger.warning("Cleanup after failed clone skipped: %s", ce)

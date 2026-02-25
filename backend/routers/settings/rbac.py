@@ -639,7 +639,7 @@ async def toggle_user_activation(
         raise
     except Exception as e:
         logger.error(
-            f"Error toggling activation for user {user_id}: {str(e)}", exc_info=True
+            "Error toggling activation for user %s: %s", user_id, str(e), exc_info=True
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -666,7 +666,7 @@ async def toggle_user_debug(
         raise
     except Exception as e:
         logger.error(
-            f"Error toggling debug for user {user_id}: {str(e)}", exc_info=True
+            "Error toggling debug for user %s: %s", user_id, str(e), exc_info=True
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

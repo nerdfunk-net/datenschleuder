@@ -91,7 +91,7 @@ class TemplateManager:
                 )
 
             logger.info(
-                f"Template '{template_data['name']}' created with ID {template_id}"
+                "Template '%s' created with ID %s", template_data['name'], template_id
             )
             return template_id
 
@@ -110,7 +110,7 @@ class TemplateManager:
             if template:
                 result = self._model_to_dict(template)
                 logger.info(
-                    f"DEBUG: get_template({template_id}) - scope={result.get('scope')}, created_by={result.get('created_by')}"
+                    "DEBUG: get_template(%s) - scope=%s, created_by=%s", template_id, result.get('scope'), result.get('created_by')
                 )
                 return result
             return None
@@ -162,7 +162,7 @@ class TemplateManager:
             logger.info("DEBUG: list_templates - found %s templates", len(results))
             for template in results:
                 logger.info(
-                    f"DEBUG: list_templates - template: id={template['id']}, name={template['name']}, scope={template.get('scope')}, created_by={template.get('created_by')}"
+                    "DEBUG: list_templates - template: id=%s, name=%s, scope=%s, created_by=%s", template['id'], template['name'], template.get('scope'), template.get('created_by')
                 )
 
             return results
@@ -185,7 +185,7 @@ class TemplateManager:
             current = self._model_to_dict(current_obj)
 
             logger.info(
-                f"DEBUG: update_template({template_id}) - incoming scope={template_data.get('scope')}, current scope={current.get('scope')}"
+                "DEBUG: update_template(%s) - incoming scope=%s, current scope=%s", template_id, template_data.get('scope'), current.get('scope')
             )
 
             # Prepare update data
@@ -203,7 +203,7 @@ class TemplateManager:
             # Get the scope to update
             new_scope = template_data.get("scope", current.get("scope", "global"))
             logger.info(
-                f"DEBUG: update_template({template_id}) - will update scope to: {new_scope}"
+                "DEBUG: update_template(%s) - will update scope to: %s", template_id, new_scope
             )
 
             # Prepare update kwargs
@@ -244,7 +244,7 @@ class TemplateManager:
             repo.update(template_id, **update_kwargs)
 
             logger.info(
-                f"DEBUG: update_template({template_id}) - SQL UPDATE executed with scope={new_scope}"
+                "DEBUG: update_template(%s) - SQL UPDATE executed with scope=%s", template_id, new_scope
             )
 
             # Content is already saved to database in repo.update() above
@@ -281,7 +281,7 @@ class TemplateManager:
                 repo.update(template_id, is_active=False)
 
             logger.info(
-                f"Template {template_id} {'deleted' if hard_delete else 'deactivated'}"
+                "Template %s %s", template_id, 'deleted' if hard_delete else 'deactivated'
             )
             return True
 
@@ -338,13 +338,13 @@ class TemplateManager:
             rendered = jinja_template.render(**data)
 
             logger.info(
-                f"Successfully rendered template '{template_name}' from category '{category}'"
+                "Successfully rendered template '%s' from category '%s'", template_name, category
             )
             return rendered
 
         except Exception as e:
             logger.error(
-                f"Error rendering template '{template_name}' in category '{category}': {e}"
+                "Error rendering template '%s' in category '%s': %s", template_name, category, e
             )
             raise e
 

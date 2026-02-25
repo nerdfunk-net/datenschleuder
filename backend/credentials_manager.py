@@ -560,7 +560,7 @@ def export_ssh_keys_to_filesystem(output_dir: Optional[str] = None) -> List[str]
     for cred in ssh_key_creds:
         if not cred.ssh_key_encrypted:
             logger.warning(
-                f"SSH key credential '{cred.name}' has no key data, skipping"
+                "SSH key credential '%s' has no key data, skipping", cred.name
             )
             continue
 

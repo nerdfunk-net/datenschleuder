@@ -166,7 +166,7 @@ class AutoSchemaMigration:
                     # Skip primary key columns
                     if column.primary_key:
                         logger.warning(
-                            f"Skipping primary key column {col_name} in {table_name}"
+                            "Skipping primary key column %s in %s", col_name, table_name
                         )
                         continue
 

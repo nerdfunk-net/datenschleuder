@@ -521,7 +521,7 @@ def delete_user_with_rbac(user_id: int) -> bool:
 
             deleted_count = credentials_manager.delete_credentials_by_owner(username)
             logger.info(
-                f"Deleted {deleted_count} private credentials for user {username}"
+                "Deleted %s private credentials for user %s", deleted_count, username
             )
         except Exception as e:
             logger.warning("Failed to delete credentials for user %s: %s", username, e)

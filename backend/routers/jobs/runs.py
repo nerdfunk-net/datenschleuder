@@ -428,7 +428,7 @@ async def get_schedule_runs(
         return runs
     except Exception as e:
         logger.error(
-            f"Error getting runs for schedule {schedule_id}: {e}", exc_info=True
+            "Error getting runs for schedule %s: %s", schedule_id, e, exc_info=True
         )
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -633,7 +633,7 @@ async def execute_job_manually(
         template_id = schedule.get("job_template_id")
         if not template_id:
             logger.error(
-                f"Schedule {schedule_id} has no associated template. Schedule data: {schedule}"
+                "Schedule %s has no associated template. Schedule data: %s", schedule_id, schedule
             )
             raise HTTPException(
                 status_code=400,

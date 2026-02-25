@@ -52,14 +52,14 @@ async def list_templates(
 
         if search:
             logger.info(
-                f"DEBUG: API list_templates - using search with username={username}"
+                "DEBUG: API list_templates - using search with username=%s", username
             )
             templates = template_manager.search_templates(
                 search, search_content=True, username=username
             )
         else:
             logger.info(
-                f"DEBUG: API list_templates - calling list_templates with username={username}"
+                "DEBUG: API list_templates - calling list_templates with username=%s", username
             )
             templates = template_manager.list_templates(
                 category=category,
@@ -70,17 +70,17 @@ async def list_templates(
 
         # Convert to response models
         logger.info(
-            f"DEBUG: API list_templates - received {len(templates)} templates from manager"
+            "DEBUG: API list_templates - received %s templates from manager", len(templates)
         )
         template_responses = []
         for template in templates:
             logger.info(
-                f"DEBUG: API list_templates - converting template id={template['id']}, name={template['name']}, scope={template.get('scope')}"
+                "DEBUG: API list_templates - converting template id=%s, name=%s, scope=%s", template['id'], template['name'], template.get('scope')
             )
             template_responses.append(TemplateResponse(**template))
 
         logger.info(
-            f"DEBUG: API list_templates - returning {len(template_responses)} templates to frontend"
+            "DEBUG: API list_templates - returning %s templates to frontend", len(template_responses)
         )
         return TemplateListResponse(
             templates=template_responses, total=len(template_responses)
@@ -317,10 +317,10 @@ async def update_template(
 
         template_data = template_request.dict(exclude_unset=True)
         logger.info(
-            f"DEBUG: API update_template({template_id}) - received data: {template_data}"
+            "DEBUG: API update_template(%s) - received data: %s", template_id, template_data
         )
         logger.info(
-            f"DEBUG: API update_template({template_id}) - scope in data: {template_data.get('scope')}"
+            "DEBUG: API update_template(%s) - scope in data: %s", template_id, template_data.get('scope')
         )
         success = template_manager.update_template(template_id, template_data)
 
@@ -834,7 +834,7 @@ async def advanced_render_template(
                     context["devices"] = devices
 
                     logger.info(
-                        f"Fetched Nautobot context for device {render_request.device_id}"
+                        "Fetched Nautobot context for device %s", render_request.device_id
                     )
                 except Exception as e:
                     error_msg = f"Failed to fetch Nautobot device data: {str(e)}"
@@ -890,7 +890,7 @@ async def advanced_render_template(
                         )
 
                     logger.info(
-                        f"Pre-run command executed. Raw length: {len(pre_run_output)}, Parsed records: {len(pre_run_parsed)}"
+                        "Pre-run command executed. Raw length: %s, Parsed records: %s", len(pre_run_output), len(pre_run_parsed)
                     )
                 except Exception as e:
                     error_msg = f"Failed to execute pre-run command: {str(e)}"
@@ -922,7 +922,7 @@ async def advanced_render_template(
                     conditions = inventory.get("conditions", [])
                     if not conditions:
                         logger.warning(
-                            f"Inventory {render_request.inventory_id} has no conditions"
+                            "Inventory %s has no conditions", render_request.inventory_id
                         )
                         context["devices"] = []
                         context["device_details"] = {}
@@ -964,7 +964,7 @@ async def advanced_render_template(
 
                         context["device_details"] = device_details
                         logger.info(
-                            f"Fetched {len(device_list)} devices from inventory {render_request.inventory_id}"
+                            "Fetched %s devices from inventory %s", len(device_list), render_request.inventory_id
                         )
 
                 except Exception as e:
@@ -1074,7 +1074,7 @@ async def execute_template_and_sync_to_nautobot(
         import job_run_manager
 
         logger.info(
-            f"Execute-and-sync request for template {request.template_id} on {len(request.device_ids)} device(s)"
+            "Execute-and-sync request for template %s on %s device(s)", request.template_id, len(request.device_ids)
         )
 
         # Get template
@@ -1134,11 +1134,11 @@ async def execute_template_and_sync_to_nautobot(
                             if "id" not in parsed_data and "name" not in parsed_data:
                                 parsed_data["id"] = device_id
                             logger.info(
-                                f"Parsed JSON for device {device_id}: interfaces={parsed_data.get('interfaces', 'NOT_FOUND')}"
+                                "Parsed JSON for device %s: interfaces=%s", device_id, parsed_data.get('interfaces', 'NOT_FOUND')
                             )
                             if "interfaces" in parsed_data:
                                 logger.info(
-                                    f"  - Found {len(parsed_data['interfaces'])} interface(s) in parsed JSON"
+                                    "  - Found %s interface(s) in parsed JSON", len(parsed_data['interfaces'])
                                 )
                             parsed_updates.append(parsed_data)
                         else:
@@ -1226,7 +1226,7 @@ async def execute_template_and_sync_to_nautobot(
 
         # Trigger the update-devices Celery task
         logger.info(
-            f"Triggering update-devices task for {len(parsed_updates)} device(s)"
+            "Triggering update-devices task for %s device(s)", len(parsed_updates)
         )
         task = update_devices_task.delay(
             devices=parsed_updates,
