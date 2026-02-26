@@ -162,7 +162,7 @@ export function BackupJobTemplate({
           )}
         </div>
         <p className="text-xs text-teal-600 mt-2">
-          When enabled, the backup completion timestamp will be written to the selected custom field in Nautobot
+          When enabled, the backup completion timestamp will be written to the selected custom field
         </p>
       </div>
 

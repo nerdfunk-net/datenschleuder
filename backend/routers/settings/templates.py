@@ -21,8 +21,6 @@ from models.templates import (
     TemplateUpdateRequest,
     ImportableTemplateInfo,
     TemplateScanImportResponse,
-    TemplateExecuteAndSyncRequest,
-    TemplateExecuteAndSyncResponse,
     AdvancedTemplateRenderRequest,
     AdvancedTemplateRenderResponse,
 )
@@ -773,7 +771,6 @@ async def advanced_render_template(
     as the backend will execute and parse commands dynamically.
     """
     try:
-        from services.nautobot.devices import device_query_service
         from jinja2 import Template, TemplateError, UndefinedError
         import re
 
@@ -794,59 +791,6 @@ async def advanced_render_template(
         if category == "netmiko":
             # Initialize pre_run to empty (optional, will be populated if command provided)
             context["pre_run"] = {"raw": "", "parsed": []}
-
-            # Determine if we need to fetch device data
-            # We need it if: use_nautobot_context is True OR pre_run_command is provided
-            needs_device_data = (
-                render_request.use_nautobot_context
-                or (
-                    render_request.pre_run_command
-                    and render_request.pre_run_command.strip()
-                )
-            ) and render_request.device_id
-
-            # Fetch Nautobot device data if needed
-            if needs_device_data:
-                try:
-                    device_data = await device_query_service.get_device_details(
-                        device_id=render_request.device_id,
-                        use_cache=True,
-                    )
-                    context["device_details"] = device_data
-
-                    # Build simplified devices array for compatibility
-                    devices = [
-                        {
-                            "id": render_request.device_id,
-                            "name": device_data.get("name", ""),
-                            "primary_ip4": device_data.get("primary_ip4", {}).get(
-                                "address", ""
-                            )
-                            if isinstance(device_data.get("primary_ip4"), dict)
-                            else device_data.get("primary_ip4", ""),
-                            "primary_ip6": device_data.get("primary_ip6", {}).get(
-                                "address", ""
-                            )
-                            if isinstance(device_data.get("primary_ip6"), dict)
-                            else device_data.get("primary_ip6", ""),
-                        }
-                    ]
-                    context["devices"] = devices
-
-                    logger.info(
-                        "Fetched Nautobot context for device %s", render_request.device_id
-                    )
-                except Exception as e:
-                    error_msg = f"Failed to fetch Nautobot device data: {str(e)}"
-                    logger.error(error_msg)
-                    # If we needed device data for pre_run_command, this is critical
-                    if (
-                        render_request.pre_run_command
-                        and render_request.pre_run_command.strip()
-                    ):
-                        raise ValueError(error_msg)
-                    # Otherwise just add warning
-                    warnings.append(error_msg)
 
             # Execute pre-run command if provided
             if (
@@ -872,7 +816,6 @@ async def advanced_render_template(
                         device_id=render_request.device_id,
                         command=render_request.pre_run_command.strip(),
                         credential_id=render_request.credential_id,
-                        nautobot_device=context.get("device_details"),
                     )
 
                     pre_run_output = pre_run_result.get("raw_output", "")
@@ -966,228 +909,3 @@ async def template_health_check(
     except Exception as e:
         logger.error("Template health check failed: %s", e)
         return {"status": "unhealthy", "error": str(e)}
-
-
-@router.post("/execute-and-sync", response_model=TemplateExecuteAndSyncResponse)
-async def execute_template_and_sync_to_nautobot(
-    request: TemplateExecuteAndSyncRequest,
-    current_user: dict = Depends(require_permission("settings.templates", "write")),
-) -> TemplateExecuteAndSyncResponse:
-    """
-    Execute template and sync results to Nautobot.
-
-    This endpoint:
-    1. Renders the template for each specified device
-    2. Parses the rendered output (JSON/YAML/text)
-    3. Updates device(s) in Nautobot via the update-devices Celery task
-    4. Returns combined result with task tracking info
-
-    Args:
-        request: TemplateExecuteAndSyncRequest containing:
-            - template_id: Template to execute
-            - device_ids: List of device UUIDs
-            - user_variables: Optional template variables
-            - dry_run: Validate without updating (default: False)
-            - output_format: Expected format (json/yaml/text)
-
-    Returns:
-        TemplateExecuteAndSyncResponse with task_id, job_id, and results
-    """
-    try:
-        import json
-        import yaml
-        from template_manager import template_manager
-        from tasks.update_devices_task import update_devices_task
-        import job_run_manager
-
-        logger.info(
-            "Execute-and-sync request for template %s on %s device(s)", request.template_id, len(request.device_ids)
-        )
-
-        # Get template
-        template = template_manager.get_template(request.template_id)
-        if not template:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Template with ID {request.template_id} not found",
-            )
-
-        rendered_outputs = {}
-        parsed_updates = []
-        errors = []
-        warnings = []
-
-        # Get template content
-        template_content = template_manager.get_template_content(request.template_id)
-        if not template_content:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Template content for ID {request.template_id} not found",
-            )
-
-        # Render template for each device
-        for device_id in request.device_ids:
-            try:
-                logger.info("Rendering template for device %s", device_id)
-
-                # Render template using the render_service (supports Nautobot context and pre-run commands)
-                from services.network.automation.render import render_service
-
-                result = await render_service.render_template(
-                    template_content=template_content,
-                    category=template["category"],
-                    device_id=device_id,
-                    user_variables=request.user_variables or {},
-                    use_nautobot_context=template.get("use_nautobot_context", True),
-                    pre_run_command=template.get("pre_run_command"),
-                    credential_id=template.get("credential_id"),
-                )
-
-                rendered_content = result["rendered_content"]
-                rendered_outputs[device_id] = rendered_content
-
-                # Capture any warnings from rendering
-                if result.get("warnings"):
-                    for warning in result["warnings"]:
-                        warnings.append(f"Device {device_id}: {warning}")
-
-                # Parse the rendered output based on format
-                try:
-                    if request.output_format == "json":
-                        # Parse JSON output
-                        parsed_data = json.loads(rendered_content)
-                        if isinstance(parsed_data, dict):
-                            # Add device_id if not present
-                            if "id" not in parsed_data and "name" not in parsed_data:
-                                parsed_data["id"] = device_id
-                            logger.info(
-                                "Parsed JSON for device %s: interfaces=%s", device_id, parsed_data.get('interfaces', 'NOT_FOUND')
-                            )
-                            if "interfaces" in parsed_data:
-                                logger.info(
-                                    "  - Found %s interface(s) in parsed JSON", len(parsed_data['interfaces'])
-                                )
-                            parsed_updates.append(parsed_data)
-                        else:
-                            errors.append(
-                                f"Device {device_id}: JSON output must be an object, got {type(parsed_data)}"
-                            )
-
-                    elif request.output_format == "yaml":
-                        # Parse YAML output
-                        parsed_data = yaml.safe_load(rendered_content)
-                        if isinstance(parsed_data, dict):
-                            # Add device_id if not present
-                            if "id" not in parsed_data and "name" not in parsed_data:
-                                parsed_data["id"] = device_id
-                            parsed_updates.append(parsed_data)
-                        else:
-                            errors.append(
-                                f"Device {device_id}: YAML output must be an object, got {type(parsed_data)}"
-                            )
-
-                    elif request.output_format == "text":
-                        # Parse key-value pairs from text (simple format)
-                        # Format: key=value (one per line)
-                        parsed_data = {"id": device_id}
-                        for line in rendered_content.strip().split("\n"):
-                            line = line.strip()
-                            if "=" in line and not line.startswith("#"):
-                                key, value = line.split("=", 1)
-                                parsed_data[key.strip()] = value.strip()
-
-                        if len(parsed_data) > 1:  # More than just the id
-                            parsed_updates.append(parsed_data)
-                        else:
-                            warnings.append(
-                                f"Device {device_id}: No key-value pairs found in text output"
-                            )
-
-                    else:
-                        errors.append(
-                            f"Device {device_id}: Unsupported output format '{request.output_format}'"
-                        )
-
-                except json.JSONDecodeError as e:
-                    errors.append(f"Device {device_id}: Failed to parse JSON: {str(e)}")
-                except yaml.YAMLError as e:
-                    errors.append(f"Device {device_id}: Failed to parse YAML: {str(e)}")
-                except Exception as e:
-                    errors.append(f"Device {device_id}: Parse error: {str(e)}")
-
-            except Exception as e:
-                errors.append(
-                    f"Device {device_id}: Template rendering failed: {str(e)}"
-                )
-                logger.error("Error rendering template for device %s: %s", device_id, e)
-
-        # If dry_run or errors occurred, return without triggering update task
-        if request.dry_run:
-            return TemplateExecuteAndSyncResponse(
-                success=len(errors) == 0,
-                message=f"Dry run completed. Parsed {len(parsed_updates)} device update(s). {len(errors)} error(s).",
-                rendered_outputs=rendered_outputs,
-                parsed_updates=parsed_updates,
-                errors=errors,
-                warnings=warnings,
-            )
-
-        if len(errors) > 0:
-            return TemplateExecuteAndSyncResponse(
-                success=False,
-                message=f"Template rendering/parsing failed with {len(errors)} error(s)",
-                rendered_outputs=rendered_outputs,
-                parsed_updates=parsed_updates,
-                errors=errors,
-                warnings=warnings,
-            )
-
-        if len(parsed_updates) == 0:
-            return TemplateExecuteAndSyncResponse(
-                success=False,
-                message="No device updates to process",
-                rendered_outputs=rendered_outputs,
-                errors=["No valid device updates parsed from template output"],
-                warnings=warnings,
-            )
-
-        # Trigger the update-devices Celery task
-        logger.info(
-            "Triggering update-devices task for %s device(s)", len(parsed_updates)
-        )
-        task = update_devices_task.delay(
-            devices=parsed_updates,
-            dry_run=False,
-        )
-
-        # Create job run record for tracking
-        job_name = f"Sync to Nautobot from template '{template['name']}'"
-        job_run = job_run_manager.create_job_run(
-            job_name=job_name,
-            job_type="template_execute_and_sync",
-            triggered_by="manual",
-            executed_by=current_user.get("username"),
-        )
-
-        # Mark as started with Celery task ID
-        job_run_manager.mark_started(job_run["id"], task.id)
-
-        return TemplateExecuteAndSyncResponse(
-            success=True,
-            message=f"Successfully queued update for {len(parsed_updates)} device(s)",
-            task_id=task.id,
-            job_id=str(job_run["id"]),
-            rendered_outputs=rendered_outputs,
-            parsed_updates=parsed_updates,
-            errors=errors,
-            warnings=warnings,
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Error in execute-and-sync: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to execute template and sync: {str(e)}",
-        )

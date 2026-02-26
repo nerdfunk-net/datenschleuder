@@ -12,13 +12,6 @@ def get_settings():
     return get_config()
 
 
-def get_nautobot_service():
-    """Get Nautobot service instance."""
-    from services.nautobot import nautobot_service
-
-    return nautobot_service
-
-
 def get_settings_manager():
     """Get settings manager instance."""
     from settings_manager import settings_manager

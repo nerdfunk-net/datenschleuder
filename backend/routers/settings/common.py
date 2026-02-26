@@ -9,10 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
 from models.settings import (
-    NautobotSettingsRequest,
     GitSettingsRequest,
     AllSettingsRequest,
-    ConnectionTestRequest,
     GitTestRequest,
     CacheSettingsRequest,
 )
@@ -50,25 +48,6 @@ async def get_all_settings(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve settings: {str(e)}",
         )
-
-
-@router.get("/nautobot")
-async def get_nautobot_settings(
-    current_user: dict = Depends(require_permission("settings.common", "write")),
-):
-    """Get Nautobot settings."""
-    try:
-        from settings_manager import settings_manager
-
-        nautobot_settings = settings_manager.get_nautobot_settings()
-        return {"success": True, "data": nautobot_settings}
-
-    except Exception as e:
-        logger.error("Error getting Nautobot settings: %s", e)
-        return {
-            "success": False,
-            "message": f"Failed to retrieve Nautobot settings: {str(e)}",
-        }
 
 
 @router.get("/git")
@@ -177,7 +156,6 @@ async def update_all_settings(
         from settings_manager import settings_manager
 
         settings_dict = {
-            "nautobot": settings_request.nautobot.dict(),
             "git": settings_request.git.dict(),
         }
         if settings_request.cache is not None:
@@ -201,36 +179,6 @@ async def update_all_settings(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update settings: {str(e)}",
-        )
-
-
-@router.put("/nautobot")
-async def update_nautobot_settings(
-    nautobot_request: NautobotSettingsRequest,
-    current_user: dict = Depends(require_permission("settings.common", "write")),
-):
-    """Update Nautobot settings."""
-    try:
-        from settings_manager import settings_manager
-
-        success = settings_manager.update_nautobot_settings(nautobot_request.dict())
-
-        if success:
-            return {
-                "message": "Nautobot settings updated successfully",
-                "nautobot": settings_manager.get_nautobot_settings(),
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to update Nautobot settings",
-            )
-
-    except Exception as e:
-        logger.error("Error updating Nautobot settings: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update Nautobot settings: {str(e)}",
         )
 
 
@@ -264,35 +212,6 @@ async def update_git_settings(
         )
 
 
-# POST endpoints for settings (to match frontend expectations)
-@router.post("/nautobot")
-async def create_nautobot_settings(
-    nautobot_request: NautobotSettingsRequest,
-    current_user: dict = Depends(require_permission("settings.common", "write")),
-):
-    """Create/Update Nautobot settings via POST."""
-    try:
-        from settings_manager import settings_manager
-
-        success = settings_manager.update_nautobot_settings(nautobot_request.dict())
-
-        if success:
-            return {
-                "success": True,
-                "message": "Nautobot settings updated successfully",
-                "data": settings_manager.get_nautobot_settings(),
-            }
-        else:
-            return {"success": False, "message": "Failed to update Nautobot settings"}
-
-    except Exception as e:
-        logger.error("Error updating Nautobot settings: %s", e)
-        return {
-            "success": False,
-            "message": f"Failed to update Nautobot settings: {str(e)}",
-        }
-
-
 @router.post("/git")
 async def create_git_settings(
     git_request: GitSettingsRequest,
@@ -316,36 +235,6 @@ async def create_git_settings(
     except Exception as e:
         logger.error("Error updating Git settings: %s", e)
         return {"success": False, "message": f"Failed to update Git settings: {str(e)}"}
-
-
-@router.post("/test/nautobot")
-async def test_nautobot_connection(
-    test_request: ConnectionTestRequest,
-    current_user: dict = Depends(require_permission("settings.common", "write")),
-):
-    """Test Nautobot connection with provided settings."""
-    try:
-        from connection_tester import connection_tester
-
-        success, message = await connection_tester.test_nautobot_connection(
-            test_request.dict()
-        )
-
-        return {
-            "success": success,
-            "message": message,
-            "tested_url": test_request.url,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
-
-    except Exception as e:
-        logger.error("Error testing Nautobot connection: %s", e)
-        return {
-            "success": False,
-            "message": f"Test failed: {str(e)}",
-            "tested_url": test_request.url,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
 
 
 @router.post("/test/git")

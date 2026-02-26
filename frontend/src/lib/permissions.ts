@@ -2,7 +2,7 @@
  * Permission utilities for checking user permissions in the frontend.
  *
  * The RBAC system uses a permission format of "resource:action"
- * (e.g., "nautobot.devices:read", "dashboard.settings:read")
+ * (e.g., "jobs:read", "dashboard.settings:read")
  */
 
 import type { User } from '@/types/auth'

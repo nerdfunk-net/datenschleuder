@@ -1,10 +1,4 @@
 import { useEffect, useState, useCallback } from "react"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Radar, Network } from "lucide-react"
-import { useAuthStore } from "@/lib/auth-store"
 
 interface CustomField {
   id: string
@@ -68,41 +62,10 @@ export function ScanPrefixesJobTemplate({
   formScanMaxIps,
   setFormScanMaxIps,
 }: ScanPrefixesJobTemplateProps) {
-  const token = useAuthStore(state => state.token)
-  const [customFields, setCustomFields] = useState<CustomField[]>(EMPTY_CUSTOM_FIELDS)
+  const [customFields] = useState<CustomField[]>(EMPTY_CUSTOM_FIELDS)
   const [selectedFieldChoices, setSelectedFieldChoices] = useState<Array<{ value: string, display: string }>>([])
-  const [loadingCustomFields, setLoadingCustomFields] = useState(false)
 
-  // Fetch custom fields for ipam.prefix
-  const fetchCustomFields = useCallback(async () => {
-    if (!token) return
-
-    setLoadingCustomFields(true)
-    try {
-      const response = await fetch("/api/proxy/api/nautobot/custom-fields/prefixes", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setCustomFields(data || [])
-      }
-    } catch (error) {
-      console.error("Error fetching prefix custom fields:", error)
-    } finally {
-      setLoadingCustomFields(false)
-    }
-  }, [token])
-
-  useEffect(() => {
-    fetchCustomFields()
-  }, [fetchCustomFields])
-
-  // When a custom field is selected, check if it has choices
-  useEffect(() => {
+  const getSelectedFieldType = useCallback(() => {
     if (formScanCustomFieldName) {
       const field = customFields.find(f => f.key === formScanCustomFieldName)
       if (field?.choices && field.choices.length > 0) {
@@ -115,12 +78,8 @@ export function ScanPrefixesJobTemplate({
     }
   }, [formScanCustomFieldName, customFields])
 
-  const getSelectedFieldType = useCallback(() => {
-    const field = customFields.find(f => f.key === formScanCustomFieldName)
-    return field?.type?.value?.toLowerCase() || 'text'
-  }, [formScanCustomFieldName, customFields])
-
-  return (
+  // When a custom field is selected, check if it has choices
+  useEffect(() => {
     <>
       {/* Custom Field Selection Section */}
       <div className="rounded-lg border border-purple-200 bg-purple-50/30 p-4 space-y-3">

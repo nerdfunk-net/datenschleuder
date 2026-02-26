@@ -13,11 +13,10 @@ export function CompareDevicesJobTemplate() {
         <Info className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
         <div className="space-y-2 text-sm text-purple-900">
           <p className="leading-relaxed">
-            This job compares device configurations between Nautobot and CheckMK to identify discrepancies.
+            This job compares device configurations in CheckMK to identify discrepancies.
           </p>
           <ul className="list-disc list-inside space-y-1 text-purple-800">
-            <li>Fetches device data from Nautobot</li>
-            <li>Retrieves corresponding configuration from CheckMK</li>
+            <li>Retrieves device configuration from CheckMK</li>
             <li>Compares and reports differences</li>
             <li>Results are stored and viewable in the Sync Devices app</li>
           </ul>

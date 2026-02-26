@@ -36,16 +36,6 @@ export interface JobTemplate {
   write_timestamp_to_custom_field?: boolean
   timestamp_custom_field_name?: string
   activate_changes_after_sync?: boolean
-  scan_resolve_dns?: boolean
-  scan_ping_count?: number
-  scan_timeout_ms?: number
-  scan_retries?: number
-  scan_interval_ms?: number
-  scan_custom_field_name?: string
-  scan_custom_field_value?: string
-  scan_response_custom_field_name?: string
-  scan_set_reachable_ip_active?: boolean
-  scan_max_ips?: number
   parallel_tasks?: number
   deploy_template_id?: number
   deploy_agent_id?: string
@@ -97,15 +87,4 @@ export interface CommandTemplate {
   id: number
   name: string
   category: string
-}
-
-export interface CustomField {
-  id: string
-  name?: string
-  key: string
-  label: string
-  type: {
-    value: string
-    label: string
-  }
 }

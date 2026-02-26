@@ -7,15 +7,6 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Literal
 
 
-class NautobotSettingsRequest(BaseModel):
-    """Nautobot settings request model."""
-
-    url: str
-    token: str
-    timeout: int = 30
-    verify_ssl: bool = True
-
-
 class GitSettingsRequest(BaseModel):
     """Git settings request model."""
 
@@ -41,7 +32,6 @@ class CheckMKSettingsRequest(BaseModel):
 class AllSettingsRequest(BaseModel):
     """All settings request model."""
 
-    nautobot: NautobotSettingsRequest
     git: GitSettingsRequest
     checkmk: Optional[CheckMKSettingsRequest] = None
     cache: Optional["CacheSettingsRequest"] = None
@@ -133,31 +123,6 @@ class GitTestRequest(BaseModel):
     token: Optional[str] = ""
     verify_ssl: bool = True
 
-
-class NautobotDefaultsRequest(BaseModel):
-    """Nautobot defaults settings request model."""
-
-    location: Optional[str] = None
-    platform: Optional[str] = None
-    interface_status: Optional[str] = None
-    device_status: Optional[str] = None
-    ip_address_status: Optional[str] = None
-    ip_prefix_status: Optional[str] = None
-    namespace: Optional[str] = None
-    device_role: Optional[str] = None
-    secret_group: Optional[str] = None
-    csv_delimiter: Optional[str] = ","
-    csv_quote_char: Optional[str] = '"'
-
-
-class DeviceOffboardingRequest(BaseModel):
-    """Device offboarding settings request model."""
-
-    remove_all_custom_fields: bool = False
-    clear_device_name: bool = False
-    keep_serial: bool = False
-    location_id: Optional[str] = None
-    status_id: Optional[str] = None
     role_id: Optional[str] = None
     custom_field_settings: Optional[Dict[str, str]] = (
         None  # custom_field_name -> value or "clear"

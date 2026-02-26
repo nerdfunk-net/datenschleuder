@@ -101,15 +101,6 @@ export function useTemplateMutations() {
         timestamp_custom_field_name: template.timestamp_custom_field_name || undefined,
         parallel_tasks: template.parallel_tasks || 1,
         activate_changes_after_sync: template.activate_changes_after_sync,
-        scan_resolve_dns: template.scan_resolve_dns,
-        scan_ping_count: template.scan_ping_count,
-        scan_timeout_ms: template.scan_timeout_ms,
-        scan_retries: template.scan_retries,
-        scan_interval_ms: template.scan_interval_ms,
-        scan_custom_field_name: template.scan_custom_field_name || undefined,
-        scan_custom_field_value: template.scan_custom_field_value || undefined,
-        scan_response_custom_field_name: template.scan_response_custom_field_name || undefined,
-        scan_max_ips: template.scan_max_ips,
         is_global: template.is_global
       }
 

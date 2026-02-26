@@ -62,9 +62,6 @@ class TemplateRequest(BaseModel):
         default_factory=dict, description="Template variables"
     )
     tags: Optional[List[str]] = Field(default_factory=list, description="Template tags")
-    use_nautobot_context: Optional[bool] = Field(
-        default=False, description="Whether to use Nautobot context when rendering"
-    )
     pass_snmp_mapping: Optional[bool] = Field(
         default=False,
         description="Whether to include SNMP mapping in context (agent templates)",
@@ -81,7 +78,7 @@ class TemplateRequest(BaseModel):
     )
     execution_mode: Optional[str] = Field(
         default="run_on_device",
-        description="Execution mode: 'run_on_device', 'write_to_file', 'sync_to_nautobot'",
+        description="Execution mode: 'run_on_device', 'write_to_file'",
     )
     file_path: Optional[str] = Field(
         None,
@@ -110,7 +107,6 @@ class TemplateResponse(BaseModel):
     # Metadata
     variables: Dict[str, Any]
     tags: List[str]
-    use_nautobot_context: bool
     pass_snmp_mapping: bool = False
     inventory_id: Optional[int] = None
     pre_run_command: Optional[str] = None
@@ -257,9 +253,6 @@ class TemplateUpdateRequest(BaseModel):
     # Metadata
     variables: Optional[Dict[str, Any]] = Field(None, description="Template variables")
     tags: Optional[List[str]] = Field(None, description="Template tags")
-    use_nautobot_context: Optional[bool] = Field(
-        None, description="Whether to use Nautobot context when rendering"
-    )
     pass_snmp_mapping: Optional[bool] = Field(
         None, description="Whether to include SNMP mapping in context (agent templates)"
     )
@@ -275,51 +268,11 @@ class TemplateUpdateRequest(BaseModel):
     )
     execution_mode: Optional[str] = Field(
         None,
-        description="Execution mode: 'run_on_device', 'write_to_file', 'sync_to_nautobot'",
+        description="Execution mode: 'run_on_device', 'write_to_file'",
     )
     file_path: Optional[str] = Field(
         None,
         description="File path when execution_mode is 'write_to_file', supports variables like {device_name}, {template_name}",
-    )
-
-
-class TemplateExecuteAndSyncRequest(BaseModel):
-    """Request model for executing template and syncing to Nautobot."""
-
-    template_id: int = Field(..., description="Template ID to execute")
-    device_ids: List[str] = Field(..., description="List of device UUIDs to update")
-    user_variables: Optional[Dict[str, Any]] = Field(
-        default_factory=dict, description="User-provided variables for template"
-    )
-    dry_run: bool = Field(
-        default=False, description="If True, validate without making changes"
-    )
-    output_format: str = Field(
-        default="json",
-        description="Expected output format: 'json', 'yaml', or 'text'",
-    )
-
-
-class TemplateExecuteAndSyncResponse(BaseModel):
-    """Response model for execute-and-sync operation."""
-
-    success: bool = Field(..., description="Whether the operation succeeded")
-    message: str = Field(..., description="Summary message")
-    task_id: Optional[str] = Field(
-        None, description="Celery task ID for tracking the update job"
-    )
-    job_id: Optional[str] = Field(None, description="Job ID for tracking in Jobs/Views")
-    rendered_outputs: Optional[Dict[str, str]] = Field(
-        None, description="Map of device_id to rendered template output"
-    )
-    parsed_updates: Optional[List[Dict[str, Any]]] = Field(
-        None, description="Parsed device update objects that will be sent to Nautobot"
-    )
-    errors: Optional[List[str]] = Field(
-        default_factory=list, description="List of errors encountered"
-    )
-    warnings: Optional[List[str]] = Field(
-        default_factory=list, description="List of warnings"
     )
 
 
@@ -344,10 +297,7 @@ class AdvancedTemplateRenderRequest(BaseModel):
 
     # Netmiko-specific fields
     device_id: Optional[str] = Field(
-        None, description="Device UUID for Nautobot context (netmiko templates)"
-    )
-    use_nautobot_context: bool = Field(
-        default=True, description="Whether to include Nautobot device context"
+        None, description="Device UUID for netmiko template pre-run commands"
     )
     pre_run_command: Optional[str] = Field(
         None,

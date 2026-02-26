@@ -21,7 +21,6 @@ import {
   isBulkOnboardJobResult,
   isUpdateDevicesJobResult,
   isCheckIPJobResult,
-  isScanPrefixJobResult,
   isDeployAgentJobResult,
   isCheckQueuesJobResult,
   isCheckProcessGroupJobResult,
@@ -34,7 +33,6 @@ import { ExportDevicesResultView } from "../components/results/export-devices-re
 import { BulkOnboardResultView } from "../components/results/bulk-onboard-result"
 import { UpdateDevicesResultView } from "../components/results/update-devices-result"
 import { CheckIPResultView } from "../components/results/check-ip-result"
-import { ScanPrefixResultView } from "../components/results/scan-prefix-result"
 import { DeployAgentResultView } from "../components/results/deploy-agent-result"
 import { GenericJobResultView } from "../components/results/generic-job-result"
 import { CheckQueuesResultView } from "../components/results/check-queues-result"
@@ -77,10 +75,6 @@ function renderJobResult(result: Record<string, any>, taskId?: string): React.Re
   }
 
   // Scan prefix result has unique prefixes array structure
-  if (isScanPrefixJobResult(result)) {
-    return <ScanPrefixResultView result={result} />
-  }
-
   // Run commands must be checked before others as it has similar fields
   if (isRunCommandsJobResult(result)) {
     return <RunCommandsResultView result={result} />

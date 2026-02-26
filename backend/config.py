@@ -41,11 +41,6 @@ class Settings:
     port: int = int(os.getenv("BACKEND_SERVER_PORT", os.getenv("SERVER_PORT", "8000")))
     log_level: str = os.getenv("LOG_LEVEL", "INFO").upper()  # Normalize to uppercase
 
-    # Nautobot Configuration
-    nautobot_url: str = os.getenv("NAUTOBOT_HOST", "http://localhost:8080")
-    nautobot_token: str = os.getenv("NAUTOBOT_TOKEN", "your-nautobot-token-here")
-    nautobot_timeout: int = int(os.getenv("NAUTOBOT_TIMEOUT", "30"))
-
     # Authentication Configuration
     secret_key: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     algorithm: str = os.getenv("ALGORITHM", "HS256")
@@ -138,4 +133,3 @@ if __name__ == "__main__":
     print("Datenschleuder Backend Configuration:")
     print(f"  Server: http://{settings.host}:{settings.port}")
     print(f"  Log Level: {settings.log_level}")
-    print(f"  Nautobot URL: {settings.nautobot_url}")

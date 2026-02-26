@@ -182,9 +182,9 @@ async function handleRequest(
         ]
 
         // Rewrite paths to remove /api/ prefix to avoid double /api/api/ in URLs
-        // Backend paths are like "/api/nautobot/devices" and "/auth/login"
-        // We want them to be "/nautobot/devices" and "/auth/login"
-        // Then Swagger UI will prepend /api server, resulting in "/api/nautobot/devices" and "/api/auth/login"
+        // Backend paths are like "/api/auth/login" and "/api/settings"
+        // We want them to be "/auth/login" and "/settings"
+        // Then Swagger UI will prepend /api server, resulting in "/api/auth/login" and "/api/settings"
         const rewrittenPaths: Record<string, unknown> = {}
 
         for (const [path, pathItem] of Object.entries(openApiSpec.paths || {})) {

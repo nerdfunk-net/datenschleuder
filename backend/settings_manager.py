@@ -40,7 +40,7 @@ class GitSettings:
 
 @dataclass
 class CacheSettings:
-    """Cache configuration for Git data and Nautobot resources"""
+    """Cache configuration for Git data and other resources"""
 
     enabled: bool = True
     ttl_seconds: int = 600  # 10 minutes

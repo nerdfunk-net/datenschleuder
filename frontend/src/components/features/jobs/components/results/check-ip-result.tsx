@@ -139,11 +139,6 @@ export function CheckIPResultView({ result }: CheckIPResultViewProps) {
                     <Badge className={getStatusColor(device.status)} variant="outline">
                       {device.status.replace('_', ' ').toUpperCase()}
                     </Badge>
-                    {device.nautobot_device_name && device.nautobot_device_name !== device.device_name && (
-                      <span className="text-sm text-muted-foreground">
-                        → {device.nautobot_device_name}
-                      </span>
-                    )}
                     {device.error && (
                       <span className="text-sm text-red-600 max-w-xs truncate" title={device.error}>
                         {device.error}

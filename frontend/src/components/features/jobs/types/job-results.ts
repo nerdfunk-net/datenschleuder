@@ -275,7 +275,6 @@ export interface CheckIPDeviceResult {
   ip_address: string
   device_name: string
   status: 'match' | 'name_mismatch' | 'ip_not_found' | 'error'
-  nautobot_device_name?: string
   error?: string
 }
 
@@ -333,40 +332,6 @@ export interface DeployAgentJobResult {
   activated?: boolean
   activation_output?: string
   activation_warning?: string
-  // Index signature for compatibility with Record<string, unknown>
-  [key: string]: unknown
-}
-
-// ============================================================================
-// Scan Prefix Job Result Types
-// ============================================================================
-
-export interface ReachableIP {
-  ip: string
-  hostname?: string
-}
-
-export interface PrefixScanResult {
-  prefix: string
-  total_ips: number
-  reachable_count: number
-  unreachable_count: number
-  reachable: ReachableIP[]
-  unreachable: string[]
-}
-
-export interface ScanPrefixJobResult {
-  success: boolean
-  custom_field_name: string
-  custom_field_value: string
-  prefixes: PrefixScanResult[]
-  total_prefixes: number
-  total_ips_scanned: number
-  total_reachable: number
-  total_unreachable: number
-  resolve_dns: boolean
-  message?: string
-  error?: string
   // Index signature for compatibility with Record<string, unknown>
   [key: string]: unknown
 }
@@ -479,21 +444,6 @@ export function isDeployAgentJobResult(result: Record<string, unknown>): result 
     'repository_name' in result
   )
 }
-
-/**
- * Check if result is a scan_prefix job result.
- * Has prefixes array with total_ips_scanned and total_reachable/total_unreachable counts.
- */
-export function isScanPrefixJobResult(result: Record<string, unknown>): result is ScanPrefixJobResult {
-  return (
-    'prefixes' in result &&
-    Array.isArray(result.prefixes) &&
-    'total_ips_scanned' in result &&
-    'total_reachable' in result &&
-    'total_unreachable' in result
-  )
-}
-
 
 // ============================================================================
 // Check Queues Job Result Types (NiFi queue depth monitoring)

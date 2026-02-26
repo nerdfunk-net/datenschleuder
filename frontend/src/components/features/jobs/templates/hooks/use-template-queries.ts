@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useApi } from '@/hooks/use-api'
 import { queryKeys } from '@/lib/query-keys'
-import type { JobTemplate, JobType, GitRepository, CommandTemplate, CustomField, NifiInstance, ProcessGroup } from '../types'
-import { STALE_TIME, EMPTY_TEMPLATES, EMPTY_TYPES, EMPTY_REPOS, EMPTY_CMD_TEMPLATES, EMPTY_CUSTOM_FIELDS, EMPTY_NIFI_INSTANCES, EMPTY_PROCESS_GROUPS } from '../utils/constants'
+import type { JobTemplate, JobType, GitRepository, CommandTemplate, NifiInstance, ProcessGroup } from '../types'
+import { STALE_TIME, EMPTY_TEMPLATES, EMPTY_TYPES, EMPTY_REPOS, EMPTY_CMD_TEMPLATES, EMPTY_NIFI_INSTANCES, EMPTY_PROCESS_GROUPS } from '../utils/constants'
 
 interface UseQueryOptions {
   enabled?: boolean
@@ -88,33 +88,6 @@ export function useCommandTemplates(options: UseQueryOptions = DEFAULT_OPTIONS) 
     },
     enabled,
     staleTime: STALE_TIME.CMD_TEMPLATES,
-  })
-}
-
-/**
- * Fetch custom fields for devices
- * Replaces: fetchCustomFields() (lines 295-321)
- */
-export function useCustomFields(options: UseQueryOptions = DEFAULT_OPTIONS) {
-  const { apiCall } = useApi()
-  const { enabled = true } = options
-
-  return useQuery({
-    queryKey: queryKeys.jobs.customFields('devices'),
-    queryFn: async () => {
-      const response = await apiCall<CustomField[]>('/api/nautobot/custom-fields/devices', { method: 'GET' })
-      const allFields = Array.isArray(response) ? response : []
-
-      // Filter for text and date type custom fields that can hold timestamp
-      const fields = allFields.filter((cf: CustomField) => {
-        const cfType = cf.type?.value?.toLowerCase() || ''
-        return ["text", "date", "datetime", "url"].includes(cfType)
-      })
-
-      return fields || EMPTY_CUSTOM_FIELDS
-    },
-    enabled,
-    staleTime: STALE_TIME.CUSTOM_FIELDS,
   })
 }
 
