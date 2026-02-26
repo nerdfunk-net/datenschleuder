@@ -1,9 +1,6 @@
 """
 Helper functions for device targeting and filtering.
 Moved from job_tasks.py to improve code organization.
-
-This module uses the shared inventory_resolver utility for
-converting inventory names to device lists.
 """
 
 import logging
@@ -18,8 +15,6 @@ def get_target_devices(
     """
     Get target devices based on template's inventory source.
 
-    Uses the shared inventory resolver to convert inventory to device list.
-
     Args:
         template: Job template configuration
         job_parameters: Additional job parameters
@@ -29,43 +24,10 @@ def get_target_devices(
     """
     inventory_source = template.get("inventory_source", "all")
 
-    if inventory_source == "all":
-        # Return None to indicate all devices
-        return None
-    elif inventory_source == "inventory":
-        # Get devices from stored inventory (database)
-        inventory_name = template.get("inventory_name")
-
-        if not inventory_name:
-            logger.warning("Inventory source selected but no inventory name provided")
-            return None
-
-        try:
-            from utils.inventory_resolver import resolve_inventory_to_device_ids_sync
-
-            # Note: We need to get the username from the template context
-            username = template.get(
-                "created_by", "admin"
-            )  # Fallback to admin if not specified
-
-            # Use shared inventory resolver (synchronous version for Celery tasks)
-            device_ids = resolve_inventory_to_device_ids_sync(inventory_name, username)
-
-            if device_ids is None:
-                logger.warning(
-                    "Inventory '%s' returned no devices for user '%s'", inventory_name, username
-                )
-                return None
-
-            logger.info(
-                "Loaded %s devices from inventory '%s'", len(device_ids), inventory_name
-            )
-            return device_ids
-
-        except Exception as e:
-            logger.error(
-                "Error loading inventory '%s': %s", inventory_name, e, exc_info=True
-            )
-            return None
+    if inventory_source != "all":
+        logger.warning(
+            "Unsupported inventory_source '%s'; returning all devices", inventory_source
+        )
 
     return None
+

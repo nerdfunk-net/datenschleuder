@@ -1,6 +1,9 @@
 """
-Run commands executor.
-Executes commands on network devices using a command template.
+Run commands executor stub.
+
+This executor previously used Nautobot (device data) and Netmiko (SSH execution),
+neither of which is available in this scaffold. The job type is preserved in the
+dispatcher for forward compatibility but always returns an informative error.
 """
 
 import logging
@@ -19,12 +22,22 @@ def execute_run_commands(
     job_run_id: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
-    Execute run_commands job.
+    Stub: run_commands job type is not available in this scaffold.
 
-    Runs commands on network devices using a command template.
-    The template is rendered for each device with Nautobot context,
-    then executed via Netmiko.
-
+    This executor previously relied on Nautobot (for device context) and Netmiko
+    (for SSH command execution). Both have been removed from this codebase.
+    """
+    logger.warning(
+        "execute_run_commands: job type 'run_commands' is not available "
+        "(Nautobot and Netmiko have been removed from this scaffold)"
+    )
+    return {
+        "success": False,
+        "error": (
+            "The 'run_commands' job type requires Nautobot and Netmiko, "
+            "which are not available in this scaffold."
+        ),
+    }
     Args:
         schedule_id: Job schedule ID
         credential_id: ID of credential for device authentication
