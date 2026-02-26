@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileCode, GitBranch, Zap, Key, Users } from 'lucide-react'
+import { FileCode, GitBranch, Zap, Key, Users, Server } from 'lucide-react'
 
 const settingsPages = [
   {

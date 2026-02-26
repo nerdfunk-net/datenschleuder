@@ -74,7 +74,6 @@ function renderJobResult(result: Record<string, any>, taskId?: string): React.Re
     return <CheckIPResultView result={result} />
   }
 
-  // Scan prefix result has unique prefixes array structure
   // Run commands must be checked before others as it has similar fields
   if (isRunCommandsJobResult(result)) {
     return <RunCommandsResultView result={result} />
