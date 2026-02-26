@@ -29,8 +29,6 @@ markers = [
     "unit: Unit tests (fast, no external dependencies)",
     "integration: Integration tests (may use real external systems or mocked externals)",
     "e2e: End-to-end tests (real systems, manual only)",
-    "nautobot: Tests involving Nautobot integration",
-    "checkmk: Tests involving CheckMK integration",
     "snmp: Tests involving SNMP configuration and detection",
     "celery: Tests that require Celery",
     "slow: Tests that take >5 seconds",

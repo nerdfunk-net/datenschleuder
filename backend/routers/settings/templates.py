@@ -844,7 +844,6 @@ async def advanced_render_template(
         elif category == "agent":
             # Load SNMP mapping if requested
             if render_request.pass_snmp_mapping:
-                logger.warning("SNMP mapping loading skipped: services.checkmk has been removed")
                 context["snmp_mapping"] = {}
 
             # Add path if provided

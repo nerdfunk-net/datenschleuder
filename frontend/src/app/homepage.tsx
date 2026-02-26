@@ -1,11 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useApi } from '@/hooks/use-api'
 import { 
   Activity, 
   Server, 
@@ -16,21 +14,10 @@ import {
   AlertTriangle,
   CheckCircle,
   Zap,
-  GitBranch,
-  Loader2
+  GitBranch
 } from 'lucide-react'
 
-interface CheckMKStats {
-  total_hosts: number
-  timestamp: string
-}
-
 export default function Home() {
-  const { apiCall } = useApi()
-  const [checkmkStats, setCheckmkStats] = useState<CheckMKStats | null>(null)
-  const [checkmkLoading, setCheckmkLoading] = useState(true)
-  const [checkmkError, setCheckmkError] = useState<string | null>(null)
-
   const stats = [
     {
       title: 'Total Devices',
@@ -61,26 +48,6 @@ export default function Home() {
       icon: Activity,
     },
   ]
-
-  // Fetch CheckMK stats
-  useEffect(() => {
-    const fetchCheckmkStats = async () => {
-      try {
-        setCheckmkLoading(true)
-        setCheckmkError(null)
-        const data = await apiCall<CheckMKStats>('checkmk/stats')
-        setCheckmkStats(data)
-      } catch (error) {
-        console.error('Error fetching CheckMK stats:', error)
-        setCheckmkError(error instanceof Error ? error.message : 'Failed to load CheckMK stats')
-      } finally {
-        setCheckmkLoading(false)
-      }
-    }
-
-    fetchCheckmkStats()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const recentActivity = [
     {
@@ -263,40 +230,6 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* CheckMK Hosts Canvas */}
-          <Card className="glass shadow-apple">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-base">
-                <Shield className="w-4 h-4 mr-2" />
-                CheckMK Hosts
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {checkmkLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                  <span className="ml-2 text-xs text-gray-500">Loading...</span>
-                </div>
-              ) : checkmkError ? (
-                <div className="text-center py-4">
-                  <AlertTriangle className="h-4 w-4 text-red-500 mx-auto mb-2" />
-                  <p className="text-xs text-red-600">{checkmkError}</p>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {checkmkStats?.total_hosts ?? 0}
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">Total Hosts</p>
-                  {checkmkStats?.timestamp && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      Updated: {new Date(checkmkStats.timestamp).toLocaleTimeString()}
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Performance Canvas */}
           <Card className="glass shadow-apple">

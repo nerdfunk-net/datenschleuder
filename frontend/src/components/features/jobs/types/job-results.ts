@@ -86,7 +86,7 @@ export interface BackupJobResult {
 }
 
 // ============================================================================
-// Sync Job Result Types (CheckMK Sync)
+// Sync Job Result Types
 // ============================================================================
 
 export interface SyncJobActivation {
@@ -352,7 +352,7 @@ export function isBackupJobResult(result: Record<string, unknown>): result is Ba
 }
 
 /**
- * Check if result is a sync job result (CheckMK sync).
+ * Check if result is a sync job result.
  * Has activation field or is sync_devices type.
  */
 export function isSyncJobResult(result: Record<string, unknown>): result is SyncJobResult {

@@ -535,7 +535,6 @@ class SettingsManager:
         """Get path to OIDC providers YAML configuration file"""
         from pathlib import Path
 
-        # Use Path-based navigation like CheckMK config service
         # Navigate from backend/settings_manager.py -> backend/ -> project_root/ -> config/
         config_path = Path(__file__).parent.parent / "config" / "oidc_providers.yaml"
         return str(config_path)

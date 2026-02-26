@@ -19,21 +19,10 @@ class GitSettingsRequest(BaseModel):
     verify_ssl: bool = True
 
 
-class CheckMKSettingsRequest(BaseModel):
-    """CheckMK settings request model."""
-
-    url: str
-    site: str
-    username: str
-    password: str
-    verify_ssl: bool = True
-
-
 class AllSettingsRequest(BaseModel):
     """All settings request model."""
 
     git: GitSettingsRequest
-    checkmk: Optional[CheckMKSettingsRequest] = None
     cache: Optional["CacheSettingsRequest"] = None
 
 
@@ -58,16 +47,6 @@ class ConnectionTestRequest(BaseModel):
     url: str
     token: str
     timeout: int = 30
-    verify_ssl: bool = True
-
-
-class CheckMKTestRequest(BaseModel):
-    """CheckMK connection test request model."""
-
-    url: str
-    site: str
-    username: str
-    password: str
     verify_ssl: bool = True
 
 

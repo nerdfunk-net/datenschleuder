@@ -64,11 +64,11 @@ export function SyncJobResultView({ result }: SyncJobResultProps) {
         </div>
       )}
 
-      {/* CheckMK Activation Status */}
+      {/* Activation Status */}
       <div>
         <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
           <RefreshCw className="h-4 w-4" />
-          CheckMK Activation Status
+          Activation Status
         </h4>
         {result.activation === null || result.activation === undefined ? (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center gap-3">
@@ -78,7 +78,7 @@ export function SyncJobResultView({ result }: SyncJobResultProps) {
             <div>
               <p className="text-sm font-medium text-gray-600">Activation Disabled</p>
               <p className="text-xs text-gray-500">
-                CheckMK changes were not activated (activate_changes_after_sync is disabled)
+                Changes were not activated (activate_changes_after_sync is disabled)
               </p>
             </div>
           </div>
@@ -90,7 +90,7 @@ export function SyncJobResultView({ result }: SyncJobResultProps) {
             <div>
               <p className="text-sm font-medium text-green-700">Activation Successful</p>
               <p className="text-xs text-green-600">
-                {result.activation.message || 'CheckMK changes were activated successfully'}
+                {result.activation.message || 'Changes were activated successfully'}
               </p>
             </div>
           </div>
@@ -102,7 +102,7 @@ export function SyncJobResultView({ result }: SyncJobResultProps) {
             <div>
               <p className="text-sm font-medium text-red-700">Activation Failed</p>
               <p className="text-xs text-red-600">
-                {result.activation.error || result.activation.message || 'Failed to activate CheckMK changes'}
+                {result.activation.error || result.activation.message || 'Failed to activate changes'}
               </p>
             </div>
           </div>

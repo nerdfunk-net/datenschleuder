@@ -29,7 +29,7 @@ export function SyncDevicesJobTemplate({
         </Label>
       </div>
       <p className="text-xs text-orange-700">
-        When enabled, CheckMK configuration changes will be automatically activated after the sync job completes successfully.
+        When enabled, configuration changes will be automatically activated after the sync job completes successfully.
       </p>
     </div>
   )
