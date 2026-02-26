@@ -382,85 +382,8 @@ class JobTemplate(Base):
     name = Column(String(255), nullable=False)
     job_type = Column(
         String(50), nullable=False
-    )  # backup, compare_devices, run_commands, cache_devices, sync_devices
+    )  # check_queues, check_progress_group
     description = Column(Text)
-    config_repository_id = Column(
-        Integer
-    )  # Reference to git repository for config (type=config)
-    inventory_source = Column(
-        String(50), nullable=False, default="all"
-    )  # all, inventory
-    inventory_repository_id = Column(
-        Integer
-    )  # Reference to git repository for inventory
-    inventory_name = Column(String(255))  # Name of the stored inventory
-    command_template_name = Column(
-        String(255)
-    )  # Name of command template (for run_commands)
-    backup_running_config_path = Column(
-        String(500)
-    )  # Path template for running config backups (supports Nautobot variables)
-    backup_startup_config_path = Column(
-        String(500)
-    )  # Path template for startup config backups (supports Nautobot variables)
-    write_timestamp_to_custom_field = Column(
-        Boolean, nullable=False, default=False
-    )  # Whether to write backup timestamp to a Nautobot custom field
-    timestamp_custom_field_name = Column(
-        String(255)
-    )  # Name of the Nautobot custom field to write the timestamp to
-    activate_changes_after_sync = Column(
-        Boolean, nullable=False, default=True
-    )  # Whether to activate CheckMK changes after sync_devices job completes
-    scan_resolve_dns = Column(
-        Boolean, nullable=False, default=False
-    )  # Whether to resolve DNS names during network scanning (scan_prefixes type)
-    scan_ping_count = Column(Integer)  # Number of ping attempts (scan_prefixes type)
-    scan_timeout_ms = Column(
-        Integer
-    )  # Timeout in milliseconds for network operations (scan_prefixes type)
-    scan_retries = Column(
-        Integer
-    )  # Number of retry attempts for failed operations (scan_prefixes type)
-    scan_interval_ms = Column(
-        Integer
-    )  # Interval in milliseconds between scan operations (scan_prefixes type)
-    scan_custom_field_name = Column(
-        String(255)
-    )  # Name of custom field for prefix selection (scan_prefixes type)
-    scan_custom_field_value = Column(
-        String(255)
-    )  # Value of custom field to filter prefixes (scan_prefixes type)
-    scan_response_custom_field_name = Column(
-        String(255)
-    )  # Name of custom field to write scan results to (scan_prefixes type)
-    scan_set_reachable_ip_active = Column(
-        Boolean, nullable=False, default=True
-    )  # Whether to set reachable IPs to Active status (scan_prefixes type)
-    scan_max_ips = Column(
-        Integer
-    )  # Maximum number of IPs to scan per job (scan_prefixes type)
-    parallel_tasks = Column(
-        Integer, nullable=False, default=1
-    )  # Number of parallel tasks for backup execution (backup type)
-    deploy_template_id = Column(
-        Integer, nullable=True
-    )  # ID of the agent template to deploy (deploy_agent type)
-    deploy_agent_id = Column(
-        String(255), nullable=True
-    )  # ID of the agent to deploy to (deploy_agent type)
-    deploy_path = Column(
-        String(500), nullable=True
-    )  # File path for deployment (deploy_agent type)
-    deploy_custom_variables = Column(
-        Text, nullable=True
-    )  # JSON string of user variable overrides (deploy_agent type)
-    deploy_templates = Column(
-        Text, nullable=True
-    )  # JSON array of template entries [{template_id, inventory_id, path, custom_variables}] (deploy_agent type)
-    activate_after_deploy = Column(
-        Boolean, nullable=False, default=True
-    )  # Whether to activate (pull and restart) the agent after deployment (deploy_agent type)
     nifi_instance_ids = Column(
         Text, nullable=True
     )  # JSON array of NiFi instance IDs to run against (check_queues type)
@@ -512,7 +435,7 @@ class JobTemplate(Base):
         Index("idx_job_templates_user", "user_id"),
         Index("idx_job_templates_user_type", "user_id", "job_type"),
         CheckConstraint(
-            "job_type IN ('backup', 'compare_devices', 'run_commands', 'sync_devices', 'scan_prefixes', 'deploy_agent', 'check_queues', 'check_progress_group')",
+            "job_type IN ('check_queues', 'check_progress_group')",
             name="ck_job_templates_job_type",
         ),
     )

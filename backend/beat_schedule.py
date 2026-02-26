@@ -27,14 +27,6 @@ CELERY_BEAT_SCHEDULE = {
             "expires": 240,  # Task expires after 4 minutes if not picked up
         },
     },
-    # Dynamic cache schedule loader - runs every minute to check for schedule changes
-    "load-cache-schedules": {
-        "task": "tasks.load_cache_schedules",
-        "schedule": crontab(minute="*"),  # Every minute
-        "options": {
-            "expires": 50,
-        },
-    },
     # Celery data cleanup - runs every 6 hours by default
     # Actual interval is read from celery_settings in database
     "cleanup-celery-data": {

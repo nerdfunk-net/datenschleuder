@@ -16,8 +16,6 @@ from .test_tasks import test_task, test_progress_task
 # Import periodic tasks
 from .periodic_tasks import (
     worker_health_check,
-    load_cache_schedules_task,
-    dispatch_cache_task,
     cleanup_celery_data_task,
 )
 
@@ -30,7 +28,5 @@ __all__ = [
     "test_progress_task",
     # Periodic tasks
     "worker_health_check",
-    "load_cache_schedules_task",
-    "dispatch_cache_task",
     "cleanup_celery_data_task",
 ]

@@ -50,9 +50,6 @@ class CacheSettings:
     # Map of items to prefetch on startup, e.g., {"git": true, "locations": false}
     prefetch_items: Dict[str, bool] = None
 
-    # Cache task intervals (in minutes) - 0 means disabled
-    devices_cache_interval_minutes: int = 60  # Cache devices every hour
-    locations_cache_interval_minutes: int = 10  # Cache locations every 10 minutes
     git_commits_cache_interval_minutes: int = 15  # Cache git commits every 15 minutes
 
 
@@ -166,16 +163,6 @@ class SettingsManager:
                     "prefetch_items": json.loads(settings.prefetch_items)
                     if settings.prefetch_items
                     else {"git": True, "locations": False},
-                    "devices_cache_interval_minutes": getattr(
-                        settings,
-                        "devices_cache_interval_minutes",
-                        self.default_cache.devices_cache_interval_minutes,
-                    ),
-                    "locations_cache_interval_minutes": getattr(
-                        settings,
-                        "locations_cache_interval_minutes",
-                        self.default_cache.locations_cache_interval_minutes,
-                    ),
                     "git_commits_cache_interval_minutes": getattr(
                         settings,
                         "git_commits_cache_interval_minutes",
@@ -213,14 +200,6 @@ class SettingsManager:
                     "max_commits", self.default_cache.max_commits
                 ),
                 "prefetch_items": prefetch_items_json,
-                "devices_cache_interval_minutes": settings.get(
-                    "devices_cache_interval_minutes",
-                    self.default_cache.devices_cache_interval_minutes,
-                ),
-                "locations_cache_interval_minutes": settings.get(
-                    "locations_cache_interval_minutes",
-                    self.default_cache.locations_cache_interval_minutes,
-                ),
                 "git_commits_cache_interval_minutes": settings.get(
                     "git_commits_cache_interval_minutes",
                     self.default_cache.git_commits_cache_interval_minutes,

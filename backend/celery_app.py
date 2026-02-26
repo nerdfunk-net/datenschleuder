@@ -89,18 +89,6 @@ def get_default_queue_configuration():
             "exchange": "default",
             "routing_key": "default",
         },
-        "backup": {
-            "exchange": "backup",
-            "routing_key": "backup",
-        },
-        "network": {
-            "exchange": "network",
-            "routing_key": "network",
-        },
-        "heavy": {
-            "exchange": "heavy",
-            "routing_key": "heavy",
-        },
     }
 
 
@@ -157,19 +145,6 @@ celery_app.conf.update(
     # Task routing rules - route specific tasks to dedicated queues
     # Note: These routes reference queue names that should be configured in the UI
     task_routes={
-        # Backup tasks go to 'backup' queue (if configured in UI)
-        "tasks.backup_single_device_task": {"queue": "backup"},
-        "tasks.finalize_backup_task": {"queue": "backup"},
-        "tasks.backup_devices": {"queue": "backup"},
-        # Network scanning tasks go to 'network' queue (if configured in UI)
-        "tasks.ping_network_task": {"queue": "network"},
-        "tasks.scan_prefixes_task": {"queue": "network"},
-        "tasks.check_ip_task": {"queue": "network"},
-        # Heavy/bulk tasks go to 'heavy' queue (if configured in UI)
-        "tasks.bulk_onboard_devices_task": {"queue": "heavy"},
-        "tasks.update_devices_from_csv_task": {"queue": "heavy"},
-        "tasks.update_ip_prefixes_from_csv_task": {"queue": "heavy"},
-        "tasks.export_devices_task": {"queue": "heavy"},
         # All other tasks go to default queue
         "*": {"queue": "default"},
     },

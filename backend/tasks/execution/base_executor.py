@@ -39,12 +39,10 @@ def execute_job_type(
     """
     from .check_queues_executor import execute_check_queues
     from .check_process_group_executor import execute_check_process_group
-    from .backup_executor import execute_backup
 
     job_executors = {
         "check_queues": execute_check_queues,
         "check_progress_group": execute_check_process_group,
-        "backup": execute_backup,
     }
 
     executor = job_executors.get(job_type)

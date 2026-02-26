@@ -7,12 +7,10 @@ from celery import shared_task
 from celery_app import celery_app
 import logging
 from datetime import datetime, timezone
-from typing import Dict
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# Track last run times for cache tasks (in-memory, reset on worker restart)
-_last_cache_runs: Dict[str, datetime] = {}
 
 
 @shared_task(name="tasks.worker_health_check")
@@ -45,100 +43,6 @@ def worker_health_check() -> dict:
 
     except Exception as e:
         logger.error("Health check failed: %s", e)
-        return {"success": False, "error": str(e)}
-
-
-@shared_task(name="tasks.load_cache_schedules")
-def load_cache_schedules_task() -> dict:
-    """
-    Periodic task: Check cache settings and dispatch cache tasks when due.
-
-    Runs every minute. Checks the configured intervals for:
-    - devices_cache_interval_minutes
-    - locations_cache_interval_minutes
-    - git_commits_cache_interval_minutes
-
-    Dispatches the appropriate cache task with job tracking when due.
-    """
-    global _last_cache_runs
-
-    try:
-        from settings_manager import settings_manager
-
-        cache_settings = settings_manager.get_cache_settings()
-
-        if not cache_settings.get("enabled", True):
-            return {"success": True, "message": "Cache disabled", "dispatched": []}
-
-        now = datetime.now(timezone.utc)
-        dispatched = []
-
-        # Placeholder for future cache tasks
-        # Add your cache scheduling logic here
-        logger.debug("Cache schedules check completed (no tasks configured)")
-
-        return {
-            "success": True,
-            "checked_at": now.isoformat(),
-            "dispatched": dispatched,
-        }
-
-    except Exception as e:
-        logger.error("Error in load_cache_schedules: %s", e, exc_info=True)
-        return {"success": False, "error": str(e)}
-
-
-@shared_task(bind=True, name="tasks.dispatch_cache_task")
-def dispatch_cache_task(self, cache_type: str, task_name: str) -> dict:
-    """
-    Dispatch a cache task and track it in job_runs.
-
-    Args:
-        cache_type: Type of cache (devices, locations, git_commits)
-        task_name: Celery task name to execute
-    """
-    try:
-        import job_run_manager
-
-        # Create job run record
-        job_run = job_run_manager.create_job_run(
-            job_name=f"Cache {cache_type.replace('_', ' ').title()}",
-            job_type=f"cache_{cache_type}",
-            triggered_by="system",
-        )
-        job_run_id = job_run["id"]
-
-        # Mark as started
-        job_run_manager.mark_started(job_run_id, self.request.id)
-
-        try:
-            # Placeholder for cache task execution
-            # Add your cache task logic here when needed
-            result = {
-                "status": "not_implemented",
-                "message": f"Cache task '{task_name}' not yet implemented",
-            }
-
-            # Check result status
-            status = result.get("status", "completed")
-            if status in ["completed", "success"]:
-                job_run_manager.mark_completed(job_run_id, result=result)
-                return {"success": True, "job_run_id": job_run_id, "result": result}
-            else:
-                error_msg = (
-                    result.get("error") or result.get("message") or "Unknown error"
-                )
-                job_run_manager.mark_failed(job_run_id, error_msg)
-                return {"success": False, "job_run_id": job_run_id, "error": error_msg}
-
-        except Exception as e:
-            job_run_manager.mark_failed(job_run_id, str(e))
-            raise
-
-    except Exception as e:
-        logger.error(
-            "Error dispatching cache task %s: %s", cache_type, e, exc_info=True
-        )
         return {"success": False, "error": str(e)}
 
 
