@@ -56,6 +56,9 @@ from routers.nifi import (
 # Health router
 from health import router as health_router
 
+# Tools router
+from routers.tools import router as tools_router
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -338,6 +341,9 @@ app.include_router(nifi_install_router)
 
 # Health Check
 app.include_router(health_router)
+
+# Admin Tools
+app.include_router(tools_router)
 
 
 # Health check and basic endpoints
