@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -48,15 +48,19 @@ export function HierarchySettingsPage() {
   const [valuesAttr, setValuesAttr] = useState<HierarchyAttribute | null>(null)
   const [valuesReadOnly, setValuesReadOnly] = useState(false)
 
+  const keyCounter = useRef(0)
+  const nextKey = () => String(++keyCounter.current)
+
   useEffect(() => {
     if (data) {
       setAttrs(
         [...data.hierarchy]
           .sort((a, b) => a.order - b.order)
-          .map(a => ({ ...a }))
+          .map(a => ({ ...a, _key: nextKey() }))
       )
       setIsDirty(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
   const markDirty = useCallback(() => setIsDirty(true), [])
@@ -96,9 +100,10 @@ export function HierarchySettingsPage() {
   const handleAdd = useCallback(() => {
     setAttrs(prev => [
       ...prev,
-      { name: '', label: '', order: prev.length },
+      { name: '', label: '', order: prev.length, _key: nextKey() },
     ])
     markDirty()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markDirty])
 
   const handleRemove = useCallback((index: number) => {
@@ -139,10 +144,11 @@ export function HierarchySettingsPage() {
       setAttrs(
         [...data.hierarchy]
           .sort((a, b) => a.order - b.order)
-          .map(a => ({ ...a }))
+          .map(a => ({ ...a, _key: nextKey() }))
       )
       setIsDirty(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
   const hasErrors = useMemo(() => attrs.some(a => !!a.nameError), [attrs])
@@ -158,7 +164,7 @@ export function HierarchySettingsPage() {
   const handleConfirmSave = useCallback(async () => {
     setShowConfirm(false)
     await saveConfig.mutateAsync({
-      hierarchy: attrs.map(({ nameError: _e, ...a }) => a),
+      hierarchy: attrs.map(({ nameError: _e, _key: _k, ...a }) => a),
     })
     setIsDirty(false)
   }, [attrs, saveConfig])
@@ -222,7 +228,7 @@ export function HierarchySettingsPage() {
           <div className="space-y-3">
             {attrs.map((attr, index) => (
               <div
-                key={attr.name || index}
+                key={attr._key}
                 className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3"
               >
                 {/* Order badge */}

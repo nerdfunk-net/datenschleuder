@@ -267,6 +267,31 @@ class Credential(Base):
     )
 
 
+class LoginCredential(Base):
+    __tablename__ = "login_credentials"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), unique=True, nullable=False)
+    username = Column(String(255), nullable=False)
+    password_encrypted = Column(LargeBinary, nullable=False)
+    description = Column(String(1024), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        Index("idx_login_credentials_name", "name"),
+        Index("idx_login_credentials_is_active", "is_active"),
+    )
+
+
 # ============================================================================
 # Git Repository Models
 # ============================================================================
