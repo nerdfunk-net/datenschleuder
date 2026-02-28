@@ -204,3 +204,4 @@ apscheduler_jobs.db
 /data/exports
 /agent-os
 /.claude
+config/oidc_providers.yaml
