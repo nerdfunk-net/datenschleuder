@@ -12,7 +12,7 @@ export interface DeploymentSettings {
     stop_versioning_after_deploy: boolean
   }
   paths: {
-    [instanceId: number]: {
+    [clusterId: number]: {
       source_path?: PathConfig
       dest_path?: PathConfig
     }

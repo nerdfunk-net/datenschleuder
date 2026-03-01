@@ -12,8 +12,8 @@ import { AlertCircle, Loader2, RefreshCw, RotateCcw, Settings, Server } from 'lu
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
 import { useApi } from '@/hooks/use-api'
-import { useNifiInstancesQuery } from '../nifi/hooks/use-nifi-instances-query'
-import type { NifiInstance } from '../nifi/types'
+import { useNifiClustersQuery } from '../nifi/hooks/use-nifi-clusters-query'
+import type { NifiCluster } from '../nifi/types'
 import { useHierarchyQuery } from '../hierarchy/hooks/use-hierarchy-query'
 import { useDeploySettingsQuery } from './hooks/use-deploy-settings-query'
 import { useDeploySettingsMutations } from './hooks/use-deploy-settings-mutations'
@@ -21,7 +21,7 @@ import type { DeploymentSettings, ProcessGroupOption, PathConfig } from './types
 import { DEFAULT_GLOBAL } from './types'
 import NextLink from 'next/link'
 
-const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
 
 export function DeploySettingsPage() {
   const { user } = useAuthStore()
@@ -29,7 +29,7 @@ export function DeploySettingsPage() {
   const { apiCall } = useApi()
 
   const { data: hierarchyData } = useHierarchyQuery()
-  const { data: instances = EMPTY_INSTANCES, isLoading: loadingInstances } = useNifiInstancesQuery()
+  const { data: clusters = EMPTY_CLUSTERS, isLoading: loadingClusters } = useNifiClustersQuery()
   const { data: remoteSettings, isLoading: loadingSettings } = useDeploySettingsQuery()
   const { saveSettings } = useDeploySettingsMutations()
 
@@ -57,31 +57,39 @@ export function DeploySettingsPage() {
   }, [remoteSettings])
 
   useEffect(() => {
-    if (instances.length === 0) return
+    if (clusters.length === 0) return
     setPaths(prev => {
       const next = { ...prev }
       let changed = false
-      for (const inst of instances) {
-        if (!next[inst.id]) { next[inst.id] = {}; changed = true }
+      for (const cluster of clusters) {
+        if (!next[cluster.id]) { next[cluster.id] = {}; changed = true }
       }
       return changed ? next : prev
     })
-  }, [instances])
+  }, [clusters])
 
   useEffect(() => {
-    if (!remoteSettings || instances.length === 0) return
-    for (const inst of instances) {
-      const saved = remoteSettings.paths?.[inst.id]
+    if (!remoteSettings || clusters.length === 0) return
+    for (const cluster of clusters) {
+      const saved = remoteSettings.paths?.[cluster.id]
       if (saved?.source_path?.id || saved?.dest_path?.id) {
-        loadPathsForInstance(inst.id)
+        loadPathsForCluster(cluster.id)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remoteSettings, instances])
+  }, [remoteSettings, clusters])
 
-  const loadPathsForInstance = useCallback(async (instanceId: number) => {
-    setLoadingPgs(prev => ({ ...prev, [instanceId]: true }))
+  const loadPathsForCluster = useCallback(async (clusterId: number) => {
+    setLoadingPgs(prev => ({ ...prev, [clusterId]: true }))
     try {
+      // Step 1: resolve the primary NiFi instance for this cluster
+      const primaryRes = await apiCall(
+        `nifi/clusters/${clusterId}/get-primary`
+      ) as { instance_id: number }
+
+      const instanceId = primaryRes.instance_id
+
+      // Step 2: load all process-group paths from that instance
       const res = await apiCall(
         `nifi/instances/${instanceId}/ops/process-groups/all-paths`
       ) as { process_groups?: Array<{ id: string; name: string; path: string; level: number; formatted_path: string }> }
@@ -94,11 +102,11 @@ export function DeploySettingsPage() {
         raw_path: pg.path,
       }))
 
-      setPgOptions(prev => ({ ...prev, [instanceId]: options }))
+      setPgOptions(prev => ({ ...prev, [clusterId]: options }))
     } catch {
       // silently ignore — user can retry
     } finally {
-      setLoadingPgs(prev => ({ ...prev, [instanceId]: false }))
+      setLoadingPgs(prev => ({ ...prev, [clusterId]: false }))
     }
   }, [apiCall])
 
@@ -110,16 +118,16 @@ export function DeploySettingsPage() {
   }, [])
 
   const updatePath = useCallback((
-    instanceId: number,
+    clusterId: number,
     field: 'source_path' | 'dest_path',
     pgId: string
   ) => {
-    const options = pgOptions[instanceId] ?? []
+    const options = pgOptions[clusterId] ?? []
     const pg = options.find(o => o.id === pgId)
     setPaths(prev => ({
       ...prev,
-      [instanceId]: {
-        ...prev[instanceId],
+      [clusterId]: {
+        ...prev[clusterId],
         [field]: pg ? { id: pg.id, path: pg.path, raw_path: pg.raw_path } as PathConfig : undefined,
       },
     }))
@@ -142,7 +150,7 @@ export function DeploySettingsPage() {
     setIsDirty(false)
   }, [saveSettings, globalSettings, paths])
 
-  const isLoading = loadingInstances || loadingSettings
+  const isLoading = loadingClusters || loadingSettings
 
   const pageHeader = (
     <div className="flex items-center justify-between">
@@ -262,35 +270,37 @@ export function DeploySettingsPage() {
         </div>
       </div>
 
-      {/* Instance Path Configuration Section */}
+      {/* Cluster Path Configuration Section */}
       <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
         <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
           <div className="flex items-center space-x-2">
             <Server className="h-4 w-4" />
-            <span className="text-sm font-medium">Instance Path Configuration</span>
+            <span className="text-sm font-medium">Cluster Path Configuration</span>
           </div>
           <div className="text-xs text-blue-100">
-            Configure source and destination paths per instance
+            Configure source and destination paths per cluster
           </div>
         </div>
         <div className="p-6 bg-gradient-to-b from-white to-gray-50">
-          {instances.length === 0 ? (
+          {clusters.length === 0 ? (
             <Alert className="bg-blue-50 border-blue-200">
               <AlertCircle className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800">
-                No NiFi instances configured. Please add instances in{' '}
+                No NiFi clusters configured. Please add clusters in{' '}
                 <NextLink href="/settings/nifi" className="underline font-medium">Settings / NiFi</NextLink>.
               </AlertDescription>
             </Alert>
           ) : (
             <div className="space-y-4">
-              {instances.map(instance => {
-                const options = pgOptions[instance.id] ?? []
-                const isLoadingPg = !!loadingPgs[instance.id]
-                const savedPaths = paths[instance.id]
+              {clusters.map(cluster => {
+                const options = pgOptions[cluster.id] ?? []
+                const isLoadingPg = !!loadingPgs[cluster.id]
+                const savedPaths = paths[cluster.id]
 
                 const sourceValue = savedPaths?.source_path?.id ?? ''
                 const destValue = savedPaths?.dest_path?.id ?? ''
+
+                const primaryMember = cluster.members.find(m => m.is_primary) ?? cluster.members[0]
 
                 const toOptions = (saved: PathConfig | undefined) => {
                   const base = options.map(o => ({ value: o.id, label: o.path || o.name }))
@@ -305,23 +315,28 @@ export function DeploySettingsPage() {
 
                 return (
                   <div
-                    key={instance.id}
+                    key={cluster.id}
                     className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-4"
                   >
-                    {/* Instance label */}
+                    {/* Cluster label */}
                     <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                       <div>
                         <p className="font-semibold text-blue-700 text-sm">
-                          {instance.hierarchy_attribute}={instance.hierarchy_value}
+                          {cluster.hierarchy_attribute}={cluster.hierarchy_value}
                         </p>
-                        <p className="text-xs text-muted-foreground">{instance.nifi_url}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {primaryMember?.nifi_url ?? cluster.cluster_id}
+                          {cluster.members.length > 1 && (
+                            <span className="ml-2 text-slate-400">({cluster.members.length} nodes)</span>
+                          )}
+                        </p>
                       </div>
                       {canWrite && (
                         <Button
                           variant="outline"
                           size="sm"
                           disabled={isLoadingPg}
-                          onClick={() => loadPathsForInstance(instance.id)}
+                          onClick={() => loadPathsForCluster(cluster.id)}
                         >
                           {isLoadingPg
                             ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -340,7 +355,7 @@ export function DeploySettingsPage() {
                         <Select
                           value={sourceValue}
                           disabled={!canWrite || (options.length === 0 && !savedPaths?.source_path)}
-                          onValueChange={v => updatePath(instance.id, 'source_path', v)}
+                          onValueChange={v => updatePath(cluster.id, 'source_path', v)}
                         >
                           <SelectTrigger className="h-8 text-xs">
                             <SelectValue placeholder={
@@ -371,7 +386,7 @@ export function DeploySettingsPage() {
                         <Select
                           value={destValue}
                           disabled={!canWrite || (options.length === 0 && !savedPaths?.dest_path)}
-                          onValueChange={v => updatePath(instance.id, 'dest_path', v)}
+                          onValueChange={v => updatePath(cluster.id, 'dest_path', v)}
                         >
                           <SelectTrigger className="h-8 text-xs">
                             <SelectValue placeholder={

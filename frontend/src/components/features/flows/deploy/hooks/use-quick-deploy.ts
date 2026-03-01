@@ -208,17 +208,29 @@ export function useQuickDeploy({
           return
         }
 
-        const instancePaths = deploymentSettings.paths[config.instanceId.toString()]
-        console.log('[QuickDeploy] Instance paths for instance', config.instanceId, ':', instancePaths)
-        
-        const savedPath = target === 'source' ? instancePaths?.source_path : instancePaths?.dest_path
+        // Paths are stored by cluster ID (since deploy settings were migrated to cluster-based config).
+        // Resolve the cluster that owns config.instanceId, then look up the path by cluster ID.
+        const owningCluster = clusters.find(c =>
+          c.members.some(m => m.instance_id === config.instanceId)
+        )
+        console.log('[QuickDeploy] Owning cluster for instance', config.instanceId, ':', owningCluster?.id, owningCluster?.hierarchy_value)
+
+        const clusterPaths = owningCluster
+          ? deploymentSettings.paths[owningCluster.id]
+          : undefined
+        console.log('[QuickDeploy] Cluster paths for cluster', owningCluster?.id, ':', clusterPaths)
+
+        const savedPath = target === 'source' ? clusterPaths?.source_path : clusterPaths?.dest_path
         console.log('[QuickDeploy] Selected', target, 'path:', savedPath)
 
         if (!savedPath) {
           console.error('[QuickDeploy] ERROR: No saved path found for', target)
+          const clusterLabel = owningCluster
+            ? `cluster ${owningCluster.hierarchy_attribute}=${owningCluster.hierarchy_value}`
+            : `instance ${config.instanceId}`
           toast({
             title: 'Deployment path not configured',
-            description: `No ${target} path is configured for this NiFi instance. Open Settings → Deploy, click "Load Paths" for instance ${config.instanceId}, select the ${target} path, and save.`,
+            description: `No ${target} path is configured for ${clusterLabel}. Open Settings → Deploy, click "Load Paths" for the cluster, select the ${target} path, and save.`,
             variant: 'destructive',
           })
           return

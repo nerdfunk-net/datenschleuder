@@ -46,7 +46,7 @@ export interface DeploymentSettings {
       source_path?: { id: string; path: string; raw_path: string }
       dest_path?: { id: string; path: string; raw_path: string }
     }
-  > // Key is instanceId as string
+  > // Key is clusterId (number coerced to string)
 }
 
 export interface DeploymentRequest {
