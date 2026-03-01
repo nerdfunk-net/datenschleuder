@@ -26,9 +26,10 @@ def get_instance(instance_id: int) -> Optional[NifiInstance]:
 
 def create_instance(
     name: Optional[str],
-    hierarchy_attribute: str,
-    hierarchy_value: str,
     nifi_url: str,
+    hierarchy_attribute: Optional[str] = None,
+    hierarchy_value: Optional[str] = None,
+    server_id: Optional[int] = None,
     username: Optional[str] = None,
     password: Optional[str] = None,
     use_ssl: bool = True,
@@ -38,13 +39,6 @@ def create_instance(
     oidc_provider_id: Optional[str] = None,
 ) -> NifiInstance:
     """Create a new NiFi instance."""
-    existing = _repo.get_by_hierarchy(hierarchy_attribute, hierarchy_value)
-    if existing:
-        raise ValueError(
-            "NiFi instance already exists for %s=%s"
-            % (hierarchy_attribute, hierarchy_value)
-        )
-
     encrypted_password = None
     if password:
         encrypted_password = encryption_service.encrypt(password)
@@ -53,6 +47,7 @@ def create_instance(
         name=name,
         hierarchy_attribute=hierarchy_attribute,
         hierarchy_value=hierarchy_value,
+        server_id=server_id,
         nifi_url=nifi_url,
         username=username,
         password_encrypted=encrypted_password,

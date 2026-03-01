@@ -85,6 +85,7 @@ async def create_nifi_instance(
             name=data.name,
             hierarchy_attribute=data.hierarchy_attribute,
             hierarchy_value=data.hierarchy_value,
+            server_id=data.server_id,
             nifi_url=data.nifi_url,
             username=data.username,
             password=data.password,

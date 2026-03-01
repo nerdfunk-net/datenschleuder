@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
+import { useNifiClustersQuery } from '@/components/features/settings/nifi/hooks/use-nifi-clusters-query'
 import { useRegistryFlowsQuery } from './use-flows-query'
 import { useCredentialsQuery } from '@/components/features/settings/credentials/hooks/queries/use-credentials-query'
-import type { HierarchyAttribute, NifiInstance } from '@/components/features/settings/nifi/types'
+import type { HierarchyAttribute, NifiCluster } from '@/components/features/settings/nifi/types'
 import type { FlowPayload } from './use-flows-mutations'
 import type { RegistryFlow } from '../types'
 import type { Credential } from '@/components/features/settings/credentials/types'
@@ -39,7 +39,7 @@ const EMPTY_CONNECTION: WizardConnectionParams = {
   parameter_context: '',
 }
 
-const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
 const EMPTY_REGISTRY_FLOWS: RegistryFlow[] = []
 const EMPTY_CREDENTIALS: Credential[] = []
 
@@ -67,34 +67,34 @@ export function useWizardForm(hierarchy: HierarchyAttribute[]) {
   const [state, setState] = useState<WizardFormState>(() => buildInitialState(hierarchy))
 
   // Queries
-  const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
+  const { data: clusters = EMPTY_CLUSTERS } = useNifiClustersQuery()
   const { data: registryFlows = EMPTY_REGISTRY_FLOWS } = useRegistryFlowsQuery()
   const { data: credentials = EMPTY_CREDENTIALS } = useCredentialsQuery()
 
-  // Resolve instance IDs from first hierarchy attribute
+  // Resolve instance IDs from first hierarchy attribute via cluster primary member
   const srcInstanceId = useMemo(() => {
-    if (!instances.length || !hierarchy.length) return null
+    if (!clusters.length || !hierarchy.length) return null
     const topAttr = hierarchy[0]
     if (!topAttr) return null
     const srcValue = state.hierarchy_values[topAttr.name]?.source
     if (!srcValue) return null
-    const instance = instances.find(
-      i => i.hierarchy_attribute === topAttr.name && i.hierarchy_value === srcValue
+    const cluster = clusters.find(
+      c => c.hierarchy_attribute === topAttr.name && c.hierarchy_value === srcValue
     )
-    return instance?.id ?? null
-  }, [state.hierarchy_values, instances, hierarchy])
+    return cluster?.members.find(m => m.is_primary)?.instance_id ?? null
+  }, [state.hierarchy_values, clusters, hierarchy])
 
   const destInstanceId = useMemo(() => {
-    if (!instances.length || !hierarchy.length) return null
+    if (!clusters.length || !hierarchy.length) return null
     const topAttr = hierarchy[0]
     if (!topAttr) return null
     const destValue = state.hierarchy_values[topAttr.name]?.destination
     if (!destValue) return null
-    const instance = instances.find(
-      i => i.hierarchy_attribute === topAttr.name && i.hierarchy_value === destValue
+    const cluster = clusters.find(
+      c => c.hierarchy_attribute === topAttr.name && c.hierarchy_value === destValue
     )
-    return instance?.id ?? null
-  }, [state.hierarchy_values, instances, hierarchy])
+    return cluster?.members.find(m => m.is_primary)?.instance_id ?? null
+  }, [state.hierarchy_values, clusters, hierarchy])
 
   // Filter templates by resolved instance
   const filteredSrcTemplates = useMemo(() => {

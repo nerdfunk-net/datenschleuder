@@ -29,13 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
+import { useNifiClustersQuery } from '@/components/features/settings/nifi/hooks/use-nifi-clusters-query'
 import { useParameterContextsQuery } from '../hooks/use-parameter-contexts-query'
 import { HierarchyCombobox } from '../components/hierarchy-combobox'
 import type { NifiFlow, RegistryFlow, FlowFormValues } from '../types'
-import type { HierarchyAttribute, NifiInstance } from '@/components/features/settings/nifi/types'
+import type { HierarchyAttribute, NifiCluster } from '@/components/features/settings/nifi/types'
 
-const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
 
 interface FlowDialogProps {
   open: boolean
@@ -283,19 +283,8 @@ export function FlowDialog({
     }
   }, [open, flow, hierarchy, form])
 
-  // Derive instance IDs by checking the FIRST (top) hierarchy attribute only
-  // This matches the old Vue implementation behavior
-  const { data: instances = EMPTY_INSTANCES, isLoading: isInstancesLoading, error: instancesError } = useNifiInstancesQuery()
-
-  // Debug: Log instances query result
-  useEffect(() => {
-    console.log('[FlowDialog] NiFi instances query result:', {
-      isLoading: isInstancesLoading,
-      error: instancesError,
-      instancesCount: instances.length,
-      instances: instances
-    })
-  }, [instances, isInstancesLoading, instancesError])
+  // Derive instance IDs by checking the FIRST (top) hierarchy attribute only via cluster primary member
+  const { data: clusters = EMPTY_CLUSTERS } = useNifiClustersQuery()
 
   // Use useWatch instead of form.watch for better reactivity with nested fields
   const hierarchyValues = useWatch({
@@ -316,93 +305,31 @@ export function FlowDialog({
     })
   }, [hierarchyValues, hierarchy])
 
-  // Compute instance ID for source - check ONLY the first hierarchy attribute
+  // Compute instance ID for source via cluster primary member
   const srcInstanceId = useMemo(() => {
-    if (!hierarchyValues || !instances.length || !hierarchy.length) {
-      console.log('[FlowDialog] Source: Missing data', { 
-        hasHierarchyValues: !!hierarchyValues,
-        instancesCount: instances.length,
-        hierarchyCount: hierarchy.length 
-      })
-      return null
-    }
-    
-    // Get the FIRST (top) hierarchy attribute - this determines which NiFi instance to use
+    if (!hierarchyValues || !clusters.length || !hierarchy.length) return null
     const topAttr = hierarchy[0]
-    if (!topAttr) {
-      console.log('[FlowDialog] Source: No top hierarchy attribute')
-      return null
-    }
-    
+    if (!topAttr) return null
     const srcValue = hierarchyValues[topAttr.name]?.source
-    
-    if (!srcValue) {
-      console.log(`[FlowDialog] Source: No value for top attribute ${topAttr.name}`)
-      return null
-    }
-    
-    const instance = instances.find(
-      i => i.hierarchy_attribute === topAttr.name && i.hierarchy_value === srcValue
+    if (!srcValue) return null
+    const cluster = clusters.find(
+      c => c.hierarchy_attribute === topAttr.name && c.hierarchy_value === srcValue
     )
-    
-    if (instance) {
-      console.log(`[FlowDialog] Source: Found instance ${instance.id} for ${topAttr.name}=${srcValue}`)
-      return instance.id
-    }
-    
-    console.log(`[FlowDialog] Source: No instance found for ${topAttr.name}=${srcValue}`, { 
-      instances: instances.map(i => ({ 
-        id: i.id, 
-        attr: i.hierarchy_attribute, 
-        value: i.hierarchy_value 
-      }))
-    })
-    return null
-  }, [hierarchyValues, instances, hierarchy])
+    return cluster?.members.find(m => m.is_primary)?.instance_id ?? null
+  }, [hierarchyValues, clusters, hierarchy])
 
-  // Compute instance ID for destination - check ONLY the first hierarchy attribute
+  // Compute instance ID for destination via cluster primary member
   const destInstanceId = useMemo(() => {
-    if (!hierarchyValues || !instances.length || !hierarchy.length) {
-      console.log('[FlowDialog] Destination: Missing data', { 
-        hasHierarchyValues: !!hierarchyValues,
-        instancesCount: instances.length,
-        hierarchyCount: hierarchy.length 
-      })
-      return null
-    }
-    
-    // Get the FIRST (top) hierarchy attribute - this determines which NiFi instance to use
+    if (!hierarchyValues || !clusters.length || !hierarchy.length) return null
     const topAttr = hierarchy[0]
-    if (!topAttr) {
-      console.log('[FlowDialog] Destination: No top hierarchy attribute')
-      return null
-    }
-    
+    if (!topAttr) return null
     const destValue = hierarchyValues[topAttr.name]?.destination
-    
-    if (!destValue) {
-      console.log(`[FlowDialog] Destination: No value for top attribute ${topAttr.name}`)
-      return null
-    }
-    
-    const instance = instances.find(
-      i => i.hierarchy_attribute === topAttr.name && i.hierarchy_value === destValue
+    if (!destValue) return null
+    const cluster = clusters.find(
+      c => c.hierarchy_attribute === topAttr.name && c.hierarchy_value === destValue
     )
-    
-    if (instance) {
-      console.log(`[FlowDialog] Destination: Found instance ${instance.id} for ${topAttr.name}=${destValue}`)
-      return instance.id
-    }
-    
-    console.log(`[FlowDialog] Destination: No instance found for ${topAttr.name}=${destValue}`, { 
-      instances: instances.map(i => ({ 
-        id: i.id, 
-        attr: i.hierarchy_attribute, 
-        value: i.hierarchy_value 
-      }))
-    })
-    return null
-  }, [hierarchyValues, instances, hierarchy])
+    return cluster?.members.find(m => m.is_primary)?.instance_id ?? null
+  }, [hierarchyValues, clusters, hierarchy])
 
   function handleSubmit(values: FlowFormValues) {
     onSubmit(values, flow?.id)
@@ -427,7 +354,7 @@ export function FlowDialog({
               registryFlows={registryFlows}
               viewOnly={viewOnly}
               instanceId={srcInstanceId}
-              isInstanceLoading={isInstancesLoading}
+              isInstanceLoading={false}
               control={form.control}
             />
 
@@ -438,7 +365,7 @@ export function FlowDialog({
               registryFlows={registryFlows}
               viewOnly={viewOnly}
               instanceId={destInstanceId}
-              isInstanceLoading={isInstancesLoading}
+              isInstanceLoading={false}
               control={form.control}
             />
 

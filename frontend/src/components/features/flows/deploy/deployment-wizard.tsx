@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight, Loader2, Rocket } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { useApi } from '@/hooks/use-api'
 import { useFlowsQuery } from '@/components/features/flows/manage/hooks/use-flows-query'
-import { useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
+import { useNifiClustersQuery } from '@/components/features/settings/nifi/hooks/use-nifi-clusters-query'
 import { useRegistryFlowsQuery, useDeploymentSettingsQuery } from './hooks/use-deploy-query'
 import { Step1SelectFlows } from './components/step-1-select-flows'
 import { Step2ChooseTargets } from './components/step-2-choose-targets'
@@ -17,7 +17,8 @@ import { Step4Settings } from './components/step-4-settings'
 import { Step5Review } from './components/step-5-review'
 import { ConflictResolutionDialog } from './dialogs/conflict-resolution-dialog'
 import { DeploymentResultsDialog } from './dialogs/deployment-results-dialog'
-import { STEPS, type DeploymentConfig, type NifiInstance, type RegistryFlow, type ProcessGroupPath, type FlowVersion, type ConflictInfo, type DeploymentError, type DeploymentResponse, type DeploymentResults, type DeploymentSettings } from './types'
+import { STEPS, type DeploymentConfig, type RegistryFlow, type ProcessGroupPath, type FlowVersion, type ConflictInfo, type DeploymentError, type DeploymentResponse, type DeploymentResults, type DeploymentSettings } from './types'
+import type { NifiCluster } from '@/components/features/settings/nifi/types'
 import { useDeployMutations } from './hooks/use-deploy-mutations'
 import { sortDeploymentConfigs } from './utils/deployment-config-utils'
 import type { NifiFlow } from '@/components/features/flows/manage/types'
@@ -33,7 +34,7 @@ const EMPTY_FLOWS: NifiFlow[] = []
 const EMPTY_FLOW_IDS: number[] = []
 const EMPTY_TARGETS: Record<number, 'source' | 'destination' | 'both'> = {}
 const EMPTY_CONFIGS: DeploymentConfig[] = []
-const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
 const EMPTY_HIERARCHY: { name: string; label: string; order: number }[] = []
 const EMPTY_REGISTRY_FLOWS: RegistryFlow[] = []
 
@@ -78,7 +79,7 @@ export function DeploymentWizard() {
 
   // Fetch required data
   const { data: flows = EMPTY_FLOWS, isLoading: isLoadingFlows, error: flowsError } = useFlowsQuery()
-  const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
+  const { data: clusters = EMPTY_CLUSTERS } = useNifiClustersQuery()
   const { data: registryFlows = EMPTY_REGISTRY_FLOWS } = useRegistryFlowsQuery()
   const { data: deploymentSettings } = useDeploymentSettingsQuery()
 
@@ -150,7 +151,7 @@ export function DeploymentWizard() {
   useEffect(() => {
     if (currentStepIndex === 2 && deploymentConfigs.length === 0) {
       console.log('[DeploymentWizard] Building deployment configs')
-      console.log('[DeploymentWizard] Instances available:', instances.length, instances)
+      console.log('[DeploymentWizard] Clusters available:', clusters.length, clusters)
       console.log('[DeploymentWizard] Hierarchy attributes:', hierarchyAttributes)
       console.log('[DeploymentWizard] Selected flows:', selectedFlowIds)
       console.log('[DeploymentWizard] Deployment targets:', deploymentTargets)
@@ -159,14 +160,14 @@ export function DeploymentWizard() {
         flows,
         selectedFlowIds,
         deploymentTargets,
-        instances as unknown as NifiInstance[],
+        clusters,
         registryFlows,
         hierarchyAttributes
       )
       console.log('[DeploymentWizard] Built configs:', configs.length, configs)
       setDeploymentConfigs(configs)
     }
-  }, [currentStepIndex, deploymentConfigs.length, flows, selectedFlowIds, deploymentTargets, instances, registryFlows, hierarchyAttributes])
+  }, [currentStepIndex, deploymentConfigs.length, flows, selectedFlowIds, deploymentTargets, clusters, registryFlows, hierarchyAttributes])
 
   // Step 3: Load process group paths for each config
   useEffect(() => {

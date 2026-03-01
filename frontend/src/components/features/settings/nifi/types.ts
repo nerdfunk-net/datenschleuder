@@ -1,8 +1,9 @@
 export interface NifiInstance {
   id: number
   name: string | null
-  hierarchy_attribute: string
-  hierarchy_value: string
+  hierarchy_attribute: string | null
+  hierarchy_value: string | null
+  server_id: number | null
   nifi_url: string
   username: string | null
   use_ssl: boolean
@@ -10,6 +11,33 @@ export interface NifiInstance {
   certificate_name: string | null
   check_hostname: boolean
   oidc_provider_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface NifiServer {
+  id: number
+  server_id: string
+  hostname: string
+  credential_id: number | null
+  credential_name: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface NifiClusterMember {
+  instance_id: number
+  name: string | null
+  nifi_url: string
+  is_primary: boolean
+}
+
+export interface NifiCluster {
+  id: number
+  cluster_id: string
+  hierarchy_attribute: string
+  hierarchy_value: string
+  members: NifiClusterMember[]
   created_at: string
   updated_at: string
 }
@@ -33,8 +61,7 @@ export type AuthMethod = 'username' | 'oidc' | `cert:${string}`
 
 export interface NifiInstanceFormValues {
   name: string
-  hierarchy_attribute: string
-  hierarchy_value: string
+  server_id: string
   nifi_url: string
   authMethod: AuthMethod
   username: string

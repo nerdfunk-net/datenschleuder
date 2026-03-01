@@ -19,7 +19,7 @@ import {
 import { GitFork, Plus, Upload, Trash2, Download, ChevronDown, Loader2, Tags } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
-import { useNifiInstancesQuery } from '../nifi/hooks/use-nifi-instances-query'
+import { useNifiClustersQuery } from '../nifi/hooks/use-nifi-clusters-query'
 import { useRegistryFlowsQuery } from './hooks/use-registry-flows-query'
 import { useRegistryFlowsMutations } from './hooks/use-registry-flows-mutations'
 import { AddFlowDialog } from './dialogs/add-flow-dialog'
@@ -27,9 +27,9 @@ import { ImportFlowDialog } from './dialogs/import-flow-dialog'
 import { FlowVersionsDialog } from './dialogs/flow-versions-dialog'
 import { FlowMetadataDialog } from './dialogs/flow-metadata-dialog'
 import type { RegistryFlow } from './types'
-import type { NifiInstance } from '../nifi/types'
+import type { NifiCluster } from '../nifi/types'
 
-const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
 const EMPTY_FLOWS: RegistryFlow[] = []
 
 export function RegistryFlowsPage() {
@@ -37,7 +37,7 @@ export function RegistryFlowsPage() {
   const canWrite = hasPermission(user, 'nifi', 'write')
   const canDelete = hasPermission(user, 'nifi', 'delete')
 
-  const [filterInstanceId, setFilterInstanceId] = useState<number | undefined>(undefined)
+  const [filterClusterId, setFilterClusterId] = useState<number | undefined>(undefined)
   const [addOpen, setAddOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [versionsFlow, setVersionsFlow] = useState<RegistryFlow | null>(null)
@@ -45,17 +45,20 @@ export function RegistryFlowsPage() {
   const [metadataFlow, setMetadataFlow] = useState<RegistryFlow | null>(null)
   const [exportingIds, setExportingIds] = useState<Set<string>>(new Set())
 
-  const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
-  const { data: flows = EMPTY_FLOWS, isLoading } = useRegistryFlowsQuery(filterInstanceId)
+  const { data: clusters = EMPTY_CLUSTERS } = useNifiClustersQuery()
+  const { data: flows = EMPTY_FLOWS, isLoading } = useRegistryFlowsQuery(filterClusterId)
   const { deleteFlow: deleteFlowMutation, exportFlow } = useRegistryFlowsMutations()
 
   const filterOptions = useMemo(() => [
-    { value: '__all__', label: 'All Instances' },
-    ...instances.map(i => ({ value: String(i.id), label: `${i.hierarchy_value} (${i.nifi_url})` })),
-  ], [instances])
+    { value: '__all__', label: 'All Clusters' },
+    ...clusters.map(c => ({
+      value: String(c.id),
+      label: `${c.cluster_id} (${c.hierarchy_attribute}: ${c.hierarchy_value})`,
+    })),
+  ], [clusters])
 
   const handleFilterChange = useCallback((val: string) => {
-    setFilterInstanceId(val === '__all__' ? undefined : Number(val))
+    setFilterClusterId(val === '__all__' ? undefined : Number(val))
   }, [])
 
   const handleExport = useCallback(async (flow: RegistryFlow, format: 'json' | 'yaml') => {
@@ -74,10 +77,18 @@ export function RegistryFlowsPage() {
     setDeleteFlow(null)
   }, [deleteFlow, deleteFlowMutation])
 
-  const versionsInstanceId = useMemo(
-    () => versionsFlow ? instances.find(i => i.nifi_url === versionsFlow.nifi_instance_url)?.id ?? null : null,
-    [versionsFlow, instances]
-  )
+  // Find the instance_id for the versions dialog by matching nifi_url across all cluster members
+  const versionsInstanceId = useMemo(() => {
+    if (!versionsFlow) return null
+    for (const cluster of clusters) {
+      for (const member of cluster.members) {
+        if (member.nifi_url === versionsFlow.nifi_instance_url) {
+          return member.instance_id
+        }
+      }
+    }
+    return null
+  }, [versionsFlow, clusters])
 
   const pageHeader = (
     <div className="flex items-center justify-between">

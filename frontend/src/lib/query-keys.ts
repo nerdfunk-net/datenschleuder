@@ -157,9 +157,9 @@ export const queryKeys = {
   // Registry Flows (DB-backed)
   registryFlows: {
     all: ['registryFlows'] as const,
-    list: (instanceId?: number) =>
-      instanceId !== undefined
-        ? ([...queryKeys.registryFlows.all, 'list', instanceId] as const)
+    list: (clusterId?: number) =>
+      clusterId !== undefined
+        ? ([...queryKeys.registryFlows.all, 'list', clusterId] as const)
         : ([...queryKeys.registryFlows.all, 'list'] as const),
     metadata: (flowId: number) =>
       [...queryKeys.registryFlows.all, 'metadata', flowId] as const,
@@ -197,6 +197,8 @@ export const queryKeys = {
     monitoringFlows: () => [...queryKeys.nifi.all, 'monitoring-flows'] as const,
     processGroupsAllPaths: (instanceId: number) =>
       [...queryKeys.nifi.all, 'process-groups-all-paths', instanceId] as const,
+    servers: () => [...queryKeys.nifi.all, 'servers'] as const,
+    clusters: () => [...queryKeys.nifi.all, 'clusters'] as const,
   },
 
   // NiFi Install

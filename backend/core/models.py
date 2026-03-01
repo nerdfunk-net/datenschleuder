@@ -787,6 +787,115 @@ class AuditLog(Base):
 # ============================================================================
 
 
+class NifiServer(Base):
+    """Physical/virtual server that hosts a NiFi process."""
+
+    __tablename__ = "nifi_servers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    server_id = Column(String(255), unique=True, nullable=False, index=True)
+    hostname = Column(String(1024), nullable=False)
+    credential_id = Column(
+        Integer, ForeignKey("credentials.id"), nullable=True
+    )
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # Relationships
+    cluster_memberships = relationship(
+        "NifiClusterServer", back_populates="server", cascade="all, delete-orphan"
+    )
+    nifi_instances = relationship("NifiInstance", back_populates="server")
+
+
+class NifiCluster(Base):
+    """A NiFi cluster formed by one or more NiFi servers."""
+
+    __tablename__ = "nifi_clusters"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cluster_id = Column(String(255), unique=True, nullable=False, index=True)
+    hierarchy_attribute = Column(String(255), nullable=False)
+    hierarchy_value = Column(String(255), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # Relationships
+    members = relationship(
+        "NifiClusterInstance", back_populates="cluster", cascade="all, delete-orphan"
+    )
+
+
+class NifiClusterServer(Base):
+    """Association table: links servers to clusters, with primary flag."""
+
+    __tablename__ = "nifi_cluster_servers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey("nifi_clusters.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    server_id = Column(
+        Integer,
+        ForeignKey("nifi_servers.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    is_primary = Column(Boolean, nullable=False, default=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships (legacy - NifiCluster.members now uses NifiClusterInstance)
+    cluster = relationship("NifiCluster", foreign_keys=[cluster_id])
+    server = relationship("NifiServer", back_populates="cluster_memberships")
+
+
+class NifiClusterInstance(Base):
+    """Association table: links NiFi instances to clusters, with primary flag."""
+
+    __tablename__ = "nifi_cluster_instances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey("nifi_clusters.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    instance_id = Column(
+        Integer,
+        ForeignKey("nifi_instances.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    is_primary = Column(Boolean, nullable=False, default=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    cluster = relationship("NifiCluster", back_populates="members")
+    instance = relationship("NifiInstance", back_populates="cluster_membership")
+
+
 class NifiInstance(Base):
     """NiFi instance model - one instance per top hierarchy value."""
 
@@ -794,8 +903,11 @@ class NifiInstance(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=True)
-    hierarchy_attribute = Column(String(255), nullable=False)
-    hierarchy_value = Column(String(255), nullable=False, index=True)
+    hierarchy_attribute = Column(String(255), nullable=True)
+    hierarchy_value = Column(String(255), nullable=True, index=True)
+    server_id = Column(
+        Integer, ForeignKey("nifi_servers.id"), nullable=True
+    )
     nifi_url = Column(String(1000), nullable=False)
     username = Column(String(255), nullable=True)
     password_encrypted = Column(LargeBinary, nullable=True)
@@ -818,13 +930,12 @@ class NifiInstance(Base):
     registry_flows = relationship(
         "RegistryFlow", back_populates="nifi_instance", cascade="all, delete-orphan"
     )
+    server = relationship("NifiServer", back_populates="nifi_instances")
+    cluster_membership = relationship(
+        "NifiClusterInstance", back_populates="instance", uselist=False
+    )
 
     __table_args__ = (
-        UniqueConstraint(
-            "hierarchy_attribute",
-            "hierarchy_value",
-            name="uq_nifi_instance_hierarchy",
-        ),
         Index("idx_nifi_instances_hierarchy", "hierarchy_attribute", "hierarchy_value"),
     )
 

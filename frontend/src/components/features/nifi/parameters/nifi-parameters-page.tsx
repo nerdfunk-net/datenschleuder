@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
+import { useNifiClustersQuery } from '@/components/features/settings/nifi/hooks/use-nifi-clusters-query'
 import { useParameterContextsListQuery } from './hooks/use-parameter-contexts-query'
 import { useParameterContextMutations } from './hooks/use-parameter-contexts-mutations'
 import { useApi } from '@/hooks/use-api'
@@ -13,7 +14,7 @@ import { useToast } from '@/hooks/use-toast'
 import { ParameterContextDialog } from './components/parameter-context-dialog'
 import { BoundProcessGroupsDialog } from './components/bound-process-groups-dialog'
 import { DeleteErrorDialog } from './components/delete-error-dialog'
-import type { NifiInstance } from '@/components/features/settings/nifi/types'
+import type { NifiInstance, NifiCluster } from '@/components/features/settings/nifi/types'
 import type {
   ParameterContext,
   ParameterContextForm,
@@ -24,6 +25,7 @@ import type {
 
 // Stable empty defaults
 const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
 const EMPTY_CONTEXTS: ParameterContext[] = []
 
 const EMPTY_FORM: ParameterContextForm = {
@@ -219,6 +221,8 @@ export function NifiParametersPage() {
   const { toast } = useToast()
   const { data: instancesData, isLoading: isLoadingInstances } = useNifiInstancesQuery()
   const instances = instancesData ?? EMPTY_INSTANCES
+  const { data: clustersData } = useNifiClustersQuery()
+  const clusters = clustersData ?? EMPTY_CLUSTERS
 
   const [searchQuery, setSearchQuery] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -241,12 +245,11 @@ export function NifiParametersPage() {
   // ---- Helpers ----
 
   const openCreate = useCallback(() => {
-    const defaultInstanceId = instances.length > 0 ? (instances[0]?.id ?? null) : null
-    setForm({ ...EMPTY_FORM, instance_id: defaultInstanceId })
+    setForm(EMPTY_FORM)
     setModalMode('create')
     setAllContextsForInstance(EMPTY_CONTEXTS)
     setModalOpen(true)
-  }, [instances])
+  }, [])
 
   const openEdit = useCallback(
     async (instanceId: number, context: ParameterContext) => {
@@ -496,7 +499,7 @@ export function NifiParametersPage() {
         mode={modalMode}
         form={form}
         onFormChange={setForm}
-        instances={instances}
+        clusters={clusters}
         allContextsForInstance={allContextsForInstance}
         isSaving={isSaving}
         onSave={handleSave}

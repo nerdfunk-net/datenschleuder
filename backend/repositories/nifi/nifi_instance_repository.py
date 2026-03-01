@@ -36,14 +36,12 @@ class NifiInstanceRepository(BaseRepository[NifiInstance]):
             db.close()
 
     def get_all_ordered(self) -> List[NifiInstance]:
-        """Get all instances ordered by hierarchy."""
+        """Get all instances ordered by name, then id."""
         db = get_db_session()
         try:
             return (
                 db.query(NifiInstance)
-                .order_by(
-                    NifiInstance.hierarchy_attribute, NifiInstance.hierarchy_value
-                )
+                .order_by(NifiInstance.name, NifiInstance.id)
                 .all()
             )
         finally:

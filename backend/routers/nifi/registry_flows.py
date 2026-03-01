@@ -24,10 +24,13 @@ async def list_registry_flows(
     nifi_instance: Optional[int] = Query(
         None, description="Filter by NiFi instance ID"
     ),
+    cluster_id: Optional[int] = Query(
+        None, description="Filter by NiFi cluster ID"
+    ),
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
-    """List all registry flows, optionally filtered by NiFi instance."""
-    return registry_flow_service.list_flows(nifi_instance)
+    """List all registry flows, optionally filtered by NiFi instance or cluster."""
+    return registry_flow_service.list_flows(nifi_instance, cluster_id)
 
 
 @router.get("/templates/list")

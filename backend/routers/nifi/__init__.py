@@ -9,6 +9,7 @@ from routers.nifi.registry_flows import router as registry_flows_router
 from routers.nifi.hierarchy import router as hierarchy_router
 from routers.nifi.certificates import router as certificates_router
 from routers.nifi.install import router as install_router
+from routers.nifi.nifi_config import router as nifi_config_router
 
 __all__ = [
     "instances_router",
@@ -20,4 +21,5 @@ __all__ = [
     "hierarchy_router",
     "certificates_router",
     "install_router",
+    "nifi_config_router",
 ]

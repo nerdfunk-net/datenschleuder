@@ -4,6 +4,8 @@ import { queryKeys } from '@/lib/query-keys'
 import { useToast } from '@/hooks/use-toast'
 import type { NifiInstance, NifiInstanceFormValues, TestConnectionResult } from '../types'
 
+const NO_SERVER = '__none__'
+
 function buildPayload(values: NifiInstanceFormValues) {
   let certificateName: string | null = null
   let oidcProviderId: string | null = null
@@ -21,8 +23,7 @@ function buildPayload(values: NifiInstanceFormValues) {
 
   return {
     name: values.name || null,
-    hierarchy_attribute: values.hierarchy_attribute,
-    hierarchy_value: values.hierarchy_value,
+    server_id: values.server_id && values.server_id !== NO_SERVER ? Number(values.server_id) : null,
     nifi_url: values.nifi_url,
     username,
     password,

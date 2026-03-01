@@ -9,8 +9,9 @@ class NifiInstanceCreate(BaseModel):
     """Schema for creating a NiFi instance."""
 
     name: Optional[str] = None
-    hierarchy_attribute: str
-    hierarchy_value: str
+    hierarchy_attribute: Optional[str] = None
+    hierarchy_value: Optional[str] = None
+    server_id: Optional[int] = None
     nifi_url: str
     username: Optional[str] = None
     password: Optional[str] = None
@@ -25,6 +26,7 @@ class NifiInstanceUpdate(BaseModel):
     """Schema for updating a NiFi instance."""
 
     name: Optional[str] = None
+    server_id: Optional[int] = None
     nifi_url: Optional[str] = None
     username: Optional[str] = None
     password: Optional[str] = None
@@ -40,8 +42,9 @@ class NifiInstanceResponse(BaseModel):
 
     id: int
     name: Optional[str] = None
-    hierarchy_attribute: str
-    hierarchy_value: str
+    hierarchy_attribute: Optional[str] = None
+    hierarchy_value: Optional[str] = None
+    server_id: Optional[int] = None
     nifi_url: str
     username: Optional[str] = None
     use_ssl: bool

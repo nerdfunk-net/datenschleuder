@@ -24,7 +24,7 @@ import { HierarchyCombobox } from './hierarchy-combobox'
 import { ParameterContextDialog } from '@/components/features/nifi/parameters/components/parameter-context-dialog'
 import { useParameterContextsListQuery, useParameterContextDetailQuery } from '@/components/features/nifi/parameters/hooks/use-parameter-contexts-query'
 import { useParameterContextMutations } from '@/components/features/nifi/parameters/hooks/use-parameter-contexts-mutations'
-import { useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
+import { useNifiClustersQuery } from '@/components/features/settings/nifi/hooks/use-nifi-clusters-query'
 import { useRegistryFlowMetadataQuery } from '@/components/features/settings/registry/hooks/use-registry-flow-metadata-query'
 import type { WizardFormReturn } from '../hooks/use-wizard-form'
 import type { HierarchyAttribute } from '@/components/features/settings/nifi/types'
@@ -78,8 +78,8 @@ export function WizardConnectionTab({ side, hierarchy, wizard }: WizardConnectio
     instance_id: instanceId,
   })
 
-  const { data: instances } = useNifiInstancesQuery()
-  const instancesList = instances ?? []
+  const { data: clusters } = useNifiClustersQuery()
+  const clustersList = clusters ?? []
 
   const { createContext } = useParameterContextMutations()
 
@@ -545,7 +545,7 @@ export function WizardConnectionTab({ side, hierarchy, wizard }: WizardConnectio
         mode="create"
         form={pcForm}
         onFormChange={setPcForm}
-        instances={instancesList}
+        clusters={clustersList}
         allContextsForInstance={allContextsForInstance}
         isSaving={createContext.isPending}
         onSave={handlePcSave}

@@ -12,6 +12,25 @@ class RegistryFlowRepository(BaseRepository[RegistryFlow]):
     def __init__(self):
         super().__init__(RegistryFlow)
 
+    def get_by_cluster(self, cluster_id: int) -> List[RegistryFlow]:
+        """Get all flows for all instances in a cluster."""
+        from core.models import NifiClusterInstance
+
+        db = get_db_session()
+        try:
+            return (
+                db.query(RegistryFlow)
+                .join(
+                    NifiClusterInstance,
+                    NifiClusterInstance.instance_id == RegistryFlow.nifi_instance_id,
+                )
+                .filter(NifiClusterInstance.cluster_id == cluster_id)
+                .order_by(RegistryFlow.bucket_name, RegistryFlow.flow_name)
+                .all()
+            )
+        finally:
+            db.close()
+
     def get_by_instance(self, instance_id: int) -> List[RegistryFlow]:
         """Get all flows for a specific NiFi instance."""
         db = get_db_session()

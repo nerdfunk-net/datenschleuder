@@ -5,14 +5,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { useApi } from '@/hooks/use-api'
-import { useNifiInstancesQuery } from '../../nifi/hooks/use-nifi-instances-query'
+import { useNifiClustersQuery } from '../../nifi/hooks/use-nifi-clusters-query'
 import { useRegistryFlowsMutations } from '../hooks/use-registry-flows-mutations'
-import type { NifiInstance } from '../../nifi/types'
+import type { NifiCluster } from '../../nifi/types'
 import type { Bucket, RemoteFlow, RegistryClient } from '../types'
 
-const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
+
+interface ClusterPrimaryInstance {
+  instance_id: number
+  name: string | null
+  hierarchy_attribute: string
+  hierarchy_value: string
+  nifi_url: string
+  username: string | null
+  use_ssl: boolean
+  verify_ssl: boolean
+  certificate_name: string | null
+  check_hostname: boolean
+  oidc_provider_id: string | null
+}
 
 interface Props {
   open: boolean
@@ -21,20 +35,25 @@ interface Props {
 
 export function AddFlowDialog({ open, onOpenChange }: Props) {
   const { apiCall } = useApi()
-  const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
+  const { data: clusters = EMPTY_CLUSTERS } = useNifiClustersQuery()
   const { createFlows } = useRegistryFlowsMutations()
 
-  const [selectedInstance, setSelectedInstance] = useState<NifiInstance | null>(null)
+  const [selectedCluster, setSelectedCluster] = useState<NifiCluster | null>(null)
+  const [primaryInstance, setPrimaryInstance] = useState<ClusterPrimaryInstance | null>(null)
+  const [primaryError, setPrimaryError] = useState<string | null>(null)
   const [registry, setRegistry] = useState<RegistryClient | null>(null)
   const [buckets, setBuckets] = useState<Bucket[]>([])
   const [selectedBucket, setSelectedBucket] = useState<Bucket | null>(null)
   const [availableFlows, setAvailableFlows] = useState<RemoteFlow[]>([])
   const [selectedFlowIds, setSelectedFlowIds] = useState<Set<string>>(new Set())
+  const [loadingPrimary, setLoadingPrimary] = useState(false)
   const [loadingBuckets, setLoadingBuckets] = useState(false)
   const [loadingFlows, setLoadingFlows] = useState(false)
 
   const reset = useCallback(() => {
-    setSelectedInstance(null)
+    setSelectedCluster(null)
+    setPrimaryInstance(null)
+    setPrimaryError(null)
     setRegistry(null)
     setBuckets([])
     setSelectedBucket(null)
@@ -47,27 +66,43 @@ export function AddFlowDialog({ open, onOpenChange }: Props) {
     onOpenChange(false)
   }, [reset, onOpenChange])
 
-  const handleInstanceChange = useCallback(async (instanceId: string) => {
-    const inst = instances.find(i => String(i.id) === instanceId) ?? null
-    setSelectedInstance(inst)
+  const handleClusterChange = useCallback(async (clusterId: string) => {
+    const cluster = clusters.find(c => String(c.id) === clusterId) ?? null
+    setSelectedCluster(cluster)
+    setPrimaryInstance(null)
+    setPrimaryError(null)
     setRegistry(null)
     setBuckets([])
     setSelectedBucket(null)
     setAvailableFlows([])
     setSelectedFlowIds(new Set())
-    if (!inst) return
+    if (!cluster) return
 
+    // Step 1: resolve the primary instance via the dedicated endpoint
+    setLoadingPrimary(true)
+    let primary: ClusterPrimaryInstance | null = null
+    try {
+      primary = await apiCall(`nifi/clusters/${cluster.id}/get-primary`) as ClusterPrimaryInstance
+      setPrimaryInstance(primary)
+    } catch {
+      setPrimaryError('No primary instance configured for this cluster.')
+      setLoadingPrimary(false)
+      return
+    }
+    setLoadingPrimary(false)
+
+    // Step 2: fetch registry clients via the resolved primary instance
     setLoadingBuckets(true)
     try {
-      const res = await apiCall(`nifi/instances/${inst.id}/ops/registries`) as {
-        registry_clients: RegistryClient[]
-      }
+      const res = await apiCall(
+        `nifi/instances/${primary.instance_id}/ops/registries`
+      ) as { registry_clients: RegistryClient[] }
       const clients = res.registry_clients ?? []
       if (clients.length === 0) return
       const first = clients[0]!
       setRegistry(first)
       const bucketsRes = await apiCall(
-        `nifi/instances/${inst.id}/ops/registries/${first.id}/buckets`
+        `nifi/instances/${primary.instance_id}/ops/registries/${first.id}/buckets`
       ) as { buckets: Bucket[] }
       setBuckets(bucketsRes.buckets ?? [])
     } catch {
@@ -75,19 +110,19 @@ export function AddFlowDialog({ open, onOpenChange }: Props) {
     } finally {
       setLoadingBuckets(false)
     }
-  }, [instances, apiCall])
+  }, [clusters, apiCall])
 
   const handleBucketChange = useCallback(async (bucketId: string) => {
     const bucket = buckets.find(b => b.identifier === bucketId) ?? null
     setSelectedBucket(bucket)
     setAvailableFlows([])
     setSelectedFlowIds(new Set())
-    if (!bucket || !selectedInstance || !registry) return
+    if (!bucket || !primaryInstance || !registry) return
 
     setLoadingFlows(true)
     try {
       const res = await apiCall(
-        `nifi/instances/${selectedInstance.id}/ops/registries/${registry.id}/buckets/${bucket.identifier}/flows`
+        `nifi/instances/${primaryInstance.instance_id}/ops/registries/${registry.id}/buckets/${bucket.identifier}/flows`
       ) as { flows: RemoteFlow[] }
       setAvailableFlows(res.flows ?? [])
     } catch {
@@ -95,7 +130,7 @@ export function AddFlowDialog({ open, onOpenChange }: Props) {
     } finally {
       setLoadingFlows(false)
     }
-  }, [buckets, selectedInstance, registry, apiCall])
+  }, [buckets, primaryInstance, registry, apiCall])
 
   const toggleFlow = useCallback((id: string) => {
     setSelectedFlowIds(prev => {
@@ -106,12 +141,12 @@ export function AddFlowDialog({ open, onOpenChange }: Props) {
   }, [])
 
   const handleSave = useCallback(async () => {
-    if (!selectedInstance || !registry || !selectedBucket || selectedFlowIds.size === 0) return
+    if (!primaryInstance || !registry || !selectedBucket || selectedFlowIds.size === 0) return
     const selected = availableFlows.filter(f => selectedFlowIds.has(f.identifier))
     const payload = selected.map(f => ({
-      nifi_instance_id: selectedInstance.id,
-      nifi_instance_name: selectedInstance.hierarchy_value,
-      nifi_instance_url: selectedInstance.nifi_url,
+      nifi_instance_id: primaryInstance.instance_id,
+      nifi_instance_name: primaryInstance.name || primaryInstance.hierarchy_value,
+      nifi_instance_url: primaryInstance.nifi_url,
       registry_id: registry.id,
       registry_name: registry.name,
       bucket_id: selectedBucket.identifier,
@@ -122,7 +157,7 @@ export function AddFlowDialog({ open, onOpenChange }: Props) {
     }))
     await createFlows.mutateAsync(payload)
     handleClose()
-  }, [selectedInstance, registry, selectedBucket, selectedFlowIds, availableFlows, createFlows, handleClose])
+  }, [primaryInstance, registry, selectedBucket, selectedFlowIds, availableFlows, createFlows, handleClose])
 
   return (
     <Dialog open={open} onOpenChange={o => !o && handleClose()}>
@@ -132,23 +167,39 @@ export function AddFlowDialog({ open, onOpenChange }: Props) {
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Step 1: NiFi instance */}
+          {/* Step 1: NiFi cluster */}
           <div className="rounded-md bg-slate-50 border border-slate-200 p-4 space-y-2">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">1. Select NiFi Instance</p>
-            <Select onValueChange={handleInstanceChange}>
-              <SelectTrigger><SelectValue placeholder="— Select instance —" /></SelectTrigger>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">1. Select NiFi Cluster</p>
+            <Select onValueChange={handleClusterChange}>
+              <SelectTrigger><SelectValue placeholder="— Select cluster —" /></SelectTrigger>
               <SelectContent>
-                {instances.map(i => (
-                  <SelectItem key={i.id} value={String(i.id)}>
-                    {i.hierarchy_value} ({i.nifi_url})
+                {clusters.map(c => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.cluster_id} ({c.hierarchy_attribute}: {c.hierarchy_value})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+
+            {loadingPrimary && (
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <Loader2 className="h-4 w-4 animate-spin" /> Resolving primary instance…
+              </div>
+            )}
+            {primaryError && (
+              <div className="flex items-center gap-2 text-sm text-red-600">
+                <AlertCircle className="h-4 w-4" /> {primaryError}
+              </div>
+            )}
+            {primaryInstance && (
+              <p className="text-xs text-slate-500">
+                Primary: <span className="font-medium text-slate-700">{primaryInstance.name || primaryInstance.nifi_url}</span>
+              </p>
+            )}
           </div>
 
           {/* Step 2: Bucket */}
-          {selectedInstance && (
+          {selectedCluster && primaryInstance && (
             <div className="rounded-md bg-slate-50 border border-slate-200 p-4 space-y-2">
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">2. Select Bucket</p>
               {loadingBuckets ? (

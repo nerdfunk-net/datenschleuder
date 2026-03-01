@@ -11,8 +11,13 @@ logger = logging.getLogger(__name__)
 _repo = RegistryFlowRepository()
 
 
-def list_flows(nifi_instance_id: Optional[int] = None) -> List[RegistryFlow]:
-    """List registry flows, optionally filtered by instance."""
+def list_flows(
+    nifi_instance_id: Optional[int] = None,
+    cluster_id: Optional[int] = None,
+) -> List[RegistryFlow]:
+    """List registry flows, optionally filtered by instance or cluster."""
+    if cluster_id is not None:
+        return _repo.get_by_cluster(cluster_id)
     if nifi_instance_id is not None:
         return _repo.get_by_instance(nifi_instance_id)
     return _repo.get_all_ordered()

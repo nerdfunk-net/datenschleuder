@@ -51,7 +51,8 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
-import { useNifiHierarchyQuery, useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
+import { useNifiHierarchyQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
+import { useNifiClustersQuery } from '@/components/features/settings/nifi/hooks/use-nifi-clusters-query'
 import { useFlowsQuery, useRegistryFlowsQuery, useFlowColumnsQuery } from './hooks/use-flows-query'
 import { useFlowsMutations } from './hooks/use-flows-mutations'
 import { useFlowViewsQuery } from './hooks/use-flow-views-query'
@@ -62,7 +63,7 @@ import { SaveViewDialog } from './dialogs/save-view-dialog'
 import { ConflictResolutionDialog } from '@/components/features/flows/deploy/dialogs/conflict-resolution-dialog'
 import { useQuickDeploy } from '@/components/features/flows/deploy/hooks/use-quick-deploy'
 import type { NifiFlow, FlowView, FlowColumn, FlowFormValues, RegistryFlow } from './types'
-import type { HierarchyAttribute, NifiInstance } from '@/components/features/settings/nifi/types'
+import type { HierarchyAttribute, NifiCluster } from '@/components/features/settings/nifi/types'
 import type { FlowPayload } from './hooks/use-flows-mutations'
 
 const EMPTY_COLUMNS: FlowColumn[] = []
@@ -70,7 +71,7 @@ const EMPTY_FLOWS: NifiFlow[] = []
 const EMPTY_VIEWS: FlowView[] = []
 const EMPTY_REGISTRY: RegistryFlow[] = []
 const EMPTY_HIERARCHY: HierarchyAttribute[] = []
-const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
 
 const ITEMS_PER_PAGE = 10
 
@@ -152,7 +153,7 @@ export function FlowsManagePage() {
   const { data: columnsData } = useFlowColumnsQuery()
   const { data: hierarchyData } = useNifiHierarchyQuery()
   const { data: flowViews = EMPTY_VIEWS } = useFlowViewsQuery()
-  const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
+  const { data: clusters = EMPTY_CLUSTERS } = useNifiClustersQuery()
 
   const hierarchy: HierarchyAttribute[] = useMemo(
     () => hierarchyData?.hierarchy ?? EMPTY_HIERARCHY,
@@ -394,7 +395,7 @@ export function FlowsManagePage() {
     handleDeleteConflict,
     handleUpdateConflict,
   } = useQuickDeploy({
-    instances: instances as unknown as Parameters<typeof useQuickDeploy>[0]['instances'],
+    clusters,
     registryFlows,
     hierarchyAttributes: hierAttrsForDeploy,
   })

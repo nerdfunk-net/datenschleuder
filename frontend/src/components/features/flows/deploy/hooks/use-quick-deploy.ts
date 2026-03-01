@@ -6,7 +6,8 @@ import { useDeployMutations } from './use-deploy-mutations'
 import { useDeploymentSettingsQuery } from './use-deploy-query'
 import { buildDeploymentConfigs, generateProcessGroupName } from '../utils/deployment-config-utils'
 import type { NifiFlow } from '@/components/features/flows/manage/types'
-import type { NifiInstance, RegistryFlow, ConflictInfo, DeploymentConfig, DeploymentError, DeploymentRequest } from '../types'
+import type { RegistryFlow, ConflictInfo, DeploymentConfig, DeploymentError, DeploymentRequest } from '../types'
+import type { NifiCluster } from '@/components/features/settings/nifi/types'
 
 const EMPTY_HIERARCHY: { name: string; label: string; order: number }[] = []
 
@@ -18,11 +19,11 @@ interface CurrentConflict {
 }
 
 export function useQuickDeploy({
-  instances,
+  clusters,
   registryFlows,
   hierarchyAttributes,
 }: {
-  instances: NifiInstance[]
+  clusters: NifiCluster[]
   registryFlows: RegistryFlow[]
   hierarchyAttributes: { name: string; label: string; order: number }[]
 }) {
@@ -143,7 +144,7 @@ export function useQuickDeploy({
           [flow],
           [flow.id],
           { [flow.id]: target },
-          instances as unknown as Parameters<typeof buildDeploymentConfigs>[3],
+          clusters,
           registryFlows,
           hierAttrs
         )
@@ -318,7 +319,7 @@ export function useQuickDeploy({
         setDeployingFlows((prev) => ({ ...prev, [key]: false }))
       }
     },
-    [instances, registryFlows, hierAttrs, deploymentSettings, deployAndHandle, toast]
+    [clusters, registryFlows, hierAttrs, deploymentSettings, deployAndHandle, toast]
   )
 
   const handleSkipConflict = useCallback(() => {

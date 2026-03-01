@@ -1,11 +1,11 @@
 import type {
   DeploymentConfig,
-  NifiInstance,
   RegistryFlow,
   DeploymentSettings,
   ProcessGroupPath,
 } from '../types'
 import type { NifiFlow } from '@/components/features/flows/manage/types'
+import type { NifiCluster } from '@/components/features/settings/nifi/types'
 
 /**
  * Build deployment configs from selected flows and their targets
@@ -15,7 +15,7 @@ export function buildDeploymentConfigs(
   flows: NifiFlow[],
   selectedFlowIds: number[],
   deploymentTargets: Record<number, 'source' | 'destination' | 'both'>,
-  nifiInstances: NifiInstance[],
+  nifiClusters: NifiCluster[],
   registryFlows: RegistryFlow[],
   hierarchyAttributes: { name: string; label: string; order: number }[]
 ): DeploymentConfig[] {
@@ -34,7 +34,7 @@ export function buildDeploymentConfigs(
       const config = buildSingleConfig(
         flow,
         deployTarget,
-        nifiInstances,
+        nifiClusters,
         registryFlows,
         hierarchyAttributes
       )
@@ -53,7 +53,7 @@ export function buildDeploymentConfigs(
 function buildSingleConfig(
   flow: NifiFlow,
   target: 'source' | 'destination',
-  nifiInstances: NifiInstance[],
+  nifiClusters: NifiCluster[],
   registryFlows: RegistryFlow[],
   hierarchyAttributes: { name: string; label: string; order: number }[]
 ): DeploymentConfig | null {
@@ -73,18 +73,21 @@ function buildSingleConfig(
     return null
   }
 
-  console.warn(`[buildSingleConfig] Looking for instance with attribute="${topAttribute.name}" value="${hierarchyValue}"`)
-  console.warn(`[buildSingleConfig] Available instances:`, nifiInstances.map(i => ({ id: i.id, attr: i.hierarchy_attribute, val: i.hierarchy_value })))
+  console.warn(`[buildSingleConfig] Looking for cluster with attribute="${topAttribute.name}" value="${hierarchyValue}"`)
+  console.warn(`[buildSingleConfig] Available clusters:`, nifiClusters.map(c => ({ id: c.id, attr: c.hierarchy_attribute, val: c.hierarchy_value })))
 
-  // Find matching NiFi instance
-  const instance = nifiInstances.find(
-    (inst) => inst.hierarchy_attribute === topAttribute.name && inst.hierarchy_value === hierarchyValue
+  // Find matching cluster and get its primary instance
+  const cluster = nifiClusters.find(
+    (c) => c.hierarchy_attribute === topAttribute.name && c.hierarchy_value === hierarchyValue
   )
+  const primaryMember = cluster?.members.find(m => m.is_primary)
 
-  if (!instance) {
-    console.warn(`[buildSingleConfig] No instance found for ${topAttribute.name}=${hierarchyValue}`)
+  if (!cluster) {
+    console.warn(`[buildSingleConfig] No cluster found for ${topAttribute.name}=${hierarchyValue}`)
+  } else if (!primaryMember) {
+    console.warn(`[buildSingleConfig] Cluster found but no primary member for ${topAttribute.name}=${hierarchyValue}`)
   } else {
-    console.warn(`[buildSingleConfig] Found instance:`, instance.id, instance.name)
+    console.warn(`[buildSingleConfig] Found primary instance:`, primaryMember.instance_id, primaryMember.name)
   }
 
   // Get template ID based on target
@@ -104,7 +107,7 @@ function buildSingleConfig(
     flowName: flow.name || `Flow ${flow.id}`,
     target,
     hierarchyValue,
-    instanceId: instance?.id || null,
+    instanceId: primaryMember?.instance_id ?? null,
     availablePaths: [],
     selectedProcessGroupId: '',
     suggestedPath: null,

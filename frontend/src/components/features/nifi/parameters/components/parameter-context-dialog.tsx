@@ -24,8 +24,9 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, Link, Loader2, Home, RefreshCw, FileText, List } from 'lucide-react'
 import { InheritanceDialog } from './inheritance-dialog'
+import { useApi } from '@/hooks/use-api'
 import type { ParameterContext, ParameterContextForm, FormParameter, ModalMode } from '../types'
-import type { NifiInstance } from '@/components/features/settings/nifi/types'
+import type { NifiCluster } from '@/components/features/settings/nifi/types'
 
 // Initial column widths in pixels: Name, Value, Description, Sensitive, Status
 const INITIAL_COL_WIDTHS = [200, 220, 200, 80, 140]
@@ -37,7 +38,7 @@ interface ParameterContextDialogProps {
   mode: ModalMode
   form: ParameterContextForm
   onFormChange: (form: ParameterContextForm) => void
-  instances: NifiInstance[]
+  clusters: NifiCluster[]
   allContextsForInstance: ParameterContext[]
   isSaving: boolean
   onSave: () => void
@@ -49,13 +50,16 @@ export function ParameterContextDialog({
   mode,
   form,
   onFormChange,
-  instances,
+  clusters,
   allContextsForInstance,
   isSaving,
   onSave,
 }: ParameterContextDialogProps) {
+  const { apiCall } = useApi()
   const [showInheritance, setShowInheritance] = useState(false)
   const [colWidths, setColWidths] = useState<number[]>(INITIAL_COL_WIDTHS)
+  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null)
+  const [isResolvingInstance, setIsResolvingInstance] = useState(false)
 
   // Ref holds mutable resize state to avoid stale closures in event listeners
   const resizeRef = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null)
@@ -94,6 +98,24 @@ export function ParameterContextDialog({
       onFormChange({ ...form, [key]: value })
     },
     [form, onFormChange],
+  )
+
+  const handleClusterSelect = useCallback(
+    async (clusterIdValue: string) => {
+      setSelectedClusterId(clusterIdValue)
+      const cluster = clusters.find((c) => c.cluster_id === clusterIdValue)
+      if (!cluster) return
+      setIsResolvingInstance(true)
+      try {
+        const primary = await apiCall<{ instance_id: number }>(
+          `nifi/clusters/${cluster.id}/get-primary`,
+        )
+        onFormChange({ ...form, instance_id: primary.instance_id })
+      } finally {
+        setIsResolvingInstance(false)
+      }
+    },
+    [apiCall, clusters, form, onFormChange],
   )
 
   const addParameter = useCallback(() => {
@@ -175,25 +197,31 @@ export function ParameterContextDialog({
           </DialogHeader>
 
           <form onSubmit={handleSave} className="space-y-6">
-            {/* NiFi Instance (create only) */}
+            {/* NiFi Cluster (create only) */}
             {mode === 'create' && (
               <div className="space-y-2">
-                <Label htmlFor="instance">NiFi Instance</Label>
-                <Select
-                  value={form.instance_id?.toString() ?? ''}
-                  onValueChange={(v) => setField('instance_id', v ? Number(v) : null)}
-                >
-                  <SelectTrigger id="instance">
-                    <SelectValue placeholder="Select an instance..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {instances.map((inst) => (
-                      <SelectItem key={inst.id} value={inst.id.toString()}>
-                        {inst.hierarchy_attribute}={inst.hierarchy_value} ({inst.nifi_url})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="cluster">NiFi Cluster</Label>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={selectedClusterId ?? ''}
+                    onValueChange={handleClusterSelect}
+                    disabled={isResolvingInstance}
+                  >
+                    <SelectTrigger id="cluster" className="flex-1">
+                      <SelectValue placeholder="Select a cluster..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clusters.map((cluster) => (
+                        <SelectItem key={cluster.id} value={cluster.cluster_id}>
+                          {cluster.cluster_id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isResolvingInstance && (
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-500 shrink-0" />
+                  )}
+                </div>
               </div>
             )}
 

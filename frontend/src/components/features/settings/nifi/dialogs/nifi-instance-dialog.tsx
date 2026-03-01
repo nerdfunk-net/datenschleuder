@@ -33,18 +33,19 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, Plug } from 'lucide-react'
 import {
-  useNifiHierarchyQuery,
-  useNifiHierarchyValuesQuery,
   useNifiCertificatesQuery,
   useOidcProvidersQuery,
 } from '../hooks/use-nifi-instances-query'
 import { useNifiInstancesMutations } from '../hooks/use-nifi-instances-mutations'
-import type { NifiInstance, NifiInstanceFormValues } from '../types'
+import { useNifiServersQuery } from '../hooks/use-nifi-servers-query'
+import type { NifiInstance, NifiInstanceFormValues, NifiServer } from '../types'
+
+const NO_SERVER = '__none__'
+const EMPTY_SERVERS: NifiServer[] = []
 
 const schema = z.object({
   name: z.string(),
-  hierarchy_attribute: z.string().min(1, 'Required'),
-  hierarchy_value: z.string().min(1, 'Required'),
+  server_id: z.string().optional(),
   nifi_url: z.string().url('Must be a valid URL'),
   authMethod: z.string().min(1, 'Required'),
   username: z.string(),
@@ -68,16 +69,15 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
   const { toast } = useToast()
   const { createInstance, updateInstance, testNewConnection } = useNifiInstancesMutations()
 
-  const { data: hierarchyData } = useNifiHierarchyQuery()
   const { data: certificatesData } = useNifiCertificatesQuery()
   const { data: oidcData } = useOidcProvidersQuery()
+  const { data: servers = EMPTY_SERVERS } = useNifiServersQuery()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
-      hierarchy_attribute: '',
-      hierarchy_value: '',
+      server_id: NO_SERVER,
       nifi_url: '',
       authMethod: 'username',
       username: '',
@@ -89,25 +89,7 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
     },
   })
 
-  const watchedAttribute = useWatch({ control: form.control, name: 'hierarchy_attribute' })
   const watchedAuthMethod = useWatch({ control: form.control, name: 'authMethod' })
-  const watchedHierarchyValue = useWatch({ control: form.control, name: 'hierarchy_value' })
-
-  const { data: valuesData } = useNifiHierarchyValuesQuery(watchedAttribute)
-
-  // Debug logging
-  useEffect(() => {
-    if (open) {
-      console.log('[NifiInstanceDialog] Form state:', {
-        isEdit,
-        instanceData: instance,
-        watchedAttribute,
-        watchedHierarchyValue,
-        valuesData,
-        hierarchyValueOptions: valuesData?.values || []
-      })
-    }
-  }, [open, isEdit, instance, watchedAttribute, watchedHierarchyValue, valuesData])
 
   // Reset form when dialog opens/closes or instance changes
   useEffect(() => {
@@ -122,8 +104,7 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
       }
       form.reset({
         name: instance.name || '',
-        hierarchy_attribute: instance.hierarchy_attribute,
-        hierarchy_value: instance.hierarchy_value,
+        server_id: instance.server_id ? String(instance.server_id) : NO_SERVER,
         nifi_url: instance.nifi_url,
         authMethod,
         username: instance.username || '',
@@ -134,11 +115,9 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
         check_hostname: instance.check_hostname,
       })
     } else {
-      const topAttr = hierarchyData?.hierarchy?.[0]
       form.reset({
         name: '',
-        hierarchy_attribute: topAttr?.name || '',
-        hierarchy_value: '',
+        server_id: NO_SERVER,
         nifi_url: '',
         authMethod: 'username',
         username: '',
@@ -149,21 +128,7 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
         check_hostname: true,
       })
     }
-  }, [open, instance, hierarchyData, form])
-
-  const hierarchyAttributeOptions = useMemo(() => {
-    const attrs = hierarchyData?.hierarchy || []
-    // Only the first (top) attribute is used for NiFi instances
-    if (attrs.length === 0) return []
-    const top = attrs[0]
-    if (!top) return []
-    return [{ value: top.name, label: `${top.name} (${top.label})` }]
-  }, [hierarchyData])
-
-  const hierarchyValueOptions = useMemo(
-    () => valuesData?.values || [],
-    [valuesData]
-  )
+  }, [open, instance, form])
 
   const authMethodOptions = useMemo(() => {
     const options: { value: string; label: string }[] = [
@@ -238,81 +203,32 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              {/* Hierarchy Attribute */}
-              <FormField
-                control={form.control}
-                name="hierarchy_attribute"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Hierarchy Attribute</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={isEdit}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select attribute" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {hierarchyAttributeOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                        {hierarchyAttributeOptions.length === 0 && (
-                          <SelectItem value="_none" disabled>No hierarchy configured</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Hierarchy Value */}
-              <FormField
-                control={form.control}
-                name="hierarchy_value"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Hierarchy Value</FormLabel>
-                    {isEdit ? (
-                      <Input
-                        value={field.value}
-                        disabled
-                        className="bg-slate-50"
-                      />
-                    ) : (
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={!watchedAttribute}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select value" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {hierarchyValueOptions.map(v => (
-                            <SelectItem key={v} value={v}>{v}</SelectItem>
-                          ))}
-                          {hierarchyValueOptions.length === 0 && (
-                            <SelectItem value="_none" disabled>
-                              {watchedAttribute ? 'No values defined' : 'Select attribute first'}
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Server (optional) */}
+            <FormField
+              control={form.control}
+              name="server_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Server <span className="text-slate-400 font-normal">(optional)</span></FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={NO_SERVER}>None</SelectItem>
+                      {servers.map(s => (
+                        <SelectItem key={s.id} value={String(s.id)}>
+                          {s.server_id} <span className="text-slate-400">({s.hostname})</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* NiFi URL */}
             <FormField

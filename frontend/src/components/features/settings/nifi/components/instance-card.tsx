@@ -72,8 +72,9 @@ export function InstanceCard({ instance, canWrite, onEdit }: Props) {
   }
 
   const displayTitle = instance.name
-    ? instance.name
-    : `${instance.hierarchy_attribute}=${instance.hierarchy_value}`
+    || (instance.hierarchy_attribute && instance.hierarchy_value
+      ? `${instance.hierarchy_attribute}=${instance.hierarchy_value}`
+      : `Instance #${instance.id}`)
 
   return (
     <>
