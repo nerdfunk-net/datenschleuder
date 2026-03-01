@@ -10,22 +10,22 @@ import {
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Network, ChevronRight } from 'lucide-react'
-import type { NifiInstance } from '../types'
+import type { NifiCluster } from '@/components/features/settings/nifi/types'
 
 interface CheckAllDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  instances: NifiInstance[]
+  clusters: NifiCluster[]
   loading: boolean
-  onSelectInstance: (instanceId: number) => void
+  onSelectCluster: (clusterId: number) => void
 }
 
 export function CheckAllDialog({
   open,
   onOpenChange,
-  instances,
+  clusters,
   loading,
-  onSelectInstance,
+  onSelectCluster,
 }: CheckAllDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -33,13 +33,13 @@ export function CheckAllDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Network className="h-5 w-5 text-blue-600" />
-            Select NiFi Instance
+            Select NiFi Cluster
           </DialogTitle>
         </DialogHeader>
 
         <div className="py-4">
           <p className="text-sm text-muted-foreground mb-4">
-            Select a NiFi instance to check all flows:
+            Select a NiFi cluster to check all flows:
           </p>
 
           {loading && (
@@ -48,33 +48,43 @@ export function CheckAllDialog({
             </div>
           )}
 
-          {!loading && instances.length === 0 && (
+          {!loading && clusters.length === 0 && (
             <Alert className="bg-amber-50 border-amber-200">
               <AlertDescription className="text-amber-800">
-                No NiFi instances found.
+                No NiFi clusters found.
               </AlertDescription>
             </Alert>
           )}
 
-          {!loading && instances.length > 0 && (
+          {!loading && clusters.length > 0 && (
             <div className="space-y-2">
-              {instances.map((instance) => (
-                <button
-                  key={instance.id}
-                  type="button"
-                  className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors flex items-center justify-between"
-                  onClick={() => {
-                    onSelectInstance(instance.id)
-                    onOpenChange(false)
-                  }}
-                >
-                  <div>
-                    <p className="font-semibold text-slate-900">{instance.hierarchy_value}</p>
-                    <p className="text-xs text-muted-foreground">{instance.nifi_url}</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
-                </button>
-              ))}
+              {clusters.map((cluster) => {
+                const primaryMember = cluster.members.find(m => m.is_primary) ?? cluster.members[0]
+                return (
+                  <button
+                    key={cluster.id}
+                    type="button"
+                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors flex items-center justify-between"
+                    onClick={() => {
+                      onSelectCluster(cluster.id)
+                      onOpenChange(false)
+                    }}
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {cluster.hierarchy_attribute}={cluster.hierarchy_value}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {primaryMember?.nifi_url ?? cluster.cluster_id}
+                        {cluster.members.length > 1 && (
+                          <span className="ml-2 text-slate-400">({cluster.members.length} nodes)</span>
+                        )}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>

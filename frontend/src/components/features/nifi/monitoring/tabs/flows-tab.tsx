@@ -21,6 +21,7 @@ import {
   Filter,
 } from 'lucide-react'
 import { useNifiInstancesQuery, useMonitoringFlowsQuery } from '../hooks/use-monitoring-queries'
+import { useNifiClustersQuery } from '@/components/features/settings/nifi/hooks/use-nifi-clusters-query'
 import { ProcessGroupDetailsDialog } from '../components/process-group-details-dialog'
 import { CheckAllDialog } from '../components/check-all-dialog'
 import { useApi } from '@/hooks/use-api'
@@ -34,10 +35,12 @@ import type {
   AllPathsResponse,
   NifiInstance,
 } from '../types'
+import type { NifiCluster } from '@/components/features/settings/nifi/types'
 
 // Stable defaults
 const EMPTY_STATUS_FILTER: FlowStatus[] = []
 const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
 const EMPTY_FLOWS: Flow[] = []
 
 function getFlowItemKey(flowId: number, flowType: FlowType): string {
@@ -319,8 +322,7 @@ function FlowWidget({
 
 const STATUS_FILTER_OPTIONS: { value: FlowStatus; label: string; color: string }[] = [
   { value: 'healthy', label: 'Green (Healthy)', color: 'bg-green-500' },
-  { value: 'issues', label: 'Yellow (Issues Detected)', color: 'bg-amber-500' },
-  { value: 'warning', label: 'Yellow (Warning)', color: 'bg-amber-500' },
+  { value: 'issues', label: 'Yellow (Problems)', color: 'bg-amber-500' },
   { value: 'unhealthy', label: 'Red (Not Deployed)', color: 'bg-red-500' },
   { value: 'unknown', label: 'Unknown', color: 'bg-gray-400' },
 ]
@@ -334,21 +336,22 @@ export function FlowsTab() {
   const [highlightedFlowId, setHighlightedFlowId] = useState<number | null>(null)
   const [searchFilter, setSearchFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<FlowStatus[]>(EMPTY_STATUS_FILTER)
-  const [instanceFilter, setInstanceFilter] = useState<number | null>(null)
+  const [clusterFilter, setClusterFilter] = useState<number | null>(null)
   const [showCheckAllDialog, setShowCheckAllDialog] = useState(false)
   const [showPGDetailsDialog, setShowPGDetailsDialog] = useState(false)
   const [selectedPGData, setSelectedPGData] = useState<ProcessGroupStatus | null>(null)
   const [selectedFlowType, setSelectedFlowType] = useState<FlowType | null>(null)
 
   const { data: instances = EMPTY_INSTANCES, isLoading: loadingInstances } = useNifiInstancesQuery()
+  const { data: clusters = EMPTY_CLUSTERS, isLoading: loadingClusters } = useNifiClustersQuery()
   const { data: flows = EMPTY_FLOWS, isLoading: loadingFlows, error: flowsError } = useMonitoringFlowsQuery()
 
-  const loading = loadingFlows || loadingInstances
+  const loading = loadingFlows || loadingInstances || loadingClusters
 
-  // Memoize instance filter options
-  const instanceOptions = useMemo(
-    () => instances.map((i) => ({ value: i.id, label: i.hierarchy_value })),
-    [instances],
+  // Memoize cluster filter options
+  const clusterOptions = useMemo(
+    () => clusters.map((c) => ({ value: c.id, label: `${c.hierarchy_attribute}=${c.hierarchy_value}` })),
+    [clusters],
   )
 
   // Get status data for a specific flow/type
@@ -391,19 +394,23 @@ export function FlowsTab() {
       })
     }
 
-    if (instanceFilter !== null) {
+    if (clusterFilter !== null) {
+      const matchingCluster = clusters.find((c) => c.id === clusterFilter)
+      const memberInstanceIds = matchingCluster
+        ? new Set(matchingCluster.members.map((m) => m.instance_id))
+        : new Set<number>()
       result = result.filter((flow) => {
         const src = getFlowItemStatus(flow, 'source')
         const dest = getFlowItemStatus(flow, 'destination')
         return (
-          (src && src.instance_id === instanceFilter) ||
-          (dest && dest.instance_id === instanceFilter)
+          (src && memberInstanceIds.has(src.instance_id)) ||
+          (dest && memberInstanceIds.has(dest.instance_id))
         )
       })
     }
 
     return result
-  }, [flows, searchFilter, statusFilter, instanceFilter, getFlowItemStatus])
+  }, [flows, searchFilter, statusFilter, clusterFilter, clusters, getFlowItemStatus])
 
   // Summary counts
   const healthyCount = useMemo(
@@ -420,7 +427,7 @@ export function FlowsTab() {
   )
 
   const checkAllFlows = useCallback(
-    async (instanceId: number) => {
+    async (clusterId: number) => {
       setChecking(true)
       setCheckError(null)
       setFlowStatuses({})
@@ -430,6 +437,12 @@ export function FlowsTab() {
           apiCall<DeploySettings>('nifi/hierarchy/deploy'),
           apiCall<HierarchyConfig>('nifi/hierarchy/'),
         ])
+
+        // Resolve the primary NiFi instance for the selected cluster
+        const primaryRes = await apiCall<{ instance_id: number }>(
+          `nifi/clusters/${clusterId}/get-primary`,
+        )
+        const instanceId = primaryRes.instance_id
 
         const allPathsResponse = await apiCall<AllPathsResponse>(
           `nifi/instances/${instanceId}/ops/process-groups/all-paths`,
@@ -445,41 +458,45 @@ export function FlowsTab() {
           pathToIdMap.set(pathString, pg.id)
           idToPathMap.set(pg.id, pathString)
         })
-        
+
         console.log('🗺️ [DEBUG] Path to ID map:', Object.fromEntries(pathToIdMap))
         console.log('🗺️ [DEBUG] ID to Path map:', Object.fromEntries(idToPathMap))
 
         const deploymentPaths = settingsResponse.paths
         const hierarchyConfig = hierarchyResponse.hierarchy.sort((a, b) => a.order - b.order)
-        const instanceDeploymentPath = deploymentPaths[instanceId.toString()]
+
+        // Paths are now keyed by cluster ID (not instance ID)
+        const clusterDeploymentPath = deploymentPaths[clusterId] ?? deploymentPaths[clusterId.toString()]
 
         console.log('⚙️ [DEBUG] Deployment paths:', deploymentPaths)
         console.log('📋 [DEBUG] Hierarchy config:', hierarchyConfig)
-        console.log('🎯 [DEBUG] Instance deployment path:', instanceDeploymentPath)
+        console.log('🎯 [DEBUG] Cluster deployment path:', clusterDeploymentPath)
 
-        if (!instanceDeploymentPath) {
-          setCheckError(`No deployment path configured for instance ${instanceId}`)
+        if (!clusterDeploymentPath) {
+          setCheckError(
+            `No deployment path configured for cluster ${clusterId}. Open Settings → Deploy, load paths for this cluster and save.`,
+          )
           return
         }
 
-        console.log('🔍 [DEBUG] Source path object:', instanceDeploymentPath.source_path)
-        console.log('🔍 [DEBUG] Dest path object:', instanceDeploymentPath.dest_path)
+        console.log('🔍 [DEBUG] Source path object:', clusterDeploymentPath.source_path)
+        console.log('🔍 [DEBUG] Dest path object:', clusterDeploymentPath.dest_path)
 
         const newStatuses: Record<string, ProcessGroupStatus> = {}
 
         const checkPart = async (flow: Flow, flowType: FlowType) => {
           const pathConfig =
             flowType === 'source'
-              ? instanceDeploymentPath.source_path
-              : instanceDeploymentPath.dest_path
-          
+              ? clusterDeploymentPath.source_path
+              : clusterDeploymentPath.dest_path
+
           console.log(`\n🔄 [DEBUG] Checking flow #${flow.id} (${flowType})`)
           console.log(`   Path config:`, pathConfig)
-          
+
           // Resolve the base path from the stored raw_path (API path, not formatted)
           const storedId = pathConfig.id
           let basePath = idToPathMap.get(storedId)
-          
+
           if (!basePath) {
             console.warn(`   ⚠️ Could not resolve path from ID "${storedId}", falling back to stored raw_path`)
             // Use raw_path (API path) if available, otherwise fall back to path
@@ -494,9 +511,9 @@ export function FlowsTab() {
               basePath = basePath.replace(/^NiFi Flow → /, '')
             }
           }
-          
+
           console.log(`   Resolved basePath: "${basePath}"`)
-          
+
           const hierarchyParts: string[] = []
           const sourceOrDest = flowType === 'source' ? 'source' : 'destination'
 
@@ -521,7 +538,7 @@ export function FlowsTab() {
 
           const processGroupId = pathToIdMap.get(expectedPath)
           console.log(`   Found process group ID: ${processGroupId || 'NOT FOUND'}`)
-          
+
           const flowKey = getFlowItemKey(flow.id, flowType)
 
           if (!processGroupId) {
@@ -682,18 +699,18 @@ export function FlowsTab() {
               ))}
             </div>
 
-            {/* Instance Filter */}
-            <div className="min-w-[160px]">
+            {/* Cluster Filter */}
+            <div className="min-w-[180px]">
               <Select
-                value={instanceFilter !== null ? String(instanceFilter) : 'all'}
-                onValueChange={(v) => setInstanceFilter(v === 'all' ? null : Number(v))}
+                value={clusterFilter !== null ? String(clusterFilter) : 'all'}
+                onValueChange={(v) => setClusterFilter(v === 'all' ? null : Number(v))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All Instances" />
+                  <SelectValue placeholder="All Clusters" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Instances</SelectItem>
-                  {instanceOptions.map((opt) => (
+                  <SelectItem value="all">All Clusters</SelectItem>
+                  {clusterOptions.map((opt) => (
                     <SelectItem key={opt.value} value={String(opt.value)}>
                       {opt.label}
                     </SelectItem>
@@ -777,9 +794,9 @@ export function FlowsTab() {
       <CheckAllDialog
         open={showCheckAllDialog}
         onOpenChange={setShowCheckAllDialog}
-        instances={instances}
-        loading={loadingInstances}
-        onSelectInstance={checkAllFlows}
+        clusters={clusters}
+        loading={loadingClusters}
+        onSelectCluster={checkAllFlows}
       />
 
       <ProcessGroupDetailsDialog

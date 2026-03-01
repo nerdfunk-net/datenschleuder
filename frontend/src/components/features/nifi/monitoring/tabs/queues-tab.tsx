@@ -25,11 +25,14 @@ import {
   Server,
 } from 'lucide-react'
 import { useNifiInstancesQuery } from '../hooks/use-monitoring-queries'
+import { useNifiClustersQuery } from '@/components/features/settings/nifi/hooks/use-nifi-clusters-query'
 import { queryKeys } from '@/lib/query-keys'
 import { useApi } from '@/hooks/use-api'
 import type { NifiInstance, Connection } from '../types'
+import type { NifiCluster } from '@/components/features/settings/nifi/types'
 
 const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
 
 type SortField = 'flowFilesIn' | 'flowFilesOut' | null
 type SortDirection = 'asc' | 'desc'
@@ -111,7 +114,8 @@ function StatCard({ label, value, className = '' }: { label: string; value: stri
 export function QueuesTab() {
   const { apiCall } = useApi()
   const queryClient = useQueryClient()
-  const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null)
+  const [selectedClusterId, setSelectedClusterId] = useState<number | null>(null)
+  const [resolvedInstanceId, setResolvedInstanceId] = useState<number | null>(null)
   const [connections, setConnections] = useState<Connection[]>([])
   const [checking, setChecking] = useState(false)
   const [hasChecked, setHasChecked] = useState(false)
@@ -119,43 +123,53 @@ export function QueuesTab() {
   const [sortField, setSortField] = useState<SortField>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
-  const { data: instances = EMPTY_INSTANCES, isLoading: loadingInstances } = useNifiInstancesQuery()
+  const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
+  const { data: clusters = EMPTY_CLUSTERS, isLoading: loadingClusters } = useNifiClustersQuery()
 
+  // Used for NiFi deep-link URL generation
   const selectedInstance = useMemo(
-    () => instances.find((i) => i.id === selectedInstanceId),
-    [instances, selectedInstanceId],
+    () => instances.find((i) => i.id === resolvedInstanceId),
+    [instances, resolvedInstanceId],
   )
 
-  const handleInstanceChange = useCallback((value: string) => {
-    setSelectedInstanceId(value === 'null' ? null : Number(value))
+  const handleClusterChange = useCallback((value: string) => {
+    setSelectedClusterId(value === 'null' ? null : Number(value))
+    setResolvedInstanceId(null)
     setConnections([])
     setHasChecked(false)
     setError(null)
   }, [])
 
   const checkAllQueues = useCallback(async () => {
-    if (!selectedInstanceId) return
+    if (!selectedClusterId) return
     setChecking(true)
     setError(null)
     setHasChecked(false)
 
     try {
+      // Resolve primary NiFi instance for this cluster
+      const primaryRes = await apiCall<{ instance_id: number }>(
+        `nifi/clusters/${selectedClusterId}/get-primary`,
+      )
+      const instanceId = primaryRes.instance_id
+      setResolvedInstanceId(instanceId)
+
       const result = await apiCall<{
         status: string
         components: Connection[]
         count: number
-      }>(`nifi/instances/${selectedInstanceId}/ops/components?kind=connections`)
+      }>(`nifi/instances/${instanceId}/ops/components?kind=connections`)
       setConnections(result?.components ?? [])
       setHasChecked(true)
       // Invalidate queue cache
-      queryClient.invalidateQueries({ queryKey: queryKeys.nifi.queues(selectedInstanceId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.nifi.queues(instanceId) })
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to check queues')
       setConnections([])
     } finally {
       setChecking(false)
     }
-  }, [selectedInstanceId, apiCall, queryClient])
+  }, [selectedClusterId, apiCall, queryClient])
 
   const toggleSort = useCallback((field: SortField) => {
     if (sortField === field) {
@@ -226,37 +240,37 @@ export function QueuesTab() {
 
   return (
     <div className="space-y-6">
-      {/* Instance Selection + Action */}
+      {/* Cluster Selection + Action */}
       <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
         <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center rounded-t-lg">
           <div className="flex items-center space-x-2">
             <Server className="h-4 w-4" />
-            <span className="text-sm font-medium">Select NiFi Instance</span>
+            <span className="text-sm font-medium">Select NiFi Cluster</span>
           </div>
         </div>
         <div className="p-6 bg-gradient-to-b from-white to-gray-50">
           <div className="flex flex-col md:flex-row gap-4 items-end">
             <div className="flex-1 max-w-md space-y-2">
-              <Label>NiFi Instance</Label>
+              <Label>NiFi Cluster</Label>
               <Select
-                value={selectedInstanceId !== null ? String(selectedInstanceId) : 'null'}
-                onValueChange={handleInstanceChange}
+                value={selectedClusterId !== null ? String(selectedClusterId) : 'null'}
+                onValueChange={handleClusterChange}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="-- Select an instance --" />
+                  <SelectValue placeholder="-- Select a cluster --" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="null">-- Select an instance --</SelectItem>
-                  {instances.map((inst) => (
-                    <SelectItem key={inst.id} value={String(inst.id)}>
-                      {inst.hierarchy_value}
+                  <SelectItem value="null">-- Select a cluster --</SelectItem>
+                  {clusters.map((cluster) => (
+                    <SelectItem key={cluster.id} value={String(cluster.id)}>
+                      {cluster.hierarchy_attribute}={cluster.hierarchy_value}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <Button
-              disabled={!selectedInstanceId || checking}
+              disabled={!selectedClusterId || checking}
               onClick={checkAllQueues}
             >
               {checking ? (
@@ -270,11 +284,11 @@ export function QueuesTab() {
         </div>
       </div>
 
-      {/* Loading instances */}
-      {loadingInstances && (
+      {/* Loading clusters */}
+      {loadingClusters && (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">Loading instances...</span>
+          <span className="ml-2 text-sm text-muted-foreground">Loading clusters...</span>
         </div>
       )}
 
@@ -286,18 +300,18 @@ export function QueuesTab() {
         </Alert>
       )}
 
-      {/* No instance selected */}
-      {!selectedInstanceId && !loadingInstances && (
+      {/* No cluster selected */}
+      {!selectedClusterId && !loadingClusters && (
         <Alert className="bg-blue-50 border-blue-200">
           <AlertCircle className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-blue-800">
-            Please select a NiFi instance to view queues.
+            Please select a NiFi cluster to view queues.
           </AlertDescription>
         </Alert>
       )}
 
       {/* Empty after check */}
-      {!checking && !error && connections.length === 0 && selectedInstanceId && hasChecked && (
+      {!checking && !error && connections.length === 0 && selectedClusterId && hasChecked && (
         <Alert className="bg-blue-50 border-blue-200">
           <AlertCircle className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-blue-800">
