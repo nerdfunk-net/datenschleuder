@@ -8,7 +8,7 @@ worker pool accordingly:
 Platform Detection:
     - macOS (Darwin): Uses 'solo' pool to avoid SIGSEGV crashes with asyncio event
       loops in forked processes. Tasks using asyncio.run() or asyncio.new_event_loop()
-      (like cache_all_devices_task) are incompatible with fork() on macOS.
+      are incompatible with fork() on macOS.
 
     - Linux/Other: Uses 'prefork' pool for optimal performance and concurrency.
       Recommended for production deployments.
@@ -160,8 +160,7 @@ def get_worker_pool():
 
     macOS (Darwin): Uses 'solo' pool to avoid SIGSEGV crashes with asyncio event loops
                     in forked processes. The asyncio.run() and asyncio.new_event_loop()
-                    calls in tasks like cache_all_devices_task are incompatible with
-                    fork() on macOS.
+                    calls in tasks are incompatible with fork() on macOS.
 
     Linux/Other: Uses 'prefork' pool for optimal performance and concurrency.
 
