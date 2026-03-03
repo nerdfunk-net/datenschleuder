@@ -94,6 +94,7 @@ async def create_nifi_instance(
             certificate_name=data.certificate_name,
             check_hostname=data.check_hostname,
             oidc_provider_id=data.oidc_provider_id,
+            git_config_repo_id=data.git_config_repo_id,
         )
     except ValueError as e:
         raise HTTPException(

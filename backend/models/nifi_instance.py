@@ -20,6 +20,7 @@ class NifiInstanceCreate(BaseModel):
     certificate_name: Optional[str] = None
     check_hostname: bool = True
     oidc_provider_id: Optional[str] = None
+    git_config_repo_id: Optional[int] = None
 
 
 class NifiInstanceUpdate(BaseModel):
@@ -35,6 +36,7 @@ class NifiInstanceUpdate(BaseModel):
     certificate_name: Optional[str] = None
     check_hostname: Optional[bool] = None
     oidc_provider_id: Optional[str] = None
+    git_config_repo_id: Optional[int] = None
 
 
 class NifiInstanceResponse(BaseModel):
@@ -52,6 +54,7 @@ class NifiInstanceResponse(BaseModel):
     certificate_name: Optional[str] = None
     check_hostname: bool
     oidc_provider_id: Optional[str] = None
+    git_config_repo_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 

@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useCallback } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useQuery } from '@tanstack/react-query'
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,8 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, Plug } from 'lucide-react'
+import { useApi } from '@/hooks/use-api'
+import { queryKeys } from '@/lib/query-keys'
 import {
   useNifiCertificatesQuery,
   useOidcProvidersQuery,
@@ -41,12 +44,26 @@ import { useNifiServersQuery } from '../hooks/use-nifi-servers-query'
 import type { NifiInstance, NifiInstanceFormValues, NifiServer } from '../types'
 
 const NO_SERVER = '__none__'
+const NO_REPO = '__none__'
 const EMPTY_SERVERS: NifiServer[] = []
+
+interface GitRepo {
+  id: number
+  name: string
+  url: string
+}
+
+interface GitReposResponse {
+  repositories: GitRepo[]
+}
+
+const EMPTY_GIT_REPOS: GitRepo[] = []
 
 const schema = z.object({
   name: z.string(),
   server_id: z.string().optional(),
   nifi_url: z.string().url('Must be a valid URL'),
+  git_config_repo_id: z.string(),
   authMethod: z.string().min(1, 'Required'),
   username: z.string(),
   password: z.string(),
@@ -67,11 +84,19 @@ interface Props {
 export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
   const isEdit = !!instance
   const { toast } = useToast()
+  const { apiCall } = useApi()
   const { createInstance, updateInstance, testNewConnection } = useNifiInstancesMutations()
 
   const { data: certificatesData } = useNifiCertificatesQuery()
   const { data: oidcData } = useOidcProvidersQuery()
   const { data: servers = EMPTY_SERVERS } = useNifiServersQuery()
+
+  const { data: gitReposData } = useQuery<GitReposResponse>({
+    queryKey: queryKeys.git.repositoriesByCategory('nifi_configs'),
+    queryFn: () => apiCall('git-repositories/?category=nifi_configs') as Promise<GitReposResponse>,
+    staleTime: 5 * 60 * 1000,
+  })
+  const gitRepos = gitReposData?.repositories ?? EMPTY_GIT_REPOS
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -79,6 +104,7 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
       name: '',
       server_id: NO_SERVER,
       nifi_url: '',
+      git_config_repo_id: NO_REPO,
       authMethod: 'username',
       username: '',
       password: '',
@@ -91,7 +117,6 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
 
   const watchedAuthMethod = useWatch({ control: form.control, name: 'authMethod' })
 
-  // Reset form when dialog opens/closes or instance changes
   useEffect(() => {
     if (!open) return
 
@@ -106,6 +131,7 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
         name: instance.name || '',
         server_id: instance.server_id ? String(instance.server_id) : NO_SERVER,
         nifi_url: instance.nifi_url,
+        git_config_repo_id: instance.git_config_repo_id ? String(instance.git_config_repo_id) : NO_REPO,
         authMethod,
         username: instance.username || '',
         password: '',
@@ -119,6 +145,7 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
         name: '',
         server_id: NO_SERVER,
         nifi_url: '',
+        git_config_repo_id: NO_REPO,
         authMethod: 'username',
         username: '',
         password: '',
@@ -146,7 +173,7 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
     [oidcData]
   )
 
-  const handleTestConnection = async () => {
+  const handleTestConnection = useCallback(async () => {
     const values = form.getValues() as unknown as NifiInstanceFormValues
     if (!values.nifi_url) {
       toast({ title: 'Error', description: 'Please enter a NiFi URL first.', variant: 'destructive' })
@@ -165,7 +192,7 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
     } else {
       toast({ title: 'Connection failed', description: result.message, variant: 'destructive' })
     }
-  }
+  }, [form, testNewConnection, toast])
 
   const onSubmit = async (values: FormValues) => {
     const payload = values as unknown as NifiInstanceFormValues
@@ -181,199 +208,247 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Edit NiFi Instance' : 'Add NiFi Instance'}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Name (optional) */}
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name <span className="text-slate-400 font-normal">(optional)</span></FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Production NiFi" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
-            {/* Server (optional) */}
-            <FormField
-              control={form.control}
-              name="server_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Server <span className="text-slate-400 font-normal">(optional)</span></FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="None" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={NO_SERVER}>None</SelectItem>
-                      {servers.map(s => (
-                        <SelectItem key={s.id} value={String(s.id)}>
-                          {s.server_id} <span className="text-slate-400">({s.hostname})</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* ── General ── */}
+            <div className="rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+              <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center gap-2">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" /></svg>
+                <span className="text-sm font-medium">General</span>
+              </div>
+              <div className="p-4 space-y-4 bg-gradient-to-b from-white to-slate-50">
 
-            {/* NiFi URL */}
-            <FormField
-              control={form.control}
-              name="nifi_url"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>NiFi URL</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://nifi.example.com:8443/nifi-api" {...field} />
-                  </FormControl>
-                  <FormDescription>Full NiFi API endpoint URL (must end with /nifi-api)</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Auth Method */}
-            <FormField
-              control={form.control}
-              name="authMethod"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Authentication Method</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select method" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {authMethodOptions.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* OIDC Provider */}
-            {watchedAuthMethod === 'oidc' && (
               <FormField
                 control={form.control}
-                name="oidcProvider"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>OIDC Provider</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select provider" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {oidcProviderOptions.map(p => (
-                          <SelectItem key={p.provider_id} value={p.provider_id}>{p.name}</SelectItem>
-                        ))}
-                        {oidcProviderOptions.length === 0 && (
-                          <SelectItem value="_none" disabled>No OIDC providers configured</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>Select an OIDC provider from config/oidc_providers.yaml</FormDescription>
+                    <FormLabel>Name <span className="text-slate-400 font-normal">(optional)</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Production NiFi" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
 
-            {/* Username / Password */}
-            {watchedAuthMethod === 'username' && (
-              <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="server_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Server <span className="text-slate-400 font-normal">(optional)</span></FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={NO_SERVER}>None</SelectItem>
+                        {servers.map(s => (
+                          <SelectItem key={s.id} value={String(s.id)}>
+                            {s.server_id} <span className="text-slate-400">({s.hostname})</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="nifi_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>NiFi URL</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://nifi.example.com:8443/nifi-api" {...field} />
+                    </FormControl>
+                    <FormDescription>Full NiFi API endpoint URL (must end with /nifi-api)</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="git_config_repo_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>NiFi Config <span className="text-slate-400 font-normal">(optional)</span></FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={NO_REPO}>None</SelectItem>
+                        {gitRepos.map(r => (
+                          <SelectItem key={r.id} value={String(r.id)}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                        {gitRepos.length === 0 && (
+                          <SelectItem value="_empty" disabled>No Nifi Configs repositories configured</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>Git repository containing the NiFi configuration files</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              </div>
+            </div>
+
+            {/* ── Connection with Authentication ── */}
+            <div className="rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+              <div className="bg-gradient-to-r from-violet-400/80 to-violet-500/80 text-white py-2 px-4 flex items-center gap-2">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                <span className="text-sm font-medium">Connection with Authentication</span>
+              </div>
+              <div className="p-4 space-y-4 bg-gradient-to-b from-white to-slate-50">
+
+              <FormField
+                control={form.control}
+                name="authMethod"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Authentication Method</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select method" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {authMethodOptions.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {watchedAuthMethod === 'oidc' && (
                 <FormField
                   control={form.control}
-                  name="username"
+                  name="oidcProvider"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
-                      <FormControl>
-                        <Input placeholder="admin" {...field} />
-                      </FormControl>
+                      <FormLabel>OIDC Provider</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select provider" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {oidcProviderOptions.map(p => (
+                            <SelectItem key={p.provider_id} value={p.provider_id}>{p.name}</SelectItem>
+                          ))}
+                          {oidcProviderOptions.length === 0 && (
+                            <SelectItem value="_none" disabled>No OIDC providers configured</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Select an OIDC provider from config/oidc_providers.yaml</FormDescription>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {watchedAuthMethod === 'username' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Username</FormLabel>
+                        <FormControl>
+                          <Input placeholder="admin" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+              </div>
+            </div>
+
+            {/* ── Connection Options ── */}
+            <div className="rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+              <div className="bg-gradient-to-r from-emerald-400/80 to-emerald-500/80 text-white py-2 px-4 flex items-center gap-2">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                <span className="text-sm font-medium">Connection Options</span>
+              </div>
+              <div className="p-4 space-y-3 bg-gradient-to-b from-white to-slate-50">
+                <FormField
+                  control={form.control}
+                  name="use_ssl"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2 space-y-0">
+                      <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <FormLabel className="font-normal">Use SSL/TLS</FormLabel>
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
-                  name="password"
+                  name="verify_ssl"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
+                    <FormItem className="flex items-center space-x-2 space-y-0">
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                       </FormControl>
-                      <FormMessage />
+                      <FormLabel className="font-normal">Verify SSL certificates</FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="check_hostname"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2 space-y-0">
+                      <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <FormLabel className="font-normal">Verify SSL hostname</FormLabel>
+                      <FormDescription className="!mt-0 ml-1">(recommended for production)</FormDescription>
                     </FormItem>
                   )}
                 />
               </div>
-            )}
-
-            {/* SSL Options */}
-            <div className="space-y-3 rounded-md border border-slate-200 p-4">
-              <p className="text-sm font-medium text-slate-700">SSL Options</p>
-              <FormField
-                control={form.control}
-                name="use_ssl"
-                render={({ field }) => (
-                  <FormItem className="flex items-center space-x-2 space-y-0">
-                    <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel className="font-normal">Use SSL/TLS</FormLabel>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="verify_ssl"
-                render={({ field }) => (
-                  <FormItem className="flex items-center space-x-2 space-y-0">
-                    <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel className="font-normal">Verify SSL Certificates</FormLabel>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="check_hostname"
-                render={({ field }) => (
-                  <FormItem className="flex items-center space-x-2 space-y-0">
-                    <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel className="font-normal">Verify SSL Hostname</FormLabel>
-                    <FormDescription className="!mt-0 ml-1">
-                      (recommended for production)
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
             </div>
 
             <DialogFooter className="gap-2">

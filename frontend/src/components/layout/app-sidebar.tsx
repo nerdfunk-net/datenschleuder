@@ -11,7 +11,7 @@ import { useSidebar } from './sidebar-context'
 import {
   Home,
   FileText,
-  // GitBranch, // NOTE: Hidden menu item - kept for re-enabling (Settings / Git Management)
+  GitBranch,
   // Zap,       // NOTE: Hidden menu item - kept for re-enabling (Settings / Cache)
   Key,
   Menu,
@@ -32,6 +32,7 @@ import {
   Rocket,
   Network,
   Upload,
+  ShieldCheck,
 } from 'lucide-react'
 
 interface NavItem {
@@ -60,6 +61,7 @@ const navigationSections: NavSection[] = [
       { label: 'Monitoring', href: '/nifi/monitoring', icon: Activity },
       { label: 'Parameter', href: '/nifi/parameter', icon: SlidersHorizontal },
       { label: 'Install', href: '/nifi/install', icon: HardDrive },
+      { label: 'Cert Manager', href: '/tools/cert-manager', icon: ShieldCheck },
     ],
   },
   {
@@ -82,11 +84,11 @@ const navigationSections: NavSection[] = [
     items: [
       // NOTE: The following menu items are intentionally hidden (code kept for re-enabling):
       // { label: 'Common', href: '/settings/common', icon: Settings },
-      // { label: 'Git Management', href: '/settings/git', icon: GitBranch },
       { label: 'NiFi', href: '/settings/nifi', icon: Server },
       { label: 'Registry', href: '/settings/registry', icon: GitFork },
       { label: 'Hierarchy', href: '/settings/hierarchy', icon: Layers },
       { label: 'Deploy', href: '/settings/deploy', icon: Rocket },
+      { label: 'Git Management', href: '/settings/git', icon: GitBranch },
       // { label: 'Cache', href: '/settings/cache', icon: Zap },
       // { label: 'Celery', href: '/settings/celery', icon: Server },
       { label: 'Credentials', href: '/settings/credentials', icon: Key },

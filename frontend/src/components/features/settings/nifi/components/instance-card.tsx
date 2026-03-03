@@ -144,6 +144,14 @@ export function InstanceCard({ instance, canWrite, onEdit }: Props) {
             <span className="text-xs font-semibold text-slate-500">Auth Method</span>
             <AuthBadge instance={instance} />
           </div>
+          {instance.git_config_repo_id && (
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <span className="text-xs font-semibold text-slate-500">NiFi Config</span>
+              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100">
+                Repo #{instance.git_config_repo_id}
+              </Badge>
+            </div>
+          )}
         </div>
       </div>
 

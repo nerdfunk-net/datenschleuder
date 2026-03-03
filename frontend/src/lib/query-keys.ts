@@ -6,6 +6,7 @@ export const queryKeys = {
   git: {
     all: ['git'] as const,
     repositories: () => [...queryKeys.git.all, 'repositories'] as const,
+    repositoriesByCategory: (category: string) => [...queryKeys.git.all, 'repositories', category] as const,
     repository: (id: number) => [...queryKeys.git.all, 'repository', id] as const,
     status: (id: number) => [...queryKeys.git.repository(id), 'status'] as const,
   },
@@ -206,6 +207,17 @@ export const queryKeys = {
     all: ['nifiInstall'] as const,
     checkPath: (instanceId: number, pathType: 'source' | 'destination') =>
       [...['nifiInstall'], 'check-path', instanceId, pathType] as const,
+  },
+
+  // Certificate Manager
+  certManager: {
+    all: ['certManager'] as const,
+    files: (instanceId: number) =>
+      [...queryKeys.certManager.all, 'files', instanceId] as const,
+    certificates: (instanceId: number, filePath: string) =>
+      [...queryKeys.certManager.all, 'certs', instanceId, filePath] as const,
+    nifiPasswords: (instanceId: number, filePath: string) =>
+      [...queryKeys.certManager.all, 'nifi-passwords', instanceId, filePath] as const,
   },
 
   // Templates

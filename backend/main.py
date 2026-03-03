@@ -60,6 +60,7 @@ from health import router as health_router
 # Tools router
 from routers.tools import router as tools_router
 from routers.certificates import router as certificates_router
+from routers.cert_manager import router as cert_manager_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -348,6 +349,7 @@ app.include_router(health_router)
 # Admin Tools
 app.include_router(tools_router)
 app.include_router(certificates_router)
+app.include_router(cert_manager_router)
 
 
 # Health check and basic endpoints

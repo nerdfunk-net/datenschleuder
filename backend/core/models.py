@@ -916,6 +916,9 @@ class NifiInstance(Base):
     certificate_name = Column(String(255), nullable=True)
     check_hostname = Column(Boolean, nullable=False, default=True)
     oidc_provider_id = Column(String(255), nullable=True)
+    git_config_repo_id = Column(
+        Integer, ForeignKey("git_repositories.id", ondelete="SET NULL"), nullable=True
+    )
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -931,6 +934,7 @@ class NifiInstance(Base):
         "RegistryFlow", back_populates="nifi_instance", cascade="all, delete-orphan"
     )
     server = relationship("NifiServer", back_populates="nifi_instances")
+    git_config_repo = relationship("GitRepository", foreign_keys=[git_config_repo_id])
     cluster_membership = relationship(
         "NifiClusterInstance", back_populates="instance", uselist=False
     )

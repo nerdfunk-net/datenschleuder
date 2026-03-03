@@ -43,7 +43,7 @@ function ClusterCard({
   return (
     <>
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 px-4 py-3 flex items-center justify-between">
           <span className="text-sm font-semibold text-white bg-white/20 rounded-full px-3 py-1">
             {cluster.cluster_id}
           </span>
@@ -94,7 +94,7 @@ function ClusterCard({
                       <span className="text-xs text-slate-400 truncate max-w-[80px]">{m.nifi_url}</span>
                     )}
                     {m.is_primary && (
-                      <Badge className="text-[10px] px-1.5 py-0 bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-100">
+                      <Badge className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100">
                         Primary
                       </Badge>
                     )}
@@ -153,13 +153,12 @@ export function ClustersTab() {
   return (
     <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
       <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <Network className="h-4 w-4" />
           <span className="text-sm font-medium">NiFi Clusters</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-blue-100">
-            {clusters.length} cluster{clusters.length !== 1 ? 's' : ''} configured
+          <span className="text-xs text-blue-100">{clusters.length !== 1 ? 's' : ''} configured
           </span>
           {canWrite && (
             <Button

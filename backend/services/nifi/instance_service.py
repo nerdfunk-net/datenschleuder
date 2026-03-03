@@ -37,6 +37,7 @@ def create_instance(
     certificate_name: Optional[str] = None,
     check_hostname: bool = True,
     oidc_provider_id: Optional[str] = None,
+    git_config_repo_id: Optional[int] = None,
 ) -> NifiInstance:
     """Create a new NiFi instance."""
     encrypted_password = None
@@ -56,6 +57,7 @@ def create_instance(
         certificate_name=certificate_name,
         check_hostname=check_hostname,
         oidc_provider_id=oidc_provider_id,
+        git_config_repo_id=git_config_repo_id,
     )
 
 

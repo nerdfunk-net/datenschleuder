@@ -32,6 +32,9 @@ function buildPayload(values: NifiInstanceFormValues) {
     certificate_name: certificateName,
     oidc_provider_id: oidcProviderId,
     check_hostname: values.check_hostname,
+    git_config_repo_id: values.git_config_repo_id && values.git_config_repo_id !== '__none__'
+      ? Number(values.git_config_repo_id)
+      : null,
   }
 }
 

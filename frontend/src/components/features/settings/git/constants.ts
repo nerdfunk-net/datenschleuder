@@ -11,7 +11,7 @@ export const EMPTY_BRANCHES: string[] = []
 // Default form values
 export const DEFAULT_FORM_DATA: RepositoryFormValues = {
   name: '',
-  category: 'device_configs',
+  category: 'nifi_configs',
   url: '',
   branch: 'main',
   auth_type: 'none',
@@ -25,9 +25,8 @@ export const DEFAULT_FORM_DATA: RepositoryFormValues = {
 
 // Repository categories
 export const REPOSITORY_CATEGORIES = [
-  { value: 'device_configs', label: 'Device Configs' },
+  { value: 'nifi_configs', label: 'Nifi Configs' },
   { value: 'datenschleuder_configs', label: 'Datenschleuder Configs' },
-  { value: 'templates', label: 'Templates' },
   { value: 'agent', label: 'Agents' },
 ] as const
 

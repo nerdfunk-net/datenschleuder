@@ -11,6 +11,7 @@ export interface NifiInstance {
   certificate_name: string | null
   check_hostname: boolean
   oidc_provider_id: string | null
+  git_config_repo_id: number | null
   created_at: string
   updated_at: string
 }
@@ -70,6 +71,7 @@ export interface NifiInstanceFormValues {
   use_ssl: boolean
   verify_ssl: boolean
   check_hostname: boolean
+  git_config_repo_id: string
 }
 
 export interface TestConnectionResult {
