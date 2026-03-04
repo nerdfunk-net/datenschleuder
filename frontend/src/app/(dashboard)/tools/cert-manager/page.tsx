@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { CertManagerPage } from '@/components/features/cert-manager/cert-manager-page'
+import { CertManagerPage } from '@/components/features/nifi/cert-manager/cert-manager-page'
 
 export const metadata: Metadata = {
   title: 'Certificate Manager - Datenschleuder',
