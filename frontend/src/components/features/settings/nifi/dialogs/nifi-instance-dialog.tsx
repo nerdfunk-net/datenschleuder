@@ -68,6 +68,7 @@ const schema = z.object({
   username: z.string(),
   password: z.string(),
   oidcProvider: z.string(),
+  certificateName: z.string(),
   use_ssl: z.boolean(),
   verify_ssl: z.boolean(),
   check_hostname: z.boolean(),
@@ -109,6 +110,7 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
       username: '',
       password: '',
       oidcProvider: '',
+      certificateName: '',
       use_ssl: true,
       verify_ssl: true,
       check_hostname: true,
@@ -125,7 +127,7 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
       if (instance.oidc_provider_id) {
         authMethod = 'oidc'
       } else if (instance.certificate_name) {
-        authMethod = `cert:${instance.certificate_name}`
+        authMethod = 'certificate'
       }
       form.reset({
         name: instance.name || '',
@@ -136,6 +138,7 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
         username: instance.username || '',
         password: '',
         oidcProvider: instance.oidc_provider_id || '',
+        certificateName: instance.certificate_name || '',
         use_ssl: instance.use_ssl,
         verify_ssl: instance.verify_ssl,
         check_hostname: instance.check_hostname,
@@ -150,6 +153,7 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
         username: '',
         password: '',
         oidcProvider: '',
+        certificateName: '',
         use_ssl: true,
         verify_ssl: true,
         check_hostname: true,
@@ -157,16 +161,16 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
     }
   }, [open, instance, form])
 
-  const authMethodOptions = useMemo(() => {
-    const options: { value: string; label: string }[] = [
-      { value: 'username', label: 'Username / Password' },
-      { value: 'oidc', label: 'OIDC Authentication' },
-    ]
-    for (const cert of certificatesData?.certificates || []) {
-      options.push({ value: `cert:${cert.name}`, label: `Certificate: ${cert.name}` })
-    }
-    return options
-  }, [certificatesData])
+  const authMethodOptions = useMemo(() => [
+    { value: 'username', label: 'Username / Password' },
+    { value: 'oidc', label: 'OIDC Authentication' },
+    { value: 'certificate', label: 'Certificate (PEM)' },
+  ], [])
+
+  const certificateOptions = useMemo(
+    () => certificatesData?.certificates || [],
+    [certificatesData]
+  )
 
   const oidcProviderOptions = useMemo(
     () => oidcData?.providers || [],
@@ -365,6 +369,35 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
                         </SelectContent>
                       </Select>
                       <FormDescription>Select an OIDC provider from config/oidc_providers.yaml</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {watchedAuthMethod === 'certificate' && (
+                <FormField
+                  control={form.control}
+                  name="certificateName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Certificate</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select certificate" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {certificateOptions.map(c => (
+                            <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>
+                          ))}
+                          {certificateOptions.length === 0 && (
+                            <SelectItem value="_none" disabled>No certificates configured in certs/certificates.yaml</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Client certificate from certs/certificates.yaml</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

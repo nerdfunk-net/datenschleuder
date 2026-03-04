@@ -58,7 +58,7 @@ export interface Certificate {
   name: string
 }
 
-export type AuthMethod = 'username' | 'oidc' | `cert:${string}`
+export type AuthMethod = 'username' | 'oidc' | 'certificate'
 
 export interface NifiInstanceFormValues {
   name: string
@@ -68,6 +68,7 @@ export interface NifiInstanceFormValues {
   username: string
   password: string
   oidcProvider: string
+  certificateName: string
   use_ssl: boolean
   verify_ssl: boolean
   check_hostname: boolean

@@ -8,6 +8,7 @@ import { FileBrowser } from './components/file-browser'
 import { CertificateBrowser } from './components/certificate-browser'
 import { ActionsBar } from './components/actions-bar'
 import { useNifiPasswordsQuery } from './hooks/use-nifi-passwords-query'
+import { useCertificatesQuery } from './hooks/use-certificates-query'
 import type { NifiPasswordEntry } from './types'
 
 const KEYSTORE_ORDER = ['nifi.security.keystorePasswd', 'nifi.security.keyPasswd', 'nifi.security.truststorePasswd']
@@ -22,6 +23,16 @@ export function CertManagerPage() {
 
   const { apiCall } = useApi()
   const { data: nifiPasswordsData } = useNifiPasswordsQuery(selectedInstanceId, selectedFilePath)
+  const { data: certsData } = useCertificatesQuery({
+    instanceId: selectedInstanceId,
+    filePath: selectedFilePath,
+    password: filePassword,
+  })
+
+  const selectedCertificates = useMemo(
+    () => certsData?.certificates.filter((c) => selectedCertIndices.includes(c.index)) ?? [],
+    [certsData, selectedCertIndices],
+  )
 
   const handleSelectInstance = useCallback((id: number) => {
     setSelectedInstanceId(id)
@@ -139,6 +150,7 @@ export function CertManagerPage() {
             filePath={selectedFilePath}
             filePassword={filePassword}
             selectedIndices={selectedCertIndices}
+            certificates={selectedCertificates}
           />
         </div>
       </div>

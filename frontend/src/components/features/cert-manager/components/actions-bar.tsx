@@ -1,18 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeftRight, Download, Upload, KeySquare } from 'lucide-react'
+import { ArrowLeftRight, Download, Upload, KeySquare, Trash2, PlusCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ConvertDialog } from '../dialogs/convert-dialog'
 import { ExportDialog } from '../dialogs/export-dialog'
 import { ImportDialog } from '../dialogs/import-dialog'
 import { CreateKeystoreDialog } from '../dialogs/create-keystore-dialog'
+import { RemoveCertificateDialog } from '../dialogs/remove-certificate-dialog'
+import { AddCertificateDialog } from '../dialogs/add-certificate-dialog'
+import type { CertificateInfo } from '../types'
 
 interface ActionsBarProps {
   instanceId: number | null
   filePath: string | null
   filePassword: string
   selectedIndices: number[]
+  certificates?: CertificateInfo[]
 }
 
 export function ActionsBar({
@@ -20,11 +24,14 @@ export function ActionsBar({
   filePath,
   filePassword,
   selectedIndices,
+  certificates,
 }: ActionsBarProps) {
   const [convertOpen, setConvertOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
+  const [removeOpen, setRemoveOpen] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
 
   const hasCertSelected = selectedIndices.length > 0
   const hasFile = filePath !== null && instanceId !== null
@@ -83,6 +90,28 @@ export function ActionsBar({
               <KeySquare className="h-4 w-4" />
               New Keystore / Truststore
             </Button>
+
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={!hasCertSelected || !hasFile}
+              onClick={() => setRemoveOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Remove selected
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!hasFile}
+              onClick={() => setAddOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Add certificate
+            </Button>
           </div>
         </div>
       </div>
@@ -121,6 +150,28 @@ export function ActionsBar({
           open={createOpen}
           onOpenChange={setCreateOpen}
           instanceId={instanceId}
+        />
+      )}
+
+      {instanceId !== null && filePath !== null && hasCertSelected && (
+        <RemoveCertificateDialog
+          open={removeOpen}
+          onOpenChange={setRemoveOpen}
+          instanceId={instanceId}
+          filePath={filePath}
+          certIndices={selectedIndices}
+          filePassword={filePassword}
+          selectedCertificates={certificates?.filter((c) => selectedIndices.includes(c.index)) ?? []}
+        />
+      )}
+
+      {instanceId !== null && filePath !== null && (
+        <AddCertificateDialog
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          instanceId={instanceId}
+          filePath={filePath}
+          filePassword={filePassword}
         />
       )}
     </>

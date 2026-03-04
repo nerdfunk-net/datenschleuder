@@ -17,8 +17,8 @@ function buildPayload(values: NifiInstanceFormValues) {
   } else if (values.authMethod === 'username') {
     username = values.username
     password = values.password
-  } else if (values.authMethod.startsWith('cert:')) {
-    certificateName = values.authMethod.substring(5)
+  } else if (values.authMethod === 'certificate') {
+    certificateName = values.certificateName || null
   }
 
   return {

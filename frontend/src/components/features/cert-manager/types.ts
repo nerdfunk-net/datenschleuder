@@ -24,6 +24,7 @@ export interface CertificateInfo {
   fingerprint_sha256: string
   raw_text: string
   has_private_key: boolean
+  cert_type: 'root_ca' | 'intermediate_ca' | 'end_entity'
 }
 
 export interface FileCertificatesResponse {
@@ -81,6 +82,26 @@ export interface KeystoreCreateResponse {
   success: boolean
   message: string
   output_path: string
+  commit_sha: string | null
+}
+
+export interface RemoveCertificatesRequest {
+  instance_id: number
+  file_path: string
+  cert_indices: number[]
+  password?: string
+}
+
+export interface AddCertificateRequest {
+  instance_id: number
+  file_path: string
+  cert_pem: string
+  password?: string
+}
+
+export interface CertModifyResponse {
+  success: boolean
+  message: string
   commit_sha: string | null
 }
 

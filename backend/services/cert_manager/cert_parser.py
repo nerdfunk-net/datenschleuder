@@ -97,6 +97,23 @@ def _parse_crypto_cert(cert, index: int, raw_text: str, has_private_key: bool = 
     fp_bytes = cert.fingerprint(hashes.SHA256())
     fingerprint = ":".join(f"{b:02X}" for b in fp_bytes)
 
+    # Certificate type classification
+    is_ca = False
+    try:
+        bc = cert.extensions.get_extension_for_class(x509.BasicConstraints).value
+        is_ca = bc.ca
+    except Exception:
+        pass
+
+    is_self_signed = cert.subject.public_bytes() == cert.issuer.public_bytes()
+
+    if is_ca and is_self_signed:
+        cert_type = "root_ca"
+    elif is_ca:
+        cert_type = "intermediate_ca"
+    else:
+        cert_type = "end_entity"
+
     return CertificateInfo(
         index=index,
         subject=subject,
@@ -111,6 +128,7 @@ def _parse_crypto_cert(cert, index: int, raw_text: str, has_private_key: bool = 
         fingerprint_sha256=fingerprint,
         raw_text=raw_text,
         has_private_key=has_private_key,
+        cert_type=cert_type,
     )
 
 

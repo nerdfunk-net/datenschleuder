@@ -233,6 +233,11 @@ class NifiConnectionService:
         key_path = cert_paths["key_path"]
         key_password = cert_paths["password"]
 
+        logger.debug(
+            "Certificate auth paths — ca_cert: %s, cert: %s, key: %s",
+            ca_cert_path, cert_path, key_path,
+        )
+
         if not ca_cert_path.exists():
             raise FileNotFoundError("CA certificate not found: %s" % ca_cert_path)
         if not cert_path.exists():
@@ -240,11 +245,54 @@ class NifiConnectionService:
         if not key_path.exists():
             raise FileNotFoundError("Client key not found: %s" % key_path)
 
+        # Log cert subject/issuer to confirm the right certificate is loaded
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["openssl", "x509", "-noout", "-subject", "-issuer", "-enddate", "-in", str(cert_path)],
+                capture_output=True, text=True, timeout=5,
+            )
+            logger.debug("Client certificate info:\n%s", result.stdout.strip() or result.stderr.strip())
+            ca_result = subprocess.run(
+                ["openssl", "x509", "-noout", "-subject", "-enddate", "-in", str(ca_cert_path)],
+                capture_output=True, text=True, timeout=5,
+            )
+            logger.debug("CA certificate info:\n%s", ca_result.stdout.strip() or ca_result.stderr.strip())
+        except Exception as e:
+            logger.debug("Could not inspect certificates via openssl: %s", e)
+
+        # Log which nipyapi config attributes are available for SSL
+        nifi_cfg = config.nifi_config
+        ssl_attrs = [a for a in dir(nifi_cfg) if "ssl" in a.lower() or "cert" in a.lower() or "key" in a.lower()]
+        logger.debug("nipyapi nifi_config SSL-related attributes: %s", ssl_attrs)
+
+        # nipyapi uses a swagger-generated client backed by urllib3/requests.
+        # The correct way to pass client certs is via ssl_ca_cert, cert_file, key_file
+        # on the Configuration object — NOT via ssl.SSLContext (which requests ignores).
+        if hasattr(nifi_cfg, "cert_file"):
+            nifi_cfg.cert_file = str(cert_path)
+            logger.debug("Set nifi_config.cert_file = %s", cert_path)
+        else:
+            logger.warning("nipyapi nifi_config has no 'cert_file' attribute — client cert may not be sent")
+
+        if hasattr(nifi_cfg, "key_file"):
+            nifi_cfg.key_file = str(key_path)
+            logger.debug("Set nifi_config.key_file = %s", key_path)
+
+        if hasattr(nifi_cfg, "ssl_ca_cert"):
+            if verify_ssl:
+                nifi_cfg.ssl_ca_cert = str(ca_cert_path)
+                logger.debug("Set nifi_config.ssl_ca_cert = %s", ca_cert_path)
+            else:
+                nifi_cfg.ssl_ca_cert = None
+                logger.debug("verify_ssl=False — skipping ssl_ca_cert")
+
+        # Also set via the old ssl_context path as fallback
         ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH)
         ssl_context.load_cert_chain(
             certfile=str(cert_path),
             keyfile=str(key_path),
-            password=key_password,
+            password=key_password if key_password else None,
         )
         ssl_context.load_verify_locations(cafile=str(ca_cert_path))
 
@@ -255,10 +303,14 @@ class NifiConnectionService:
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_REQUIRED
 
-        config.nifi_config.ssl_context = ssl_context
+        if hasattr(nifi_cfg, "ssl_context"):
+            nifi_cfg.ssl_context = ssl_context
+            logger.debug("Set nifi_config.ssl_context (fallback path)")
+
         logger.info(
-            "Successfully configured certificate authentication: %s",
-            certificate_name,
+            "Successfully configured certificate authentication: %s "
+            "(verify_ssl=%s, check_hostname=%s)",
+            certificate_name, verify_ssl, check_hostname,
         )
 
     def _configure_username_auth(

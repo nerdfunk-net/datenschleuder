@@ -24,6 +24,9 @@ from models.cert_manager import (
     CreateTruststoreRequest,
     KeystoreCreateResponse,
     NifiPasswordsResponse,
+    RemoveCertificatesRequest,
+    AddCertificateRequest,
+    CertModifyResponse,
 )
 from services.cert_manager.file_service import list_cert_files, get_nifi_passwords as _get_nifi_passwords
 from services.cert_manager.cert_parser import parse_cert_file
@@ -34,6 +37,8 @@ from services.cert_manager.cert_operations import (
     create_new_keystore,
     create_new_truststore,
     resolve_cert_file_path,
+    remove_certificates,
+    add_certificate,
 )
 
 logger = logging.getLogger(__name__)
@@ -201,3 +206,35 @@ async def create_truststore(request: CreateTruststoreRequest) -> KeystoreCreateR
         validity_days=request.validity_days,
     )
     return KeystoreCreateResponse(**result)
+
+
+@router.post(
+    "/remove-certificates",
+    response_model=CertModifyResponse,
+    dependencies=[Depends(require_permission("nifi", "write"))],
+)
+async def remove_certs(request: RemoveCertificatesRequest) -> CertModifyResponse:
+    """Remove selected certificates from a PEM or PKCS12 file and commit the change."""
+    result = remove_certificates(
+        instance_id=request.instance_id,
+        file_path=request.file_path,
+        cert_indices=request.cert_indices,
+        password=request.password,
+    )
+    return CertModifyResponse(**result)
+
+
+@router.post(
+    "/add-certificate",
+    response_model=CertModifyResponse,
+    dependencies=[Depends(require_permission("nifi", "write"))],
+)
+async def add_cert(request: AddCertificateRequest) -> CertModifyResponse:
+    """Add a PEM certificate to an existing store and commit the change."""
+    result = add_certificate(
+        instance_id=request.instance_id,
+        file_path=request.file_path,
+        cert_pem=request.cert_pem,
+        password=request.password,
+    )
+    return CertModifyResponse(**result)

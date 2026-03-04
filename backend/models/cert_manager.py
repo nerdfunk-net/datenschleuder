@@ -38,6 +38,7 @@ class CertificateInfo(BaseModel):
     fingerprint_sha256: str
     raw_text: str  # full openssl output
     has_private_key: bool = False  # True when the paired private key is present in the P12
+    cert_type: str = "end_entity"  # "root_ca" | "intermediate_ca" | "end_entity"
 
 
 class FileCertificatesResponse(BaseModel):
@@ -117,6 +118,32 @@ class KeystoreCreateResponse(BaseModel):
     success: bool
     message: str
     output_path: str
+    commit_sha: Optional[str] = None
+
+
+class RemoveCertificatesRequest(BaseModel):
+    """Request to remove one or more certificates from an existing store."""
+
+    instance_id: int
+    file_path: str
+    cert_indices: List[int]           # 0-based indices of certs to remove
+    password: Optional[str] = None    # required for encrypted P12
+
+
+class AddCertificateRequest(BaseModel):
+    """Request to add a new PEM certificate to an existing store."""
+
+    instance_id: int
+    file_path: str
+    cert_pem: str                     # full PEM text (with headers/footers)
+    password: Optional[str] = None    # required for encrypted P12
+
+
+class CertModifyResponse(BaseModel):
+    """Response from a certificate add or remove operation."""
+
+    success: bool
+    message: str
     commit_sha: Optional[str] = None
 
 

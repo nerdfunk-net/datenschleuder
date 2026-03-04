@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, AlertTriangle, CheckCircle, Clock, KeyRound } from 'lucide-react'
+import { ChevronDown, ChevronRight, AlertTriangle, CheckCircle, Clock, KeyRound, ShieldCheck, Shield } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -64,6 +64,18 @@ export function CertificateCard({ cert, isSelected, onToggleSelect }: Certificat
               {extractCN(cert.subject)}
             </span>
             {validityBadge}
+            {cert.cert_type === 'root_ca' && (
+              <Badge className="text-xs bg-blue-100 text-blue-700 border-blue-300 flex items-center gap-1">
+                <ShieldCheck className="h-3 w-3" />
+                Root CA
+              </Badge>
+            )}
+            {cert.cert_type === 'intermediate_ca' && (
+              <Badge className="text-xs bg-orange-100 text-orange-700 border-orange-300 flex items-center gap-1">
+                <Shield className="h-3 w-3" />
+                Signing CA
+              </Badge>
+            )}
             {cert.has_private_key && (
               <Badge className="text-xs bg-purple-100 text-purple-700 border-purple-300 flex items-center gap-1">
                 <KeyRound className="h-3 w-3" />

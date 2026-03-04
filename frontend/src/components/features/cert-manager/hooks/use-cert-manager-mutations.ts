@@ -10,6 +10,9 @@ import type {
   CreateKeystoreRequest,
   CreateTruststoreRequest,
   KeystoreCreateResponse,
+  RemoveCertificatesRequest,
+  AddCertificateRequest,
+  CertModifyResponse,
 } from '../types'
 
 export function useCertManagerMutations() {
@@ -146,5 +149,39 @@ export function useCertManagerMutations() {
     },
   })
 
-  return { convertCert, exportCert, importCert, createKeystore, createTruststore }
+  const removeCertificates = useMutation({
+    mutationFn: (request: RemoveCertificatesRequest) =>
+      apiCall('cert-manager/remove-certificates', {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }) as Promise<CertModifyResponse>,
+    onSuccess: (_, req) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.certManager.certificates(req.instance_id, req.file_path),
+      })
+      toast({ title: 'Removed', description: 'Certificate(s) removed and committed to git.' })
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Remove failed', description: error.message, variant: 'destructive' })
+    },
+  })
+
+  const addCertificate = useMutation({
+    mutationFn: (request: AddCertificateRequest) =>
+      apiCall('cert-manager/add-certificate', {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }) as Promise<CertModifyResponse>,
+    onSuccess: (_, req) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.certManager.certificates(req.instance_id, req.file_path),
+      })
+      toast({ title: 'Added', description: 'Certificate added and committed to git.' })
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Add failed', description: error.message, variant: 'destructive' })
+    },
+  })
+
+  return { convertCert, exportCert, importCert, createKeystore, createTruststore, removeCertificates, addCertificate }
 }
