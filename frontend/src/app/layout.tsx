@@ -4,6 +4,7 @@ import "./globals.css";
 import { localFonts } from "@/lib/local-fonts";
 import { AuthHydration } from "@/components/auth/auth-hydration";
 import { QueryProvider } from "@/providers/query-provider";
+import { Toaster } from "@/components/ui/toaster";
 
 // Use local font configuration for air-gapped environments
 const geistSans = {
@@ -58,6 +59,7 @@ export default function RootLayout({
           <QueryProvider>
             <AuthHydration />
             {children}
+            <Toaster />
           </QueryProvider>
         </React.StrictMode>
       </body>

@@ -17,6 +17,7 @@ import { Pencil, Trash2, Plug, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useNifiInstancesMutations } from '../hooks/use-nifi-instances-mutations'
 import type { NifiInstance } from '../types'
+import { tryParseNifiError } from '../utils/parse-error'
 
 interface Props {
   instance: NifiInstance
@@ -55,14 +56,21 @@ export function InstanceCard({ instance, canWrite, onEdit }: Props) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   const handleTestConnection = async () => {
-    const result = await testSavedConnection.mutateAsync(instance.id)
-    if (result.status === 'success') {
-      toast({
-        title: 'Connection successful',
-        description: `${result.message}${result.details?.version ? ` — Version: ${result.details.version}` : ''}`,
-      })
-    } else {
-      toast({ title: 'Connection failed', description: result.message, variant: 'destructive' })
+    try {
+      const result = await testSavedConnection.mutateAsync(instance.id)
+      if (result.status === 'success') {
+        toast({
+          title: 'Connection successful',
+          description: `${result.message}${result.details?.version ? ` — Version: ${result.details.version}` : ''}`,
+        })
+      } else {
+        const detail = result.details?.error ? `\n\nDetails: ${result.details.error}` : ''
+        toast({ title: 'Connection failed', description: `${result.message}${detail}`, variant: 'destructive' })
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'An unexpected error occurred.'
+      const parsed = tryParseNifiError(msg)
+      toast({ title: 'Connection failed', description: parsed, variant: 'destructive' })
     }
   }
 

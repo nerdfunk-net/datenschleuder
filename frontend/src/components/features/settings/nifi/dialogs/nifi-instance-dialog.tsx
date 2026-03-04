@@ -42,6 +42,7 @@ import {
 import { useNifiInstancesMutations } from '../hooks/use-nifi-instances-mutations'
 import { useNifiServersQuery } from '../hooks/use-nifi-servers-query'
 import type { NifiInstance, NifiInstanceFormValues, NifiServer } from '../types'
+import { tryParseNifiError } from '../utils/parse-error'
 
 const NO_SERVER = '__none__'
 const NO_REPO = '__none__'
@@ -187,14 +188,21 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
       toast({ title: 'Error', description: 'Please select an OIDC provider.', variant: 'destructive' })
       return
     }
-    const result = await testNewConnection.mutateAsync(values)
-    if (result.status === 'success') {
-      toast({
-        title: 'Connection successful',
-        description: `${result.message}${result.details?.version ? ` — Version: ${result.details.version}` : ''}`,
-      })
-    } else {
-      toast({ title: 'Connection failed', description: result.message, variant: 'destructive' })
+    try {
+      const result = await testNewConnection.mutateAsync(values)
+      if (result.status === 'success') {
+        toast({
+          title: 'Connection successful',
+          description: `${result.message}${result.details?.version ? ` — Version: ${result.details.version}` : ''}`,
+        })
+      } else {
+        const detail = result.details?.error ? `\n\nDetails: ${result.details.error}` : ''
+        toast({ title: 'Connection failed', description: `${result.message}${detail}`, variant: 'destructive' })
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'An unexpected error occurred.'
+      const parsed = tryParseNifiError(msg)
+      toast({ title: 'Connection failed', description: parsed, variant: 'destructive' })
     }
   }, [form, testNewConnection, toast])
 
