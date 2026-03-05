@@ -281,6 +281,25 @@ Virtual source/sink nodes (whose `id` equals the FlowFile UUID) are skipped duri
 
 HTTP endpoint: `GET /{instance_id}/ops/provenance/lineage/{flow_file_uuid}?component_id=`
 
+### Flow Lineage by Filename
+
+```python
+get_flow_lineage_by_filename(
+    filename: str,
+    max_results: int = 10,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> list[dict]
+```
+
+Two-step lookup: first submits a provenance search with `search_terms={"Filename": ...}` to find all matching FlowFile UUIDs, then calls `get_flow_lineage()` for each unique UUID. Raises `ValueError` if no events are found for the given filename.
+
+Returns a list of lineage dicts (same shape as `get_flow_lineage()` above), one per unique FlowFile UUID found.
+
+HTTP endpoint: `GET /{instance_id}/ops/provenance/lineage-by-filename/{filename}?max_results=&start_date=&end_date=`
+
+Note: NiFi only retains provenance data for a limited window (default ~24 h). Filenames not in that window will return 404.
+
 ---
 
 ## Core nipyapi Modules Used

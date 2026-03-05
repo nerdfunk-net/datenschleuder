@@ -60,6 +60,79 @@ def get_component_provenance_events(
             pass
 
 
+def get_flow_lineage_by_filename(
+    filename: str,
+    max_results: int = 10,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> list[dict]:
+    """
+    Find FlowFile UUIDs by filename via a provenance search, then return
+    lineage for each unique UUID found.
+
+    NiFi keeps provenance data for a limited window (default ~24 h).
+    Returns a list of lineage result dicts (one per unique FlowFile UUID).
+    Raises ValueError if no matching events are found.
+    """
+    api = nipyapi.nifi.ProvenanceApi()
+
+    search_value = nipyapi.nifi.ProvenanceSearchValueDTO(value=filename)
+    request_dto = nipyapi.nifi.ProvenanceRequestDTO(
+        search_terms={"Filename": search_value},
+        max_results=max_results,
+        incremental_results=False,
+    )
+    if start_date:
+        request_dto.start_date = start_date
+    if end_date:
+        request_dto.end_date = end_date
+
+    body = nipyapi.nifi.ProvenanceEntity(
+        provenance=nipyapi.nifi.ProvenanceDTO(request=request_dto)
+    )
+
+    result = api.submit_provenance_request(body)
+    query_id = result.provenance.id
+
+    try:
+        deadline = time.monotonic() + _POLL_TIMEOUT
+        while True:
+            result = api.get_provenance(query_id)
+            if result.provenance.finished:
+                break
+            if time.monotonic() > deadline:
+                raise TimeoutError(
+                    "Provenance query timed out after %ds" % _POLL_TIMEOUT
+                )
+            time.sleep(_POLL_INTERVAL)
+
+        events = (
+            result.provenance.results.provenance_events
+            if result.provenance.results
+            else []
+        ) or []
+
+        seen: set[str] = set()
+        uuids: list[str] = []
+        for event in events:
+            uuid = getattr(event, "flow_file_uuid", None)
+            if uuid and uuid not in seen:
+                seen.add(uuid)
+                uuids.append(uuid)
+    finally:
+        try:
+            api.delete_provenance(query_id)
+        except Exception:
+            pass
+
+    if not uuids:
+        raise ValueError(
+            "No provenance events found for filename '%s'" % filename
+        )
+
+    return [get_flow_lineage(uuid) for uuid in uuids]
+
+
 def get_flow_lineage(
     flow_file_uuid: str,
     component_id: str | None = None,

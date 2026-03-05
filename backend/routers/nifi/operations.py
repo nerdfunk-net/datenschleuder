@@ -886,3 +886,44 @@ async def get_flow_lineage(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return {"status": "success", "instance_id": instance_id, **result}
+
+
+@router.get("/{instance_id}/ops/provenance/lineage-by-filename/{filename:path}")
+async def get_flow_lineage_by_filename(
+    instance_id: int,
+    filename: str,
+    max_results: int = 10,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    current_user: dict = Depends(require_permission("nifi", "read")),
+):
+    """
+    Trace FlowFiles by filename through all NiFi components they passed through.
+
+    Searches provenance for events matching the given filename, extracts the
+    unique FlowFile UUIDs, and returns lineage for each. Useful when you know
+    the filename but not the FlowFile UUID.
+
+    - **filename**: Exact filename of the FlowFile (URL-encoded if it contains slashes)
+    - **max_results**: Maximum number of provenance events to search (default 10)
+    - **start_date**: Earliest event time filter (NiFi date format)
+    - **end_date**: Latest event time filter (NiFi date format)
+    """
+    try:
+        results = await _execute_with_retry(
+            instance_id,
+            lambda: prov_ops.get_flow_lineage_by_filename(
+                filename, max_results, start_date, end_date
+            ),
+        )
+    except TimeoutError as e:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return {
+        "status": "success",
+        "instance_id": instance_id,
+        "filename": filename,
+        "lineage_count": len(results),
+        "lineages": results,
+    }
