@@ -43,7 +43,7 @@ function ServerCard({
   return (
     <>
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 px-4 py-3 flex items-center justify-between">
           <span className="text-sm font-semibold text-white bg-white/20 rounded-full px-3 py-1">
             {server.server_id}
           </span>

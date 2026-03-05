@@ -16,6 +16,7 @@ import {
 import { Pencil, Trash2, Plug, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useNifiInstancesMutations } from '../hooks/use-nifi-instances-mutations'
+import { useGitRepositoriesQuery } from '@/components/features/settings/git/hooks/queries/use-git-repositories-query'
 import type { NifiInstance } from '../types'
 import { tryParseNifiError } from '../utils/parse-error'
 
@@ -53,6 +54,10 @@ function YesNoBadge({ value }: { value: boolean }) {
 export function InstanceCard({ instance, canWrite, onEdit }: Props) {
   const { toast } = useToast()
   const { deleteInstance, testSavedConnection } = useNifiInstancesMutations()
+  const { data: gitData } = useGitRepositoriesQuery()
+  const gitRepoName = instance.git_config_repo_id
+    ? (gitData?.repositories.find(r => r.id === instance.git_config_repo_id)?.name ?? `Repo #${instance.git_config_repo_id}`)
+    : null
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   const handleTestConnection = async () => {
@@ -88,7 +93,7 @@ export function InstanceCard({ instance, canWrite, onEdit }: Props) {
     <>
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5">
         {/* Card header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 px-4 py-3 flex items-center justify-between">
           <span className="text-sm font-semibold text-white bg-white/20 rounded-full px-3 py-1">
             {displayTitle}
           </span>
@@ -152,11 +157,11 @@ export function InstanceCard({ instance, canWrite, onEdit }: Props) {
             <span className="text-xs font-semibold text-slate-500">Auth Method</span>
             <AuthBadge instance={instance} />
           </div>
-          {instance.git_config_repo_id && (
+          {gitRepoName && (
             <div className="flex items-center justify-between px-4 py-2.5">
               <span className="text-xs font-semibold text-slate-500">NiFi Config</span>
               <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100">
-                Repo #{instance.git_config_repo_id}
+                {gitRepoName}
               </Badge>
             </div>
           )}

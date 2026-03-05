@@ -30,6 +30,27 @@ export interface ProcessGroupStatus {
   data: ProcessGroupData
 }
 
+export interface VersionControlInformation {
+  branch?: string
+  bucket_id?: string
+  bucket_name?: string
+  flow_description?: string
+  flow_id?: string
+  flow_name?: string
+  group_id?: string
+  registry_id?: string
+  registry_name?: string
+  state?: string
+  state_explanation?: string
+  version?: string
+}
+
+export interface ParameterContextRef {
+  id?: string
+  permissions?: { can_read?: boolean; can_write?: boolean }
+  component?: { id?: string; name?: string }
+}
+
 export interface ProcessGroupData {
   not_deployed?: boolean
   message?: string
@@ -38,17 +59,45 @@ export interface ProcessGroupData {
   stopped_count?: number
   invalid_count?: number
   disabled_count?: number
+  stale_count?: number
+  locally_modified_count?: number
+  locally_modified_and_stale_count?: number
+  sync_failure_count?: number
+  up_to_date_count?: number
   input_port_count?: number
   output_port_count?: number
   local_input_port_count?: number
   local_output_port_count?: number
+  public_input_port_count?: number
+  public_output_port_count?: number
+  active_remote_port_count?: number
+  inactive_remote_port_count?: number
+  versioned_flow_state?: string
   bulletins?: Bulletin[]
   status?: {
     aggregate_snapshot?: AggregateSnapshot
+    name?: string
+    stats_last_refreshed?: string
   }
   component?: {
     name?: string
+    comments?: string
+    running_count?: number
+    stopped_count?: number
+    invalid_count?: number
+    disabled_count?: number
+    stale_count?: number
+    input_port_count?: number
+    output_port_count?: number
+    execution_engine?: string
+    flowfile_concurrency?: string
+    flowfile_outbound_policy?: string
+    parameter_context?: ParameterContextRef
+    parent_group_id?: string
+    version_control_information?: VersionControlInformation
   }
+  parameter_context?: ParameterContextRef
+  uri?: string
 }
 
 export interface Bulletin {

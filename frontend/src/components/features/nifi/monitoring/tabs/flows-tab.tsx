@@ -558,7 +558,7 @@ export function FlowsTab() {
 
           try {
             const response = await apiCall<ProcessGroupStatus>(
-              `nifi/instances/${instanceId}/ops/process-groups/${processGroupId}/status`,
+              `nifi/instances/${instanceId}/ops/process-groups/${processGroupId}/status/canvas?detail=all`,
             )
             newStatuses[flowKey] = response
           } catch (err: unknown) {

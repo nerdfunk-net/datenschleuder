@@ -30,6 +30,7 @@ from services.nifi.operations import (
     processors as proc_ops,
     versions as ver_ops,
     management as mgmt_ops,
+    provenance as prov_ops,
 )
 
 logger = logging.getLogger(__name__)
@@ -810,3 +811,78 @@ async def list_components_by_kind(
         "components": components,
         "count": len(components),
     }
+
+
+# ============================================================================
+# Provenance
+# ============================================================================
+
+
+@router.get("/{instance_id}/ops/provenance/component/{component_id}")
+async def get_component_provenance(
+    instance_id: int,
+    component_id: str,
+    max_results: int = 100,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    current_user: dict = Depends(require_permission("nifi", "read")),
+):
+    """
+    Get provenance events for a NiFi component (processor, port, etc.).
+
+    Submits a provenance query filtered by component UUID, polls until
+    complete, and returns the full result. The query is automatically
+    deleted from NiFi after retrieval.
+
+    - **component_id**: NiFi component UUID
+    - **max_results**: Maximum number of events (default 100)
+    - **start_date**: Earliest event time filter (NiFi date format)
+    - **end_date**: Latest event time filter (NiFi date format)
+    """
+    try:
+        result = await _execute_with_retry(
+            instance_id,
+            lambda: prov_ops.get_component_provenance_events(
+                component_id, max_results, start_date, end_date
+            ),
+        )
+    except TimeoutError as e:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return {
+        "status": "success",
+        "instance_id": instance_id,
+        "component_id": component_id,
+        "data": result,
+    }
+
+
+@router.get("/{instance_id}/ops/provenance/lineage/{flow_file_uuid}")
+async def get_flow_lineage(
+    instance_id: int,
+    flow_file_uuid: str,
+    component_id: str | None = None,
+    current_user: dict = Depends(require_permission("nifi", "read")),
+):
+    """
+    Trace a FlowFile through all NiFi components it passed through.
+
+    Returns an ordered list of components (sorted by event timestamp)
+    that the FlowFile visited, plus the raw lineage graph (nodes/links).
+    Useful for debugging where a flow stopped.
+
+    - **flow_file_uuid**: UUID of the FlowFile to trace
+    - **component_id**: Optional starting component UUID — annotates the
+      matching node in `ordered_path` with `is_starting_component: true`
+    """
+    try:
+        result = await _execute_with_retry(
+            instance_id,
+            lambda: prov_ops.get_flow_lineage(flow_file_uuid, component_id),
+        )
+    except TimeoutError as e:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return {"status": "success", "instance_id": instance_id, **result}
