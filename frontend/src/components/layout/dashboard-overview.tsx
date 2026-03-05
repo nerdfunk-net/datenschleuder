@@ -1,116 +1,188 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { LayoutDashboard, Activity, Loader2 } from 'lucide-react'
+
+import { Badge } from '@/components/ui/badge'
 import { useAuthStore } from '@/lib/auth-store'
-import {
-  Home,
-  Zap,
-  GitBranch,
-  Settings as SettingsIcon
-} from 'lucide-react'
+import { useJobsQuery } from '@/components/features/jobs/view/hooks/use-jobs-query'
+import { isCheckQueuesJobResult, isCheckProcessGroupJobResult } from '@/components/features/jobs/types/job-results'
+import type { JobRun } from '@/components/features/jobs/types/job-results'
+
+type StatusColor = 'green' | 'yellow' | 'red' | 'gray'
+
+function getJobStatus(job: JobRun): StatusColor {
+  if (job.result && isCheckQueuesJobResult(job.result)) {
+    return job.result.overall_status
+  }
+
+  if (job.result && isCheckProcessGroupJobResult(job.result)) {
+    return job.result.passed ? 'green' : 'red'
+  }
+
+  if (job.status === 'running' || job.status === 'pending') return 'yellow'
+  if (job.status === 'completed') {
+    return job.result && (job.result as { success?: boolean }).success === true ? 'green' : 'red'
+  }
+  if (job.status === 'failed' || job.status === 'cancelled') return 'red'
+
+  return 'gray'
+}
+
+const STATUS_BADGE_CLASSES: Record<StatusColor, string> = {
+  green: 'bg-green-100 text-green-800 border-green-200',
+  yellow: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  red: 'bg-red-100 text-red-800 border-red-200',
+  gray: 'bg-gray-100 text-gray-600 border-gray-200',
+}
+
+const STATUS_INDICATOR_CLASSES: Record<StatusColor, string> = {
+  green: 'bg-green-500',
+  yellow: 'bg-yellow-400',
+  red: 'bg-red-500',
+  gray: 'bg-gray-400',
+}
+
+const STATUS_LABELS: Record<StatusColor, string> = {
+  green: 'Healthy',
+  yellow: 'In Progress',
+  red: 'Failed',
+  gray: 'No Data',
+}
+
+function formatTimestamp(ts: string | null): string {
+  if (!ts) return 'Never'
+  const date = new Date(ts)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'Just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffH = Math.floor(diffMin / 60)
+  if (diffH < 24) return `${diffH}h ago`
+  const diffD = Math.floor(diffH / 24)
+  return `${diffD}d ago`
+}
+
+const QUERY_PARAMS = { page_size: 100 }
 
 export default function DashboardOverview() {
   const user = useAuthStore((state) => state.user)
+  const router = useRouter()
 
-  const quickLinks = [
-    {
-      title: 'Jobs',
-      description: 'Manage and monitor job templates',
-      icon: Zap,
-      href: '/jobs',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      iconBg: 'bg-blue-100'
-    },
-    {
-      title: 'Git Repositories',
-      description: 'Manage Git repository connections',
-      icon: GitBranch,
-      href: '/settings/git',
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      iconBg: 'bg-green-100'
-    },
-    {
-      title: 'Settings',
-      description: 'Configure application settings',
-      icon: SettingsIcon,
-      href: '/settings',
-      color: 'text-slate-600',
-      bgColor: 'bg-slate-50',
-      iconBg: 'bg-slate-100'
+  const { data, isLoading } = useJobsQuery({ params: QUERY_PARAMS })
+
+  const jobCards = useMemo(() => {
+    if (!data?.items) return []
+
+    // Group by job_name — API returns newest first, so first entry per name = latest run
+    const seen = new Map<string, JobRun>()
+    for (const job of data.items) {
+      if (!seen.has(job.job_name)) {
+        seen.set(job.job_name, job)
+      }
     }
-  ]
+
+    return Array.from(seen.values()).sort((a, b) =>
+      a.job_name.localeCompare(b.job_name)
+    )
+  }, [data])
+
+  const pageHeader = (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div className="bg-blue-100 p-2 rounded-lg">
+          <LayoutDashboard className="h-6 w-6 text-blue-600" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">
+            {user?.username ? `Welcome, ${user.username}` : 'Dashboard'}
+          </h1>
+          <p className="text-muted-foreground mt-2">Job status overview — auto-refreshes while jobs are active</p>
+        </div>
+      </div>
+    </div>
+  )
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        {pageHeader}
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-8 p-6 bg-slate-50/50 min-h-screen">
-      {/* Welcome Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-slate-900">
-          Welcome{user?.username ? `, ${user.username}` : ''}!
-        </h1>
-        <p className="text-slate-600">
-          Get started with your application scaffold
-        </p>
-      </div>
+    <div className="space-y-6">
+      {pageHeader}
 
-      {/* Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {quickLinks.map((link) => {
-          const IconComponent = link.icon
-          return (
-            <a key={link.title} href={link.href}>
-              <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer h-full">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className={`p-3 rounded-xl ${link.iconBg}`}>
-                      <IconComponent className={`h-6 w-6 ${link.color}`} />
+      <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
+        {/* Blue gradient panel header */}
+        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
+          <div className="flex items-center space-x-2">
+            <Activity className="h-4 w-4" />
+            <span className="text-sm font-medium">Job Status</span>
+          </div>
+          <div className="text-xs text-blue-100">
+            {jobCards.length > 0
+              ? `${jobCards.length} job template${jobCards.length !== 1 ? 's' : ''} monitored — latest run per job name`
+              : 'No job runs recorded yet'}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 bg-gradient-to-b from-white to-gray-50">
+          {jobCards.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <p className="text-lg font-medium">No job runs found</p>
+              <p className="text-sm mt-1">Jobs will appear here once they have been executed</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {jobCards.map((job) => {
+                const color = getJobStatus(job)
+                const lastRun = job.completed_at ?? job.started_at ?? job.queued_at
+                return (
+                  <div
+                    key={job.job_name}
+                    className="shadow-sm border-0 p-0 bg-white rounded-lg hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
+                    onClick={() => router.push('/jobs/view')}
+                  >
+                    {/* Card blue header */}
+                    <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-1.5 px-3 flex items-center justify-between">
+                      <span className="text-xs font-medium truncate">{job.job_name}</span>
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full shrink-0 ml-2 ${STATUS_INDICATOR_CLASSES[color]}`}
+                        aria-label={STATUS_LABELS[color]}
+                      />
+                    </div>
+                    {/* Card body */}
+                    <div className="p-4 bg-gradient-to-b from-white to-gray-50 space-y-2">
+                      {job.template_name && (
+                        <p className="text-xs text-muted-foreground">{job.template_name}</p>
+                      )}
+                      <Badge
+                        variant="outline"
+                        className={`text-xs font-medium ${STATUS_BADGE_CLASSES[color]}`}
+                      >
+                        {STATUS_LABELS[color]}
+                      </Badge>
+                      <div className="text-xs text-gray-500 space-y-0.5">
+                        <div>Last run: <span className="font-medium text-slate-700">{formatTimestamp(lastRun)}</span></div>
+                        <div>Status: <span className="font-medium text-slate-700 capitalize">{job.status}</span></div>
+                      </div>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <CardTitle className="text-lg font-semibold text-slate-900 mb-2">
-                    {link.title}
-                  </CardTitle>
-                  <p className="text-sm text-slate-500 leading-relaxed">
-                    {link.description}
-                  </p>
-                </CardContent>
-              </Card>
-            </a>
-          )
-        })}
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Getting Started Section */}
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <Home className="h-5 w-5 text-blue-600" />
-            <CardTitle className="text-xl text-slate-900">Getting Started</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="prose prose-slate max-w-none">
-            <p className="text-slate-600 leading-relaxed">
-              This is a clean application scaffold with the following features:
-            </p>
-            <ul className="text-slate-600 space-y-2 mt-4">
-              <li><strong>Job Management:</strong> Create and schedule automated tasks</li>
-              <li><strong>Git Integration:</strong> Connect to Git repositories for version control</li>
-              <li><strong>User Management:</strong> Role-based access control (RBAC) with permissions</li>
-              <li><strong>Settings:</strong> Configure application behavior and credentials</li>
-            </ul>
-            <p className="text-slate-600 leading-relaxed mt-4">
-              To customize this dashboard, edit the{' '}
-              <code className="text-sm bg-slate-100 px-2 py-1 rounded">
-                /frontend/src/components/layout/dashboard-overview.tsx
-              </code>{' '}
-              file.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
