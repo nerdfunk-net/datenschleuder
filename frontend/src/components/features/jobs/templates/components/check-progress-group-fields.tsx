@@ -12,9 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useNifiInstances, useNifiProcessGroups } from '../hooks/use-template-queries'
-import { EMPTY_NIFI_INSTANCES, EMPTY_PROCESS_GROUPS } from '../utils/constants'
-import type { NifiInstance } from '../types'
+import { useNifiClusters, useNifiClusterProcessGroups } from '../hooks/use-template-queries'
+import { EMPTY_NIFI_CLUSTERS, EMPTY_PROCESS_GROUPS } from '../utils/constants'
+import type { NifiCluster } from '../types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -28,9 +28,9 @@ const EXPECTED_STATUS_OPTIONS: { value: ExpectedStatus; label: string; color: st
 ]
 
 export interface CheckProgressGroupFieldsProps {
-  /** ID of the selected NiFi instance (null = none selected yet) */
-  nifiInstanceId: number | null
-  onNifiInstanceIdChange: (id: number | null) => void
+  /** ID of the selected NiFi cluster (null = none selected yet) */
+  nifiClusterId: number | null
+  onNifiClusterIdChange: (id: number | null) => void
 
   /** UUID of the selected process group */
   processGroupId: string | null
@@ -49,16 +49,15 @@ export interface CheckProgressGroupFieldsProps {
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-function getInstanceLabel(instance: NifiInstance): string {
-  if (instance.name) return instance.name
-  return `${instance.hierarchy_attribute}: ${instance.hierarchy_value}`
+function getClusterLabel(cluster: NifiCluster): string {
+  return `${cluster.cluster_id} (${cluster.hierarchy_attribute}: ${cluster.hierarchy_value})`
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export function CheckProgressGroupFields({
-  nifiInstanceId,
-  onNifiInstanceIdChange,
+  nifiClusterId,
+  onNifiClusterIdChange,
   processGroupId,
   processGroupPath,
   onProcessGroupChange,
@@ -67,19 +66,19 @@ export function CheckProgressGroupFields({
   expectedStatus,
   onExpectedStatusChange,
 }: CheckProgressGroupFieldsProps) {
-  // ── Instances ──────────────────────────────────────────────────────────────
+  // ── Clusters ───────────────────────────────────────────────────────────────
   const {
-    data: instances = EMPTY_NIFI_INSTANCES,
-    isLoading: instancesLoading,
-    isError: instancesError,
-  } = useNifiInstances()
+    data: clusters = EMPTY_NIFI_CLUSTERS,
+    isLoading: clustersLoading,
+    isError: clustersError,
+  } = useNifiClusters()
 
-  // ── Process groups – only fetched when an instance is selected ─────────────
+  // ── Process groups – only fetched when a cluster is selected ───────────────
   const {
     data: processGroups = EMPTY_PROCESS_GROUPS,
     isLoading: processGroupsLoading,
     isError: processGroupsError,
-  } = useNifiProcessGroups({ instanceId: nifiInstanceId })
+  } = useNifiClusterProcessGroups({ clusterId: nifiClusterId })
 
   // Sorted by path for a tree-like visual order
   const sortedProcessGroups = useMemo(
@@ -87,14 +86,14 @@ export function CheckProgressGroupFields({
     [processGroups]
   )
 
-  const handleInstanceChange = useCallback(
+  const handleClusterChange = useCallback(
     (value: string) => {
       const id = Number(value)
-      onNifiInstanceIdChange(id)
-      // Reset process group selection when instance changes
+      onNifiClusterIdChange(id)
+      // Reset process group selection when cluster changes
       onProcessGroupChange(null, null)
     },
-    [onNifiInstanceIdChange, onProcessGroupChange]
+    [onNifiClusterIdChange, onProcessGroupChange]
   )
 
   const handleProcessGroupChange = useCallback(
@@ -107,9 +106,9 @@ export function CheckProgressGroupFields({
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
-  const selectedInstance = useMemo(
-    () => instances.find((i) => i.id === nifiInstanceId) ?? null,
-    [instances, nifiInstanceId]
+  const selectedCluster = useMemo(
+    () => clusters.find((c) => c.id === nifiClusterId) ?? null,
+    [clusters, nifiClusterId]
   )
 
   const selectedProcessGroup = useMemo(
@@ -119,80 +118,82 @@ export function CheckProgressGroupFields({
 
   return (
     <div className="space-y-4">
-      {/* ── NiFi Instance (single selection) ──────────────────────────────── */}
+      {/* ── NiFi Cluster (single selection) ────────────────────────────────── */}
       <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
         <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
           <div className="flex items-center space-x-2">
             <Server className="h-4 w-4" />
-            <span className="text-sm font-medium">NiFi Instance</span>
+            <span className="text-sm font-medium">NiFi Cluster</span>
           </div>
-          <div className="text-xs text-blue-100">Select exactly one NiFi instance to target</div>
+          <div className="text-xs text-blue-100">Select exactly one NiFi cluster to target</div>
         </div>
 
         <div className="p-6 bg-gradient-to-b from-white to-gray-50 space-y-4">
-          {instancesLoading && (
+          {clustersLoading && (
             <div className="flex items-center gap-2 py-2 text-gray-500">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">Loading NiFi instances…</span>
+              <span className="text-sm">Loading NiFi clusters…</span>
             </div>
           )}
 
-          {instancesError && (
+          {clustersError && (
             <Alert className="bg-red-50 border-red-200">
               <AlertCircle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">
-                Failed to load NiFi instances. Check your connection and try again.
+                Failed to load NiFi clusters. Check your connection and try again.
               </AlertDescription>
             </Alert>
           )}
 
-          {!instancesLoading && !instancesError && instances.length === 0 && (
+          {!clustersLoading && !clustersError && clusters.length === 0 && (
             <Alert className="bg-amber-50 border-amber-200">
               <AlertCircle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-800">
-                No NiFi instances are registered. Add instances in the NiFi settings first.
+                No NiFi clusters are registered. Add clusters in the NiFi settings first.
               </AlertDescription>
             </Alert>
           )}
 
-          {!instancesLoading && !instancesError && instances.length > 0 && (
+          {!clustersLoading && !clustersError && clusters.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">Instance</Label>
+              <Label className="text-sm font-medium text-gray-700">Cluster</Label>
               <Select
-                value={nifiInstanceId !== null ? String(nifiInstanceId) : ''}
-                onValueChange={handleInstanceChange}
+                value={nifiClusterId !== null ? String(nifiClusterId) : ''}
+                onValueChange={handleClusterChange}
               >
                 <SelectTrigger className="h-9 bg-white">
-                  <SelectValue placeholder="Select a NiFi instance…" />
+                  <SelectValue placeholder="Select a NiFi cluster…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {instances.map((inst) => (
-                    <SelectItem key={inst.id} value={String(inst.id)}>
+                  {clusters.map((cluster) => (
+                    <SelectItem key={cluster.id} value={String(cluster.id)}>
                       <div className="flex items-center gap-2">
-                        {nifiInstanceId === inst.id ? (
+                        {nifiClusterId === cluster.id ? (
                           <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
                         ) : (
                           <Server className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
                         )}
-                        <span className="font-medium">{getInstanceLabel(inst)}</span>
-                        <span className="text-xs text-gray-400 truncate">{inst.nifi_url}</span>
+                        <span className="font-medium">{cluster.cluster_id}</span>
+                        <span className="text-xs text-gray-400 truncate">
+                          {cluster.hierarchy_attribute}: {cluster.hierarchy_value}
+                        </span>
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
-              {selectedInstance && (
+              {selectedCluster && (
                 <p className="text-xs text-gray-500">
-                  <span className="font-medium text-blue-700">{getInstanceLabel(selectedInstance)}</span>
+                  <span className="font-medium text-blue-700">{getClusterLabel(selectedCluster)}</span>
                   {' · '}
-                  {selectedInstance.nifi_url}
+                  {selectedCluster.members.length} instance{selectedCluster.members.length !== 1 ? 's' : ''}
                 </p>
               )}
 
-              {nifiInstanceId === null && (
+              {nifiClusterId === null && (
                 <p className="text-xs text-amber-600">
-                  Select an instance to load the available process groups.
+                  Select a cluster to load the available process groups.
                 </p>
               )}
             </div>
@@ -211,15 +212,15 @@ export function CheckProgressGroupFields({
         </div>
 
         <div className="p-6 bg-gradient-to-b from-white to-gray-50 space-y-4">
-          {/* Not yet selected an instance */}
-          {nifiInstanceId === null && (
+          {/* Not yet selected a cluster */}
+          {nifiClusterId === null && (
             <p className="text-sm text-gray-400 italic">
-              Select a NiFi instance above to load process groups.
+              Select a NiFi cluster above to load process groups.
             </p>
           )}
 
           {/* Loading process groups */}
-          {nifiInstanceId !== null && processGroupsLoading && (
+          {nifiClusterId !== null && processGroupsLoading && (
             <div className="flex items-center gap-2 py-2 text-gray-500">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span className="text-sm">Loading process groups…</span>
@@ -227,7 +228,7 @@ export function CheckProgressGroupFields({
           )}
 
           {/* Error loading process groups */}
-          {nifiInstanceId !== null && processGroupsError && (
+          {nifiClusterId !== null && processGroupsError && (
             <Alert className="bg-red-50 border-red-200">
               <AlertCircle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">
@@ -237,17 +238,17 @@ export function CheckProgressGroupFields({
           )}
 
           {/* No process groups returned */}
-          {nifiInstanceId !== null && !processGroupsLoading && !processGroupsError && processGroups.length === 0 && (
+          {nifiClusterId !== null && !processGroupsLoading && !processGroupsError && processGroups.length === 0 && (
             <Alert className="bg-amber-50 border-amber-200">
               <AlertCircle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-800">
-                No process groups found for this instance.
+                No process groups found for this cluster.
               </AlertDescription>
             </Alert>
           )}
 
           {/* Process group selector */}
-          {nifiInstanceId !== null && !processGroupsLoading && !processGroupsError && processGroups.length > 0 && (
+          {nifiClusterId !== null && !processGroupsLoading && !processGroupsError && processGroups.length > 0 && (
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Process Group</Label>
               <Select

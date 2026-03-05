@@ -34,8 +34,8 @@ export function TemplateFormDialog({
   const [formDescription, setFormDescription] = useState("")
   const [formIsGlobal, setFormIsGlobal] = useState(false)
 
-  // check_queues specific state: null = all instances, array = specific instance IDs
-  const [nifiInstanceIds, setNifiInstanceIds] = useState<number[] | null>(null)
+  // check_queues specific state: null = all clusters, array = specific cluster IDs
+  const [nifiClusterIds, setNifiClusterIds] = useState<number[] | null>(null)
   const [checkMode, setCheckMode] = useState<'count' | 'bytes' | 'both'>('count')
   const [countYellow, setCountYellow] = useState(1000)
   const [countRed, setCountRed] = useState(10000)
@@ -43,7 +43,7 @@ export function TemplateFormDialog({
   const [bytesRed, setBytesRed] = useState(100)
 
   // check_progress_group specific state
-  const [pgNifiInstanceId, setPgNifiInstanceId] = useState<number | null>(null)
+  const [pgNifiClusterId, setPgNifiClusterId] = useState<number | null>(null)
   const [pgProcessGroupId, setPgProcessGroupId] = useState<string | null>(null)
   const [pgProcessGroupPath, setPgProcessGroupPath] = useState<string | null>(null)
   const [pgCheckChildren, setPgCheckChildren] = useState(true)
@@ -54,13 +54,13 @@ export function TemplateFormDialog({
     setFormJobType("")
     setFormDescription("")
     setFormIsGlobal(false)
-    setNifiInstanceIds(null)
+    setNifiClusterIds(null)
     setCheckMode('count')
     setCountYellow(1000)
     setCountRed(10000)
     setBytesYellow(10)
     setBytesRed(100)
-    setPgNifiInstanceId(null)
+    setPgNifiClusterId(null)
     setPgProcessGroupId(null)
     setPgProcessGroupPath(null)
     setPgCheckChildren(true)
@@ -74,14 +74,14 @@ export function TemplateFormDialog({
       setFormJobType(editingTemplate.job_type)
       setFormDescription(editingTemplate.description || "")
       setFormIsGlobal(editingTemplate.is_global)
-      // Restore nifi_instance_ids: undefined/null → null (all), array → specific
-      setNifiInstanceIds(editingTemplate.nifi_instance_ids ?? null)
+      // Restore nifi_cluster_ids: undefined/null → null (all), array → specific
+      setNifiClusterIds(editingTemplate.nifi_cluster_ids ?? null)
       setCheckMode((editingTemplate.check_queues_mode as 'count' | 'bytes' | 'both') ?? 'count')
       setCountYellow(editingTemplate.check_queues_count_yellow ?? 1000)
       setCountRed(editingTemplate.check_queues_count_red ?? 10000)
       setBytesYellow(editingTemplate.check_queues_bytes_yellow ?? 10)
       setBytesRed(editingTemplate.check_queues_bytes_red ?? 100)
-      setPgNifiInstanceId(editingTemplate.check_progress_group_nifi_instance_id ?? null)
+      setPgNifiClusterId(editingTemplate.check_progress_group_nifi_cluster_id ?? null)
       setPgProcessGroupId(editingTemplate.check_progress_group_process_group_id ?? null)
       setPgProcessGroupPath(editingTemplate.check_progress_group_process_group_path ?? null)
       setPgCheckChildren(editingTemplate.check_progress_group_check_children ?? true)
@@ -111,7 +111,7 @@ export function TemplateFormDialog({
       formJobType === "check_queues"
         ? {
             ...basePayload,
-            nifi_instance_ids: nifiInstanceIds,
+            nifi_cluster_ids: nifiClusterIds,
             check_queues_mode: checkMode,
             check_queues_count_yellow: countYellow,
             check_queues_count_red: countRed,
@@ -121,7 +121,7 @@ export function TemplateFormDialog({
         : formJobType === "check_progress_group"
           ? {
               ...basePayload,
-              check_progress_group_nifi_instance_id: pgNifiInstanceId,
+              check_progress_group_nifi_cluster_id: pgNifiClusterId,
               check_progress_group_process_group_id: pgProcessGroupId,
               check_progress_group_process_group_path: pgProcessGroupPath,
               check_progress_group_check_children: pgCheckChildren,
@@ -174,8 +174,8 @@ export function TemplateFormDialog({
           {/* Job-type specific sections */}
           {formJobType === "check_queues" && (
             <CheckQueuesFields
-              nifiInstanceIds={nifiInstanceIds}
-              onNifiInstanceIdsChange={setNifiInstanceIds}
+              nifiClusterIds={nifiClusterIds}
+              onNifiClusterIdsChange={setNifiClusterIds}
               checkMode={checkMode}
               onCheckModeChange={setCheckMode}
               countYellow={countYellow}
@@ -191,8 +191,8 @@ export function TemplateFormDialog({
 
           {formJobType === "check_progress_group" && (
             <CheckProgressGroupFields
-              nifiInstanceId={pgNifiInstanceId}
-              onNifiInstanceIdChange={setPgNifiInstanceId}
+              nifiClusterId={pgNifiClusterId}
+              onNifiClusterIdChange={setPgNifiClusterId}
               processGroupId={pgProcessGroupId}
               processGroupPath={pgProcessGroupPath}
               onProcessGroupChange={(id, path) => {

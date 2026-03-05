@@ -7,9 +7,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Loader2, AlertCircle, Server, CheckCircle2, Activity } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useNifiInstances } from '../hooks/use-template-queries'
-import { EMPTY_NIFI_INSTANCES } from '../utils/constants'
-import type { NifiInstance } from '../types'
+import { useNifiClusters } from '../hooks/use-template-queries'
+import { EMPTY_NIFI_CLUSTERS } from '../utils/constants'
+import type { NifiCluster } from '../types'
 
 // Stable empty array constant – prevents re-render loops
 const EMPTY_IDS: number[] = []
@@ -23,10 +23,10 @@ const CHECK_MODE_OPTIONS: { value: CheckMode; label: string; description: string
 ]
 
 interface CheckQueuesFieldsProps {
-  // ── Instance selection ──────────────────────────────────────────────────
-  /** null = all instances; array of IDs = specific instances */
-  nifiInstanceIds: number[] | null
-  onNifiInstanceIdsChange: (ids: number[] | null) => void
+  // ── Cluster selection ────────────────────────────────────────────────────
+  /** null = all clusters; array of IDs = specific clusters */
+  nifiClusterIds: number[] | null
+  onNifiClusterIdsChange: (ids: number[] | null) => void
 
   // ── Check configuration ─────────────────────────────────────────────────
   checkMode: CheckMode
@@ -43,9 +43,8 @@ interface CheckQueuesFieldsProps {
   onBytesRedChange: (v: number) => void
 }
 
-function getInstanceLabel(instance: NifiInstance): string {
-  if (instance.name) return instance.name
-  return `${instance.hierarchy_attribute}: ${instance.hierarchy_value}`
+function getClusterLabel(cluster: NifiCluster): string {
+  return `${cluster.cluster_id} (${cluster.hierarchy_attribute}: ${cluster.hierarchy_value})`
 }
 
 // ─── Threshold row helper ───────────────────────────────────────────────────
@@ -114,8 +113,8 @@ function ThresholdRow({
 // ─── Main component ─────────────────────────────────────────────────────────
 
 export function CheckQueuesFields({
-  nifiInstanceIds,
-  onNifiInstanceIdsChange,
+  nifiClusterIds,
+  onNifiClusterIdsChange,
   checkMode,
   onCheckModeChange,
   countYellow,
@@ -127,33 +126,33 @@ export function CheckQueuesFields({
   bytesRed,
   onBytesRedChange,
 }: CheckQueuesFieldsProps) {
-  const { data: instances = EMPTY_NIFI_INSTANCES, isLoading, isError } = useNifiInstances()
+  const { data: clusters = EMPTY_NIFI_CLUSTERS, isLoading, isError } = useNifiClusters()
 
-  const isAllInstances = nifiInstanceIds === null
-  const selectedIds = nifiInstanceIds ?? EMPTY_IDS
+  const isAllClusters = nifiClusterIds === null
+  const selectedIds = nifiClusterIds ?? EMPTY_IDS
 
   const handleAllToggle = useCallback(() => {
-    onNifiInstanceIdsChange(null)
-  }, [onNifiInstanceIdsChange])
+    onNifiClusterIdsChange(null)
+  }, [onNifiClusterIdsChange])
 
   const handleSpecificToggle = useCallback(() => {
-    onNifiInstanceIdsChange([])
-  }, [onNifiInstanceIdsChange])
+    onNifiClusterIdsChange([])
+  }, [onNifiClusterIdsChange])
 
-  const handleInstanceToggle = useCallback(
-    (instanceId: number, checked: boolean) => {
+  const handleClusterToggle = useCallback(
+    (clusterId: number, checked: boolean) => {
       if (checked) {
-        onNifiInstanceIdsChange([...selectedIds, instanceId])
+        onNifiClusterIdsChange([...selectedIds, clusterId])
       } else {
-        onNifiInstanceIdsChange(selectedIds.filter((id) => id !== instanceId))
+        onNifiClusterIdsChange(selectedIds.filter((id) => id !== clusterId))
       }
     },
-    [selectedIds, onNifiInstanceIdsChange]
+    [selectedIds, onNifiClusterIdsChange]
   )
 
-  const selectedInstances = useMemo(
-    () => instances.filter((inst) => selectedIds.includes(inst.id)),
-    [instances, selectedIds]
+  const selectedClusters = useMemo(
+    () => clusters.filter((c) => selectedIds.includes(c.id)),
+    [clusters, selectedIds]
   )
 
   const showCount = checkMode === 'count' || checkMode === 'both'
@@ -161,76 +160,76 @@ export function CheckQueuesFields({
 
   return (
     <div className="space-y-4">
-      {/* ── NiFi Instances ─────────────────────────────────────────────────── */}
+      {/* ── NiFi Clusters ──────────────────────────────────────────────────── */}
       <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
         <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center justify-between rounded-t-lg">
           <div className="flex items-center space-x-2">
             <Server className="h-4 w-4" />
-            <span className="text-sm font-medium">NiFi Instances</span>
+            <span className="text-sm font-medium">NiFi Cluster</span>
           </div>
-          <div className="text-xs text-blue-100">Select the instances this job will target</div>
+          <div className="text-xs text-blue-100">Select the clusters this job will target</div>
         </div>
 
         <div className="p-6 bg-gradient-to-b from-white to-gray-50 space-y-4">
           {/* Scope selection */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">Target Instances</Label>
+            <Label className="text-sm font-medium text-gray-700">Target Clusters</Label>
             <div className="flex flex-col gap-2">
               <label
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  isAllInstances
+                  isAllClusters
                     ? 'border-blue-300 bg-blue-50'
                     : 'border-gray-200 bg-white hover:bg-gray-50'
                 }`}
               >
                 <Checkbox
-                  checked={isAllInstances}
+                  checked={isAllClusters}
                   onCheckedChange={(checked) => {
                     if (checked) handleAllToggle()
                   }}
                   className="rounded-full"
                 />
                 <div>
-                  <p className="text-sm font-medium text-gray-800">All instances</p>
+                  <p className="text-sm font-medium text-gray-800">All clusters</p>
                   <p className="text-xs text-gray-500">
-                    The job will run against every registered NiFi instance
+                    The job will run against every registered NiFi cluster
                   </p>
                 </div>
-                {isAllInstances && (
+                {isAllClusters && (
                   <CheckCircle2 className="ml-auto h-4 w-4 text-blue-600 flex-shrink-0" />
                 )}
               </label>
 
               <label
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  !isAllInstances
+                  !isAllClusters
                     ? 'border-blue-300 bg-blue-50'
                     : 'border-gray-200 bg-white hover:bg-gray-50'
                 }`}
               >
                 <Checkbox
-                  checked={!isAllInstances}
+                  checked={!isAllClusters}
                   onCheckedChange={(checked) => {
                     if (checked) handleSpecificToggle()
                   }}
                   className="rounded-full"
                 />
                 <div>
-                  <p className="text-sm font-medium text-gray-800">Specific instances</p>
-                  <p className="text-xs text-gray-500">Choose which NiFi instances to target</p>
+                  <p className="text-sm font-medium text-gray-800">Specific clusters</p>
+                  <p className="text-xs text-gray-500">Choose which NiFi clusters to target</p>
                 </div>
-                {!isAllInstances && (
+                {!isAllClusters && (
                   <CheckCircle2 className="ml-auto h-4 w-4 text-blue-600 flex-shrink-0" />
                 )}
               </label>
             </div>
           </div>
 
-          {/* Instance list – only shown in specific mode */}
-          {!isAllInstances && (
+          {/* Cluster list – only shown in specific mode */}
+          {!isAllClusters && (
             <div className="space-y-3">
               <Label className="text-sm font-medium text-gray-700">
-                Select instances{' '}
+                Select clusters{' '}
                 <span className="font-normal text-gray-500">
                   ({selectedIds.length} selected)
                 </span>
@@ -239,7 +238,7 @@ export function CheckQueuesFields({
               {isLoading && (
                 <div className="flex items-center gap-2 py-4 text-gray-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Loading NiFi instances...</span>
+                  <span className="text-sm">Loading NiFi clusters...</span>
                 </div>
               )}
 
@@ -247,27 +246,27 @@ export function CheckQueuesFields({
                 <Alert className="bg-red-50 border-red-200">
                   <AlertCircle className="h-4 w-4 text-red-600" />
                   <AlertDescription className="text-red-800">
-                    Failed to load NiFi instances. Check your connection and try again.
+                    Failed to load NiFi clusters. Check your connection and try again.
                   </AlertDescription>
                 </Alert>
               )}
 
-              {!isLoading && !isError && instances.length === 0 && (
+              {!isLoading && !isError && clusters.length === 0 && (
                 <Alert className="bg-amber-50 border-amber-200">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-amber-800">
-                    No NiFi instances are registered. Add instances in the NiFi settings first.
+                    No NiFi clusters are registered. Add clusters in the NiFi settings first.
                   </AlertDescription>
                 </Alert>
               )}
 
-              {!isLoading && !isError && instances.length > 0 && (
+              {!isLoading && !isError && clusters.length > 0 && (
                 <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-64 overflow-y-auto">
-                  {instances.map((instance) => {
-                    const checked = selectedIds.includes(instance.id)
+                  {clusters.map((cluster) => {
+                    const checked = selectedIds.includes(cluster.id)
                     return (
                       <label
-                        key={instance.id}
+                        key={cluster.id}
                         className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${
                           checked ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'
                         }`}
@@ -275,20 +274,22 @@ export function CheckQueuesFields({
                         <Checkbox
                           checked={checked}
                           onCheckedChange={(value) =>
-                            handleInstanceToggle(instance.id, !!value)
+                            handleClusterToggle(cluster.id, !!value)
                           }
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-800 truncate">
-                            {getInstanceLabel(instance)}
+                            {cluster.cluster_id}
                           </p>
-                          <p className="text-xs text-gray-500 truncate">{instance.nifi_url}</p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {cluster.hierarchy_attribute}: {cluster.hierarchy_value}
+                          </p>
                         </div>
                         <Badge
                           variant="outline"
                           className="text-xs flex-shrink-0 text-gray-500"
                         >
-                          {instance.hierarchy_attribute}
+                          {cluster.members.length} instance{cluster.members.length !== 1 ? 's' : ''}
                         </Badge>
                       </label>
                     )
@@ -296,22 +297,22 @@ export function CheckQueuesFields({
                 </div>
               )}
 
-              {selectedInstances.length > 0 && (
+              {selectedClusters.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {selectedInstances.map((inst) => (
+                  {selectedClusters.map((c) => (
                     <Badge
-                      key={inst.id}
+                      key={c.id}
                       className="bg-blue-100 text-blue-800 border-blue-300 text-xs"
                     >
-                      {getInstanceLabel(inst)}
+                      {getClusterLabel(c)}
                     </Badge>
                   ))}
                 </div>
               )}
 
-              {selectedIds.length === 0 && !isLoading && instances.length > 0 && (
+              {selectedIds.length === 0 && !isLoading && clusters.length > 0 && (
                 <p className="text-xs text-amber-600">
-                  No instances selected — the job will not run against any instance until you
+                  No clusters selected — the job will not run against any cluster until you
                   select at least one.
                 </p>
               )}

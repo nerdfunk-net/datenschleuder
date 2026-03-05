@@ -508,8 +508,8 @@ class CheckQueuesRequest(BaseModel):
     """Request body for the NiFi queue-check task endpoint.
 
     Fields:
-        instance_ids:        NiFi instance IDs to check.  ``None`` or an empty list
-                             means *all* configured instances.
+        cluster_ids:         NiFi cluster IDs to check.  ``None`` or an empty list
+                             means *all* configured clusters.
         check_queues_mode:   Metric to evaluate – ``'count'``, ``'bytes'``, or ``'both'``.
         count_yellow:        Flow-file count threshold for yellow status (default 1 000).
         count_red:           Flow-file count threshold for red status (default 10 000).
@@ -517,7 +517,7 @@ class CheckQueuesRequest(BaseModel):
         bytes_red:           Queue size in MB for red status (default 100 MB).
     """
 
-    instance_ids: Optional[List[int]] = None
+    cluster_ids: Optional[List[int]] = None
     check_queues_mode: str = "count"
     count_yellow: int = 1_000
     count_red: int = 10_000
@@ -558,8 +558,8 @@ async def trigger_check_queues(
         "check_queues_bytes_yellow": request.bytes_yellow,
         "check_queues_bytes_red": request.bytes_red,
     }
-    if request.instance_ids:
-        job_params["nifi_instance_ids"] = request.instance_ids
+    if request.cluster_ids:
+        job_params["nifi_cluster_ids"] = request.cluster_ids
 
     task = dispatch_job.delay(
         job_name="check-queues",
@@ -570,10 +570,10 @@ async def trigger_check_queues(
     )
 
     logger.info(
-        "check-queues task %s submitted by %s (instances=%s, mode=%s)",
+        "check-queues task %s submitted by %s (clusters=%s, mode=%s)",
         task.id,
         current_user.get("username"),
-        request.instance_ids or "all",
+        request.cluster_ids or "all",
         request.check_queues_mode,
     )
 
@@ -593,7 +593,7 @@ class CheckProcessGroupRequest(BaseModel):
     """Request body for the NiFi check-process-group task endpoint.
 
     Fields:
-        nifi_instance_id:   ID of the NiFi instance to connect to.
+        nifi_cluster_id:    ID of the NiFi cluster to connect to (primary instance is resolved).
         process_group_id:   UUID of the process group to inspect.
         process_group_path: Human-readable path (used in logs/results only).
         check_children:     When ``True``, each direct child process group is
@@ -607,7 +607,7 @@ class CheckProcessGroupRequest(BaseModel):
                             - ``"Enabled"``  → disabled_count must be 0.
     """
 
-    nifi_instance_id: int
+    nifi_cluster_id: int
     process_group_id: str
     process_group_path: Optional[str] = None
     check_children: bool = True
@@ -648,7 +648,7 @@ async def trigger_check_process_group(
         )
 
     job_params: Dict[str, Any] = {
-        "nifi_instance_id": request.nifi_instance_id,
+        "nifi_cluster_id": request.nifi_cluster_id,
         "process_group_id": request.process_group_id,
         "process_group_path": request.process_group_path,
         "check_children": request.check_children,
@@ -664,10 +664,10 @@ async def trigger_check_process_group(
     )
 
     logger.info(
-        "check-process-group task %s submitted by %s (instance=%d, pg=%s, expected=%s)",
+        "check-process-group task %s submitted by %s (cluster=%d, pg=%s, expected=%s)",
         task.id,
         current_user.get("username"),
-        request.nifi_instance_id,
+        request.nifi_cluster_id,
         request.process_group_id,
         request.expected_status,
     )

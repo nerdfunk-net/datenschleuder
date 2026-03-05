@@ -1,4 +1,4 @@
-import type { JobTemplate, JobType, GitRepository, CommandTemplate, NifiInstance, ProcessGroup } from '../types'
+import type { JobTemplate, JobType, GitRepository, CommandTemplate, NifiCluster, ProcessGroup } from '../types'
 
 // React best practice: Extract default objects to prevent re-render loops
 export const EMPTY_TEMPLATES: JobTemplate[] = []
@@ -6,7 +6,7 @@ export const EMPTY_TYPES: JobType[] = []
 export const EMPTY_REPOS: GitRepository[] = []
 // EMPTY_INVENTORIES removed - inventory feature no longer exists
 export const EMPTY_CMD_TEMPLATES: CommandTemplate[] = []
-export const EMPTY_NIFI_INSTANCES: NifiInstance[] = []
+export const EMPTY_NIFI_CLUSTERS: NifiCluster[] = []
 export const EMPTY_PROCESS_GROUPS: ProcessGroup[] = []
 
 export const JOB_TYPE_LABELS: Record<string, string> = {

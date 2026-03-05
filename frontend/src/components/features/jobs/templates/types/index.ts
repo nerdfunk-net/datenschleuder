@@ -5,12 +5,19 @@ export interface DeployTemplateEntry {
   custom_variables: Record<string, string>
 }
 
-export interface NifiInstance {
-  id: number
+export interface NifiClusterMember {
+  instance_id: number
   name: string | null
   nifi_url: string
+  is_primary: boolean
+}
+
+export interface NifiCluster {
+  id: number
+  cluster_id: string
   hierarchy_attribute: string
   hierarchy_value: string
+  members: NifiClusterMember[]
 }
 
 export interface ProcessGroup {
@@ -43,13 +50,13 @@ export interface JobTemplate {
   deploy_custom_variables?: Record<string, string>
   activate_after_deploy?: boolean
   deploy_templates?: DeployTemplateEntry[]
-  nifi_instance_ids?: number[] | null
+  nifi_cluster_ids?: number[] | null
   check_queues_mode?: 'count' | 'bytes' | 'both'
   check_queues_count_yellow?: number
   check_queues_count_red?: number
   check_queues_bytes_yellow?: number
   check_queues_bytes_red?: number
-  check_progress_group_nifi_instance_id?: number | null
+  check_progress_group_nifi_cluster_id?: number | null
   check_progress_group_process_group_id?: string | null
   check_progress_group_process_group_path?: string | null
   check_progress_group_check_children?: boolean

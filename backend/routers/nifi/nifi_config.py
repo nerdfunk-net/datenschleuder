@@ -2,7 +2,7 @@
 
 import logging
 from typing import List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
 from models.nifi_server import NifiServerCreate, NifiServerUpdate, NifiServerResponse
@@ -13,6 +13,11 @@ from models.nifi_cluster import (
     NifiClusterPrimaryResponse,
 )
 from services.nifi import nifi_config_service
+from services.nifi.connection import nifi_connection_service
+from services.nifi.operations import process_groups as pg_ops
+from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
+
+_cluster_repo = NifiClusterRepository()
 
 logger = logging.getLogger(__name__)
 
@@ -121,3 +126,49 @@ async def delete_cluster(
     """Delete a NiFi cluster."""
     nifi_config_service.delete_cluster(cluster_id)
     return {"message": "NiFi cluster deleted successfully"}
+
+
+@router.get("/clusters/{cluster_id}/ops/process-groups/all-paths")
+async def get_cluster_process_group_paths(
+    cluster_id: int,
+    start_pg_id: str = "root",
+    current_user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Get all process groups for a cluster's primary NiFi instance.
+
+    Resolves the primary instance for the cluster and delegates to the
+    standard process-group path enumeration.
+    """
+    # Validate cluster exists (raises 404 if not)
+    nifi_config_service.get_primary_instance(cluster_id)
+
+    # Get raw ORM instance for connection configuration
+    primary_instance = _cluster_repo.get_primary_instance(cluster_id)
+    if not primary_instance:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No primary instance configured for cluster id %d" % cluster_id,
+        )
+
+    try:
+        nifi_connection_service.configure_from_instance(primary_instance)
+        result = pg_ops.get_all_process_group_paths(start_pg_id)
+    except Exception as exc:
+        logger.error(
+            "Failed to fetch process groups for cluster %d via primary instance %d: %s",
+            cluster_id,
+            primary_instance.id,
+            exc,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to connect to NiFi cluster primary instance: %s" % str(exc),
+        )
+
+    pgs = result["process_groups"]
+    return {
+        "status": "success",
+        "process_groups": pgs,
+        "count": len(pgs),
+        "root_id": result["root_id"],
+    }

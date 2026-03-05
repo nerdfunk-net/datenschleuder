@@ -409,9 +409,6 @@ class JobTemplate(Base):
         String(50), nullable=False
     )  # check_queues, check_progress_group
     description = Column(Text)
-    nifi_instance_ids = Column(
-        Text, nullable=True
-    )  # JSON array of NiFi instance IDs to run against (check_queues type)
     check_queues_mode = Column(
         String(10), nullable=True, default="count"
     )  # Metric to evaluate: 'count', 'bytes', or 'both' (check_queues type)
@@ -427,9 +424,12 @@ class JobTemplate(Base):
     check_queues_bytes_red = Column(
         Integer, nullable=True, default=100
     )  # Queue size threshold for red status in MB (check_queues type)
-    check_progress_group_nifi_instance_id = Column(
-        Integer, nullable=True
-    )  # Single NiFi instance ID to target (check_progress_group type)
+    nifi_cluster_ids = Column(
+        Text, nullable=True
+    )  # JSON array of NiFi cluster IDs to run against (check_queues type)
+    check_progress_group_nifi_cluster_id = Column(
+        Integer, ForeignKey("nifi_clusters.id", ondelete="SET NULL"), nullable=True
+    )  # Single NiFi cluster ID to target (check_progress_group type)
     check_progress_group_process_group_id = Column(
         String(255), nullable=True
     )  # UUID of the process group (check_progress_group type)

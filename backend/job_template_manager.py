@@ -21,7 +21,7 @@ def create_job_template(
     user_id: int,
     created_by: str,
     description: Optional[str] = None,
-    nifi_instance_ids: Optional[List[int]] = None,
+    nifi_cluster_ids: Optional[List[int]] = None,
     is_global: bool = False,
     # check_queues specific parameters
     check_queues_mode: Optional[str] = None,
@@ -30,7 +30,7 @@ def create_job_template(
     check_queues_bytes_yellow: Optional[int] = None,
     check_queues_bytes_red: Optional[int] = None,
     # check_progress_group specific parameters
-    check_progress_group_nifi_instance_id: Optional[int] = None,
+    check_progress_group_nifi_cluster_id: Optional[int] = None,
     check_progress_group_process_group_id: Optional[str] = None,
     check_progress_group_process_group_path: Optional[str] = None,
     check_progress_group_check_children: bool = True,
@@ -42,14 +42,13 @@ def create_job_template(
     if repo.check_name_exists(name, user_id if not is_global else None):
         raise ValueError(f"A job template with name '{name}' already exists")
 
-    # Serialize nifi_instance_ids to JSON string for storage
-    nifi_instance_ids_json = json.dumps(nifi_instance_ids) if nifi_instance_ids is not None else None
+    nifi_cluster_ids_json = json.dumps(nifi_cluster_ids) if nifi_cluster_ids is not None else None
 
     template = repo.create(
         name=name,
         job_type=job_type,
         description=description,
-        nifi_instance_ids=nifi_instance_ids_json,
+        nifi_cluster_ids=nifi_cluster_ids_json,
         is_global=is_global,
         user_id=user_id if not is_global else None,
         created_by=created_by,
@@ -58,7 +57,7 @@ def create_job_template(
         check_queues_count_red=check_queues_count_red,
         check_queues_bytes_yellow=check_queues_bytes_yellow,
         check_queues_bytes_red=check_queues_bytes_red,
-        check_progress_group_nifi_instance_id=check_progress_group_nifi_instance_id,
+        check_progress_group_nifi_cluster_id=check_progress_group_nifi_cluster_id,
         check_progress_group_process_group_id=check_progress_group_process_group_id,
         check_progress_group_process_group_path=check_progress_group_process_group_path,
         check_progress_group_check_children=check_progress_group_check_children,
@@ -111,7 +110,7 @@ def update_job_template(
     template_id: int,
     name: Optional[str] = None,
     description: Optional[str] = None,
-    nifi_instance_ids: Optional[List[int]] = None,
+    nifi_cluster_ids: Optional[List[int]] = None,
     check_queues_mode: Optional[str] = None,
     check_queues_count_yellow: Optional[int] = None,
     check_queues_count_red: Optional[int] = None,
@@ -120,7 +119,7 @@ def update_job_template(
     is_global: Optional[bool] = None,
     user_id: Optional[int] = None,
     # check_progress_group specific parameters
-    check_progress_group_nifi_instance_id: Optional[int] = None,
+    check_progress_group_nifi_cluster_id: Optional[int] = None,
     check_progress_group_process_group_id: Optional[str] = None,
     check_progress_group_process_group_path: Optional[str] = None,
     check_progress_group_check_children: Optional[bool] = None,
@@ -140,8 +139,8 @@ def update_job_template(
         update_data["name"] = name
     if description is not None:
         update_data["description"] = description
-    if nifi_instance_ids is not None:
-        update_data["nifi_instance_ids"] = json.dumps(nifi_instance_ids)
+    if nifi_cluster_ids is not None:
+        update_data["nifi_cluster_ids"] = json.dumps(nifi_cluster_ids)
     if check_queues_mode is not None:
         update_data["check_queues_mode"] = check_queues_mode
     if check_queues_count_yellow is not None:
@@ -152,8 +151,8 @@ def update_job_template(
         update_data["check_queues_bytes_yellow"] = check_queues_bytes_yellow
     if check_queues_bytes_red is not None:
         update_data["check_queues_bytes_red"] = check_queues_bytes_red
-    if check_progress_group_nifi_instance_id is not None:
-        update_data["check_progress_group_nifi_instance_id"] = check_progress_group_nifi_instance_id
+    if check_progress_group_nifi_cluster_id is not None:
+        update_data["check_progress_group_nifi_cluster_id"] = check_progress_group_nifi_cluster_id
     if check_progress_group_process_group_id is not None:
         update_data["check_progress_group_process_group_id"] = check_progress_group_process_group_id
     if check_progress_group_process_group_path is not None:
@@ -213,15 +212,15 @@ def _model_to_dict(template) -> Dict[str, Any]:
         "name": template.name,
         "job_type": template.job_type,
         "description": template.description,
-        "nifi_instance_ids": (
-            json.loads(template.nifi_instance_ids) if template.nifi_instance_ids else None
+        "nifi_cluster_ids": (
+            json.loads(template.nifi_cluster_ids) if template.nifi_cluster_ids else None
         ),
         "check_queues_mode": template.check_queues_mode,
         "check_queues_count_yellow": template.check_queues_count_yellow,
         "check_queues_count_red": template.check_queues_count_red,
         "check_queues_bytes_yellow": template.check_queues_bytes_yellow,
         "check_queues_bytes_red": template.check_queues_bytes_red,
-        "check_progress_group_nifi_instance_id": template.check_progress_group_nifi_instance_id,
+        "check_progress_group_nifi_cluster_id": template.check_progress_group_nifi_cluster_id,
         "check_progress_group_process_group_id": template.check_progress_group_process_group_id,
         "check_progress_group_process_group_path": template.check_progress_group_process_group_path,
         "check_progress_group_check_children": template.check_progress_group_check_children,

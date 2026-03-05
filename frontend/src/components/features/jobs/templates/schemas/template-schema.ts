@@ -10,15 +10,15 @@ const baseTemplateSchema = z.object({
 // Check Queues job type schema
 const checkQueuesTemplateSchema = baseTemplateSchema.extend({
   job_type: z.literal("check_queues"),
-  // null = all instances; array of IDs = specific instances
-  nifi_instance_ids: z.array(z.number()).nullable().optional(),
+  // null = all clusters; array of IDs = specific clusters
+  nifi_cluster_ids: z.array(z.number()).nullable().optional(),
 })
 
 // Check ProcessGroup job type schema
 const checkProgressGroupTemplateSchema = baseTemplateSchema.extend({
   job_type: z.literal("check_progress_group"),
-  /** Single NiFi instance to target – null means not yet selected */
-  check_progress_group_nifi_instance_id: z.number().nullable().optional(),
+  /** NiFi cluster to target – null means not yet selected */
+  check_progress_group_nifi_cluster_id: z.number().nullable().optional(),
   /** UUID of the selected process group */
   check_progress_group_process_group_id: z.string().nullable().optional(),
   /** Human-readable path (stored for display) */

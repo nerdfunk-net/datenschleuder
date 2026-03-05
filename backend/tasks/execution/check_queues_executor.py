@@ -30,7 +30,7 @@ def execute_check_queues(
         job_parameters: Runtime overrides; recognised keys:
                         ``check_queues_mode``, ``check_queues_count_yellow``,
                         ``check_queues_count_red``, ``check_queues_bytes_yellow``,
-                        ``check_queues_bytes_red``, ``nifi_instance_ids``.
+                        ``check_queues_bytes_red``, ``nifi_cluster_ids``.
         target_devices: Not used for NiFi queue checks.
         task_context:   Celery task context (used for progress updates).
         template:       Resolved job template dict.
@@ -40,9 +40,9 @@ def execute_check_queues(
         dict with keys ``success``, ``instances``, ``overall_status``,
         ``summary``, and ``thresholds``.
     """
-    from services.nifi import instance_service
     from services.nifi.connection import nifi_connection_service
     from services.nifi.operations import management as mgmt_ops
+    from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
 
     params = job_parameters or {}
     tmpl = template or {}
@@ -71,29 +71,31 @@ def execute_check_queues(
         or 100
     )
 
-    # Resolve which NiFi instances to check
-    instance_ids = params.get("nifi_instance_ids") or (
-        tmpl.get("nifi_instance_ids") if tmpl else None
+    # Resolve which NiFi instances to check via cluster → primary instance resolution
+    cluster_repo = NifiClusterRepository()
+    cluster_ids = params.get("nifi_cluster_ids") or (
+        tmpl.get("nifi_cluster_ids") if tmpl else None
     )
 
     task_context.update_state(
         state="PROGRESS",
-        meta={"current": 0, "total": 100, "status": "Resolving NiFi instances…"},
+        meta={"current": 0, "total": 100, "status": "Resolving NiFi clusters…"},
     )
 
-    if instance_ids:
-        instances = [
-            inst
-            for inst in [instance_service.get_instance(iid) for iid in instance_ids]
-            if inst is not None
-        ]
+    if cluster_ids:
+        instances = [cluster_repo.get_primary_instance(cid) for cid in cluster_ids]
+        instances = [i for i in instances if i is not None]
         logger.info(
-            "check_queues: checking %d specified NiFi instance(s)", len(instances)
+            "check_queues: checking %d specified NiFi cluster(s) via primary instance(s)",
+            len(instances),
         )
     else:
-        instances = instance_service.list_instances()
+        all_clusters = cluster_repo.get_all_with_members()
+        instances = [cluster_repo.get_primary_instance(c.id) for c in all_clusters]
+        instances = [i for i in instances if i is not None]
         logger.info(
-            "check_queues: checking all %d NiFi instance(s)", len(instances)
+            "check_queues: checking all %d NiFi cluster(s) via primary instance(s)",
+            len(instances),
         )
 
     if not instances:

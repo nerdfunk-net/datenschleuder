@@ -198,6 +198,8 @@ export const queryKeys = {
     monitoringFlows: () => [...queryKeys.nifi.all, 'monitoring-flows'] as const,
     processGroupsAllPaths: (instanceId: number) =>
       [...queryKeys.nifi.all, 'process-groups-all-paths', instanceId] as const,
+    clusterProcessGroupsAllPaths: (clusterId: number) =>
+      [...queryKeys.nifi.all, 'cluster-process-groups-all-paths', clusterId] as const,
     servers: () => [...queryKeys.nifi.all, 'servers'] as const,
     clusters: () => [...queryKeys.nifi.all, 'clusters'] as const,
   },

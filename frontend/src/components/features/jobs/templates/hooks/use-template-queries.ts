@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useApi } from '@/hooks/use-api'
 import { queryKeys } from '@/lib/query-keys'
-import type { JobTemplate, JobType, GitRepository, CommandTemplate, NifiInstance, ProcessGroup } from '../types'
-import { STALE_TIME, EMPTY_TEMPLATES, EMPTY_TYPES, EMPTY_REPOS, EMPTY_CMD_TEMPLATES, EMPTY_NIFI_INSTANCES, EMPTY_PROCESS_GROUPS } from '../utils/constants'
+import type { JobTemplate, JobType, GitRepository, CommandTemplate, NifiCluster, ProcessGroup } from '../types'
+import { STALE_TIME, EMPTY_TEMPLATES, EMPTY_TYPES, EMPTY_REPOS, EMPTY_CMD_TEMPLATES, EMPTY_NIFI_CLUSTERS, EMPTY_PROCESS_GROUPS } from '../utils/constants'
 
 interface UseQueryOptions {
   enabled?: boolean
@@ -92,47 +92,47 @@ export function useCommandTemplates(options: UseQueryOptions = DEFAULT_OPTIONS) 
 }
 
 /**
- * Fetch all NiFi instances (used for check_queues template type)
+ * Fetch all NiFi clusters (used for check_queues and check_progress_group template types).
  */
-export function useNifiInstances(options: UseQueryOptions = DEFAULT_OPTIONS) {
+export function useNifiClusters(options: UseQueryOptions = DEFAULT_OPTIONS) {
   const { apiCall } = useApi()
   const { enabled = true } = options
 
   return useQuery({
-    queryKey: queryKeys.nifi.instances(),
+    queryKey: queryKeys.nifi.clusters(),
     queryFn: async () => {
-      const response = await apiCall<NifiInstance[]>('/api/nifi/instances/', { method: 'GET' })
-      return Array.isArray(response) ? response : EMPTY_NIFI_INSTANCES
+      const response = await apiCall<NifiCluster[]>('/api/nifi/clusters/', { method: 'GET' })
+      return Array.isArray(response) ? response : EMPTY_NIFI_CLUSTERS
     },
     enabled,
-    staleTime: 2 * 60 * 1000, // 2 minutes - instances rarely change
+    staleTime: 2 * 60 * 1000, // 2 minutes - clusters rarely change
   })
 }
 
-interface UseProcessGroupsOptions extends UseQueryOptions {
-  instanceId: number | null
+interface UseClusterProcessGroupsOptions extends UseQueryOptions {
+  clusterId: number | null
 }
 
-const DEFAULT_PROCESS_GROUPS_OPTIONS: UseProcessGroupsOptions = { enabled: true, instanceId: null }
+const DEFAULT_CLUSTER_PROCESS_GROUPS_OPTIONS: UseClusterProcessGroupsOptions = { enabled: true, clusterId: null }
 
 /**
- * Fetch all process groups (with full paths) for a given NiFi instance.
+ * Fetch all process groups (with full paths) via a NiFi cluster's primary instance.
  * Used for the check_progress_group template type.
  */
-export function useNifiProcessGroups(options: UseProcessGroupsOptions = DEFAULT_PROCESS_GROUPS_OPTIONS) {
+export function useNifiClusterProcessGroups(options: UseClusterProcessGroupsOptions = DEFAULT_CLUSTER_PROCESS_GROUPS_OPTIONS) {
   const { apiCall } = useApi()
-  const { instanceId, enabled = true } = options
+  const { clusterId, enabled = true } = options
 
   return useQuery({
-    queryKey: queryKeys.nifi.processGroupsAllPaths(instanceId ?? 0),
+    queryKey: queryKeys.nifi.clusterProcessGroupsAllPaths(clusterId ?? 0),
     queryFn: async () => {
       const response = await apiCall<{ status: string; process_groups: ProcessGroup[]; count: number; root_id: string }>(
-        `/api/nifi/instances/${instanceId}/ops/process-groups/all-paths`,
+        `/api/nifi/clusters/${clusterId}/ops/process-groups/all-paths`,
         { method: 'GET' }
       )
       return response?.process_groups ?? EMPTY_PROCESS_GROUPS
     },
-    enabled: enabled && instanceId !== null,
+    enabled: enabled && clusterId !== null,
     staleTime: 30 * 1000, // 30 seconds - process groups may change
   })
 }

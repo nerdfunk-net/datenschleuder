@@ -26,9 +26,9 @@ class JobTemplateBase(BaseModel):
     description: Optional[str] = Field(
         None, max_length=1000, description="Description of what this template does"
     )
-    nifi_instance_ids: Optional[List[int]] = Field(
+    nifi_cluster_ids: Optional[List[int]] = Field(
         None,
-        description="List of NiFi instance IDs to run the job against; None or empty means all instances (only applies to check_queues type)",
+        description="List of NiFi cluster IDs to run the job against; None means all clusters (only applies to check_queues type)",
     )
     check_queues_mode: Optional[str] = Field(
         "count",
@@ -54,9 +54,9 @@ class JobTemplateBase(BaseModel):
         ge=0,
         description="Queue size in MB at which the status turns red (only applies to check_queues type)",
     )
-    check_progress_group_nifi_instance_id: Optional[int] = Field(
+    check_progress_group_nifi_cluster_id: Optional[int] = Field(
         None,
-        description="ID of the single NiFi instance to target (only applies to check_progress_group type)",
+        description="ID of the NiFi cluster to target (only applies to check_progress_group type)",
     )
     check_progress_group_process_group_id: Optional[str] = Field(
         None,
@@ -93,13 +93,13 @@ class JobTemplateUpdate(BaseModel):
 
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=1000)
-    nifi_instance_ids: Optional[List[int]] = None
+    nifi_cluster_ids: Optional[List[int]] = None
     check_queues_mode: Optional[str] = None
     check_queues_count_yellow: Optional[int] = Field(None, ge=0)
     check_queues_count_red: Optional[int] = Field(None, ge=0)
     check_queues_bytes_yellow: Optional[int] = Field(None, ge=0)
     check_queues_bytes_red: Optional[int] = Field(None, ge=0)
-    check_progress_group_nifi_instance_id: Optional[int] = None
+    check_progress_group_nifi_cluster_id: Optional[int] = None
     check_progress_group_process_group_id: Optional[str] = Field(None, max_length=255)
     check_progress_group_process_group_path: Optional[str] = Field(None, max_length=1000)
     check_progress_group_check_children: Optional[bool] = None

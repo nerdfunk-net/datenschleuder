@@ -47,13 +47,13 @@ def execute_check_process_group(
         ``violations``, ``children`` (when *check_children* is True),
         and ``instance_id``.
     """
-    from services.nifi import instance_service
     from services.nifi.connection import nifi_connection_service
     from services.nifi.operations.process_groups import (
         get_process_group_status_canvas,
         evaluate_process_group_status,
         list_child_process_groups,
     )
+    from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
 
     params = job_parameters or {}
     tmpl = template or {}
@@ -61,8 +61,8 @@ def execute_check_process_group(
     # -------------------------------------------------------------------------
     # Resolve parameters (runtime > template)
     # -------------------------------------------------------------------------
-    instance_id: Optional[int] = params.get("nifi_instance_id") or tmpl.get(
-        "check_progress_group_nifi_instance_id"
+    cluster_id: Optional[int] = params.get("nifi_cluster_id") or tmpl.get(
+        "check_progress_group_nifi_cluster_id"
     )
     pg_id: Optional[str] = params.get("process_group_id") or tmpl.get(
         "check_progress_group_process_group_id"
@@ -81,10 +81,10 @@ def execute_check_process_group(
         or "Running"
     )
 
-    if not instance_id:
+    if not cluster_id:
         return {
             "success": False,
-            "error": "No NiFi instance ID configured for this job.",
+            "error": "No NiFi cluster ID configured for this job.",
         }
     if not pg_id:
         return {
@@ -93,18 +93,19 @@ def execute_check_process_group(
         }
 
     # -------------------------------------------------------------------------
-    # Set up NiFi connection
+    # Resolve cluster → primary instance
     # -------------------------------------------------------------------------
     task_context.update_state(
         state="PROGRESS",
-        meta={"current": 10, "total": 100, "status": "Connecting to NiFi instance…"},
+        meta={"current": 10, "total": 100, "status": "Resolving NiFi cluster primary instance…"},
     )
 
-    instance = instance_service.get_instance(int(instance_id))
+    cluster_repo = NifiClusterRepository()
+    instance = cluster_repo.get_primary_instance(int(cluster_id))
     if not instance:
         return {
             "success": False,
-            "error": "NiFi instance with ID %d not found." % instance_id,
+            "error": "No primary instance configured for NiFi cluster %d." % cluster_id,
         }
 
     nifi_connection_service.configure_from_instance(instance)
@@ -133,7 +134,8 @@ def execute_check_process_group(
         return {
             "success": False,
             "error": "Failed to fetch process group status: %s" % str(exc),
-            "instance_id": instance_id,
+            "cluster_id": cluster_id,
+            "instance_id": instance.id,
             "process_group_id": pg_id,
         }
 
@@ -210,8 +212,9 @@ def execute_check_process_group(
     )
 
     logger.info(
-        "check_process_group: instance=%d pg=%s expected=%s passed=%s",
-        instance_id,
+        "check_process_group: cluster=%d instance=%d pg=%s expected=%s passed=%s",
+        cluster_id,
+        instance.id,
         pg_id,
         expected_status,
         overall_passed,
@@ -220,8 +223,9 @@ def execute_check_process_group(
     result: Dict[str, Any] = {
         "success": True,
         "passed": overall_passed,
-        "instance_id": instance_id,
-        "instance_name": instance.name or str(instance_id),
+        "cluster_id": cluster_id,
+        "instance_id": instance.id,
+        "instance_name": instance.name or str(instance.id),
         "process_group_id": pg_id,
         "process_group_name": pg_status.get("name"),
         "process_group_path": pg_path,
