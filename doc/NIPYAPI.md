@@ -223,6 +223,66 @@ status = evaluate_queue_status(count, yellow_threshold, red_threshold)
 
 ---
 
+## Provenance
+
+**File:** `/backend/services/nifi/operations/provenance.py`
+
+Both functions follow the same submit → poll → cleanup pattern: a query is submitted to NiFi, polled until `finished`, and then deleted from NiFi in a `finally` block regardless of outcome. The poll interval is 0.5 s with a 30 s timeout.
+
+### Component Provenance Events
+
+```python
+get_component_provenance_events(
+    component_id: str,
+    max_results: int = 100,
+    start_date: str | None = None,  # ISO-8601 e.g. "2024-01-01T00:00:00Z"
+    end_date: str | None = None,
+) -> dict
+```
+
+Submits a `ProvenanceEntity` using `ProcessorID` as the search term (works for processors, ports, and other components), polls via `ProvenanceApi.get_provenance()`, and returns the full result dict.
+
+HTTP endpoint: `GET /{instance_id}/ops/provenance/component/{component_id}?max_results=&start_date=&end_date=`
+
+### Flow Lineage
+
+```python
+get_flow_lineage(
+    flow_file_uuid: str,
+    component_id: str | None = None,  # Optional — annotates starting node
+) -> dict
+```
+
+Traces the complete path of a FlowFile through the NiFi flow. Submits a `LineageEntity` with `lineage_request_type="FLOWFILE"`, polls via `ProvenanceApi.get_lineage()`, then enriches each lineage node by fetching the full event detail from `ProvenanceEventsApi.get_provenance_event()`.
+
+Returns:
+```json
+{
+  "flow_file_uuid": "...",
+  "component_id": "...",
+  "ordered_path": [
+    {
+      "event_id": "...",
+      "component_id": "...",
+      "component_name": "...",
+      "component_type": "...",
+      "event_type": "...",
+      "timestamp": "...",
+      "millis": 0,
+      "is_starting_component": false
+    }
+  ],
+  "links": [{"source_id": "...", "target_id": "..."}],
+  "event_count": 0
+}
+```
+
+Virtual source/sink nodes (whose `id` equals the FlowFile UUID) are skipped during enrichment. Nodes are ordered by lineage `millis` (elapsed time).
+
+HTTP endpoint: `GET /{instance_id}/ops/provenance/lineage/{flow_file_uuid}?component_id=`
+
+---
+
 ## Core nipyapi Modules Used
 
 | Module | Usage |
@@ -239,6 +299,8 @@ status = evaluate_queue_status(count, yellow_threshold, red_threshold)
 | `nipyapi.nifi.ProcessorsApi` | Low-level processor run status updates |
 | `nipyapi.nifi.InputPortsApi` / `OutputPortsApi` | Port management |
 | `nipyapi.nifi.ParameterContextsApi` | Full parameter context lifecycle |
+| `nipyapi.nifi.ProvenanceApi` | Submit/poll/delete provenance queries and lineage requests |
+| `nipyapi.nifi.ProvenanceEventsApi` | Fetch individual provenance event details |
 
 ---
 
@@ -294,4 +356,5 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 | `/backend/services/nifi/operations/versions.py` | Version control operations |
 | `/backend/services/nifi/operations/connections.py` | Connection testing |
 | `/backend/services/nifi/operations/management.py` | Queue monitoring & status parsing |
+| `/backend/services/nifi/operations/provenance.py` | Provenance events & flow lineage |
 | `/backend/routers/nifi/operations.py` | HTTP endpoints with retry wrapper |
