@@ -37,11 +37,12 @@ const STATUS_BADGE_CLASSES: Record<StatusColor, string> = {
   gray: 'bg-gray-100 text-gray-600 border-gray-200',
 }
 
-const STATUS_INDICATOR_CLASSES: Record<StatusColor, string> = {
-  green: 'bg-green-500',
-  yellow: 'bg-yellow-400',
-  red: 'bg-red-500',
-  gray: 'bg-gray-400',
+
+const STATUS_HEADER_CLASSES: Record<StatusColor, string> = {
+  green: 'from-green-400/80 to-green-500/80',
+  yellow: 'from-yellow-400/80 to-yellow-500/80',
+  red: 'from-red-400/80 to-red-500/80',
+  gray: 'from-gray-400/80 to-gray-500/80',
 }
 
 const STATUS_LABELS: Record<StatusColor, string> = {
@@ -152,13 +153,10 @@ export default function DashboardOverview() {
                     className="shadow-sm border-0 p-0 bg-white rounded-lg hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
                     onClick={() => router.push('/jobs/view')}
                   >
-                    {/* Card blue header */}
-                    <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-1.5 px-3 flex items-center justify-between">
+                    {/* Card status-colored header */}
+                    <div className={`bg-gradient-to-r ${STATUS_HEADER_CLASSES[color]} text-white py-1.5 px-3 flex items-center justify-between`}>
                       <span className="text-xs font-medium truncate">{job.job_name}</span>
-                      <span
-                        className={`h-2.5 w-2.5 rounded-full shrink-0 ml-2 ${STATUS_INDICATOR_CLASSES[color]}`}
-                        aria-label={STATUS_LABELS[color]}
-                      />
+                      <span className="text-xs opacity-80 ml-2 shrink-0">{STATUS_LABELS[color]}</span>
                     </div>
                     {/* Card body */}
                     <div className="p-4 bg-gradient-to-b from-white to-gray-50 space-y-2">
