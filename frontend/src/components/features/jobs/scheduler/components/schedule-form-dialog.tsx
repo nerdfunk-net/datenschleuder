@@ -1,8 +1,7 @@
 'use client'
-'use no memo'
 
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -95,12 +94,9 @@ export function ScheduleFormDialog({
     onSuccess()
   })
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const scheduleType = form.watch('schedule_type')
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const startTime = form.watch('start_time')
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const selectedTemplateId = form.watch('job_template_id')
+  const scheduleType = useWatch({ control: form.control, name: 'schedule_type' })
+  const startTime = useWatch({ control: form.control, name: 'start_time' })
+  const selectedTemplateId = useWatch({ control: form.control, name: 'job_template_id' })
   const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
 
   const requiresCredential = selectedTemplate &&

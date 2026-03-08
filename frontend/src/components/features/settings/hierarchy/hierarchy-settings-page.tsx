@@ -60,7 +60,6 @@ export function HierarchySettingsPage() {
       )
       setIsDirty(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
   const markDirty = useCallback(() => setIsDirty(true), [])
@@ -103,7 +102,6 @@ export function HierarchySettingsPage() {
       { name: '', label: '', order: prev.length, _key: nextKey() },
     ])
     markDirty()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markDirty])
 
   const handleRemove = useCallback((index: number) => {
@@ -148,7 +146,6 @@ export function HierarchySettingsPage() {
       )
       setIsDirty(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
   const hasErrors = useMemo(() => attrs.some(a => !!a.nameError), [attrs])

@@ -6,4 +6,5 @@
  */
 
 // Export empty config - Tailwind v4 uses CSS-based configuration
-export default {};
+const config = {};
+export default config;
