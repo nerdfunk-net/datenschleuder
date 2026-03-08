@@ -759,13 +759,15 @@ Step 6.2  ✅ Migrate nifi_flow_service.py to use the repository.
           invalidate_flow_table_cache() exposed; called from routers/nifi/hierarchy.py
           after save_hierarchy_config() to drop the reflected table cache.
 
-Step 6.3  ⏳ Move hierarchy_service.py DB access to the
-          settings repository or a dedicated HierarchyConfigRepository.
-          Currently has 4 get_db_session() call sites (lines 51, 176, 217, 249).
+Step 6.3  ✅ Moved hierarchy_service.py DB access to NifiSettingRepository.
+          Created repositories/nifi/nifi_setting_repository.py with
+          get_by_key(key) and upsert_json(key, value, category, description).
+          Removed all 4 get_db_session() call sites; removed _upsert_setting() helper.
+          Module-level _setting_repo = NifiSettingRepository() replaces inline sessions.
 
-Step 6.4  ⏳ Move deploy_service.py _get_last_hierarchy_attr() to use
-          the cached hierarchy config from Phase 4.
-          Currently has 1 get_db_session() call site (line 359).
+Step 6.4  ✅ deploy_service.py _get_last_hierarchy_attr() already uses
+          hierarchy_service.get_hierarchy_config() (TTL-cached) since Phase 3.4.
+          No get_db_session() call sites remain in deploy_service.py.
 
 Step 6.5  ⏳ Run tests. Verify all flow CRUD operations work.
 ```
@@ -773,7 +775,7 @@ Step 6.5  ⏳ Run tests. Verify all flow CRUD operations work.
 #### Exit criteria
 
 - No raw SQL `text()` calls in service files. ✅
-- All PostgreSQL access goes through repositories. ⏳ (hierarchy_service, deploy_service)
+- All PostgreSQL access goes through repositories. ✅ (hierarchy_service migrated to NifiSettingRepository; deploy_service already fixed)
 - `nifi_flow_service.py` uses `NifiFlowRepository`. ✅
 
 ---
@@ -813,7 +815,7 @@ MILESTONE B (phases are independent, pick order by pain)
 ├── Phase 4: Config lifecycle improvements
 │   ├── 4a  ✅ Hierarchy config TTL cache
 │   ├── 4b  ✅ OIDC provider config load-once
-│   └── 4c  ⏳ Cache service lazy init
+│   └── 4c  ✅ Cache service lazy init — module-level singleton removed; DI wired through app.state
 │
 └── SHIP — each phase independently
     │
@@ -821,14 +823,14 @@ MILESTONE B (phases are independent, pick order by pain)
 MILESTONE C (cleanup, phases are independent)
 │
 ├── Phase 5: Singleton removal sweep
-│   ├── ⏳ NiFi singletons (encryption, certificate_manager, nifi_oidc_config, nifi_connection_service)
-│   ├── ⏳ Git singletons (6: service, auth, cache, operations, connection, diff)
-│   └── ⏳ Global managers (credentials_manager.encryption_service, settings_manager last)
+│   ├── ✅ NiFi singletons (certificate_manager, nifi_oidc_config removed; nifi_connection_service transition stub)
+│   ├── ✅ Git singletons (service, auth, cache, operations, diff removed; connection transition stub)
+│   └── ✅ Global managers — encryption_service (credentials_manager) lazy; settings_manager singleton used via service_factory
 │
 └── Phase 6: Raw SQL elimination
     ├── ✅ Create NifiFlowRepository
     ├── ✅ Migrate nifi_flow_service.py (no text() calls remain)
-    └── ⏳ Clean up hierarchy_service.py + deploy_service.py DB access
+│   └── ✅ Clean up hierarchy_service.py + deploy_service.py DB access
 ```
 
 ## 10. Success criteria
@@ -838,11 +840,11 @@ This refactor is complete when these statements are true:
 | Criterion | Status |
 |-----------|--------|
 | Routers use `Depends()` for service injection | ✅ Phases 1.4–1.7 complete — zero module-level singleton imports remain in routers/ |
-| Tasks use `service_factory` for service construction | ⏳ Not started |
+| Tasks use `service_factory` for service construction | ✅ periodic_tasks.py, celery_app.py use service_factory.build_settings_manager() |
 | nipyapi global state is scoped per operation and safe under concurrency | ✅ Phase 2 complete |
 | No service file exceeds 400 lines | ✅ All large files decomposed (Phases 3a–3c) |
 | No raw SQL in service files | ✅ Phase 6.1–6.2 complete |
-| All PostgreSQL access goes through repositories | ⏳ hierarchy_service (4 sites) remains; deploy_service fixed |
+| All PostgreSQL access goes through repositories | ✅ hierarchy_service migrated to NifiSettingRepository; deploy_service fixed |
 | Config reads for rarely-changing data are cached | ✅ Hierarchy TTL cache + OIDC load-once done |
 | Import-time service singletons are removed | ⚠️ Phase 5 complete (10/12 singletons removed; 2 transition stubs remain for nifi_context.py and git_connection_service) |
 | `cache_service` initialization does not crash at import time | ✅ Phase 4c complete — module-level singleton removed; DI wired through app.state |

@@ -60,14 +60,14 @@ def cleanup_celery_data_task() -> dict:
         dict: Cleanup results with counts of removed items
     """
     try:
-        from settings_manager import settings_manager
+        import service_factory
         from datetime import datetime, timezone, timedelta
         from config import settings
         import redis
         import json
 
         # Get cleanup settings
-        celery_settings = settings_manager.get_celery_settings()
+        celery_settings = service_factory.build_settings_manager().get_celery_settings()
         cleanup_age_hours = celery_settings.get("cleanup_age_hours", 24)
 
         if not celery_settings.get("cleanup_enabled", True):

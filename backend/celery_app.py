@@ -31,9 +31,9 @@ def load_queue_configuration():
     If database is not available or no queues configured, returns default queue only.
     """
     try:
-        from settings_manager import settings_manager
+        import service_factory
 
-        celery_settings = settings_manager.get_celery_settings()
+        celery_settings = service_factory.build_settings_manager().get_celery_settings()
         configured_queues = celery_settings.get("queues", [])
 
         if not configured_queues:

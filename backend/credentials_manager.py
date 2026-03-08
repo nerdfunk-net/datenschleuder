@@ -49,7 +49,15 @@ class EncryptionService:
             raise ValueError("Failed to decrypt stored credential") from e
 
 
-encryption_service = EncryptionService()
+_encryption_service: Optional["EncryptionService"] = None
+
+
+def _get_enc() -> "EncryptionService":
+    """Return the module-level EncryptionService, constructing lazily on first call."""
+    global _encryption_service
+    if _encryption_service is None:
+        _encryption_service = EncryptionService()
+    return _encryption_service
 
 
 def _credential_to_dict(cred: Credential) -> Dict[str, Any]:
@@ -158,17 +166,17 @@ def create_credential(
     # Encrypt password if provided
     encrypted_password = None
     if password:
-        encrypted_password = encryption_service.encrypt(password)
+        encrypted_password = _get_enc().encrypt(password)
 
     # Encrypt SSH key if provided
     encrypted_ssh_key = None
     if ssh_private_key:
-        encrypted_ssh_key = encryption_service.encrypt(ssh_private_key)
+        encrypted_ssh_key = _get_enc().encrypt(ssh_private_key)
 
     # Encrypt SSH passphrase if provided
     encrypted_ssh_passphrase = None
     if ssh_passphrase:
-        encrypted_ssh_passphrase = encryption_service.encrypt(ssh_passphrase)
+        encrypted_ssh_passphrase = _get_enc().encrypt(ssh_passphrase)
 
     new_cred = _creds_repo.create(
         name=name,
@@ -245,11 +253,11 @@ def update_credential(
     if owner is not None:
         update_kwargs["owner"] = owner
     if password is not None:
-        update_kwargs["password_encrypted"] = encryption_service.encrypt(password)
+        update_kwargs["password_encrypted"] = _get_enc().encrypt(password)
     if ssh_private_key is not None:
-        update_kwargs["ssh_key_encrypted"] = encryption_service.encrypt(ssh_private_key)
+        update_kwargs["ssh_key_encrypted"] = _get_enc().encrypt(ssh_private_key)
     if ssh_passphrase is not None:
-        update_kwargs["ssh_passphrase_encrypted"] = encryption_service.encrypt(
+        update_kwargs["ssh_passphrase_encrypted"] = _get_enc().encrypt(
             ssh_passphrase
         )
     if ssh_keyfile_path is not None:
@@ -345,7 +353,7 @@ def get_decrypted_password(cred_id: int) -> str:
         raise ValueError("Credential not found")
     if not cred.password_encrypted:
         raise ValueError("Credential has no password")
-    return encryption_service.decrypt(cred.password_encrypted)
+    return _get_enc().decrypt(cred.password_encrypted)
 
 
 def get_decrypted_ssh_key(cred_id: int) -> str:
@@ -365,7 +373,7 @@ def get_decrypted_ssh_key(cred_id: int) -> str:
         raise ValueError("Credential not found")
     if not cred.ssh_key_encrypted:
         raise ValueError("Credential has no SSH key")
-    return encryption_service.decrypt(cred.ssh_key_encrypted)
+    return _get_enc().decrypt(cred.ssh_key_encrypted)
 
 
 def get_decrypted_ssh_passphrase(cred_id: int) -> Optional[str]:
@@ -385,7 +393,7 @@ def get_decrypted_ssh_passphrase(cred_id: int) -> Optional[str]:
         raise ValueError("Credential not found")
     if not cred.ssh_passphrase_encrypted:
         return None
-    return encryption_service.decrypt(cred.ssh_passphrase_encrypted)
+    return _get_enc().decrypt(cred.ssh_passphrase_encrypted)
 
 
 def has_ssh_key(cred_id: int) -> bool:
@@ -505,7 +513,7 @@ def export_single_ssh_key(cred_id: int) -> Optional[str]:
 
     try:
         # Decrypt the SSH key
-        ssh_key_content = encryption_service.decrypt(cred.ssh_key_encrypted)
+        ssh_key_content = _get_enc().decrypt(cred.ssh_key_encrypted)
 
         # Sanitize the credential name for use as a filename
         # Add prefix based on source (global_ for general, username_ for private)
@@ -566,7 +574,7 @@ def export_ssh_keys_to_filesystem(output_dir: Optional[str] = None) -> List[str]
 
         try:
             # Decrypt the SSH key
-            ssh_key_content = encryption_service.decrypt(cred.ssh_key_encrypted)
+            ssh_key_content = _get_enc().decrypt(cred.ssh_key_encrypted)
 
             # Sanitize the credential name for use as a filename
             # Add prefix based on source (global_ for general, username_ for private)

@@ -21,15 +21,17 @@ from services.auth.oidc.user_provisioning import (
     extract_user_data as _extract_user_data,
     provision_or_get_user as _provision_or_get_user,
 )
-from settings_manager import settings_manager
-
 logger = logging.getLogger(__name__)
 
 
 class OIDCService:
     """Service for OIDC authentication operations supporting multiple providers."""
 
-    def __init__(self) -> None:
+    def __init__(self, settings_manager=None) -> None:
+        if settings_manager is None:
+            from settings_manager import settings_manager as _sm
+            settings_manager = _sm
+        self._settings_manager = settings_manager
         # Cache per provider: {provider_id: config}
         self._configs: Dict[str, OIDCConfig] = {}
         # Provider config loaded once from YAML at startup; refreshed by reload()
@@ -48,7 +50,7 @@ class OIDCService:
 
     def _load_provider_configs(self) -> None:
         """Load all OIDC provider configs from settings into memory."""
-        providers = settings_manager.get_oidc_providers()
+        providers = self._settings_manager.get_oidc_providers()
         self._provider_configs = {
             pid: {**cfg, "provider_id": pid} for pid, cfg in providers.items()
         }
@@ -96,7 +98,7 @@ class OIDCService:
 
     async def get_oidc_config(self, provider_id: str) -> OIDCConfig:
         """Fetch OIDC configuration from discovery endpoint for a specific provider."""
-        if not settings_manager.is_oidc_enabled():
+        if not self._settings_manager.is_oidc_enabled():
             raise HTTPException(
                 status_code=status.HTTP_501_NOT_IMPLEMENTED,
                 detail="OIDC authentication is not enabled",

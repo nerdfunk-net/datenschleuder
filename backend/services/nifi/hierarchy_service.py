@@ -19,13 +19,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import func
 
-from core.models import Setting
-from core.database import get_db_session, engine
+from core.database import engine
 from repositories.nifi.hierarchy_repository import HierarchyValueRepository
+from repositories.nifi.nifi_setting_repository import NifiSettingRepository
 
 logger = logging.getLogger(__name__)
 
 _value_repo = HierarchyValueRepository()
+_setting_repo = NifiSettingRepository()
 
 # In-memory TTL cache — hierarchy config rarely changes.
 # Invalidated explicitly by save_hierarchy_config().
@@ -48,18 +49,14 @@ def get_hierarchy_config() -> dict:
     if _hierarchy_cache is not None and (now - _hierarchy_cache_time) < _HIERARCHY_CACHE_TTL:
         return _hierarchy_cache
 
-    db = get_db_session()
-    try:
-        setting = db.query(Setting).filter(Setting.key == "hierarchy_config").first()
-        if setting and setting.value:
-            result = json.loads(setting.value)
-        else:
-            result = {"hierarchy": DEFAULT_HIERARCHY}
-        _hierarchy_cache = result
-        _hierarchy_cache_time = now
-        return result
-    finally:
-        db.close()
+    setting = _setting_repo.get_by_key("hierarchy_config")
+    if setting and setting.value:
+        result = json.loads(setting.value)
+    else:
+        result = {"hierarchy": DEFAULT_HIERARCHY}
+    _hierarchy_cache = result
+    _hierarchy_cache_time = now
+    return result
 
 
 def invalidate_hierarchy_cache() -> None:
@@ -173,25 +170,12 @@ def save_hierarchy_config(hierarchy: list) -> int:
     deleted_count = get_flow_count()
     create_nifi_flows_table(hierarchy)
 
-    db = get_db_session()
-    try:
-        value_json = json.dumps({"hierarchy": hierarchy})
-        setting = db.query(Setting).filter(Setting.key == "hierarchy_config").first()
-        if setting:
-            setting.value = value_json
-        else:
-            setting = Setting(
-                key="hierarchy_config",
-                value=value_json,
-                category="nifi",
-                value_type="json",
-                description="Hierarchical data format configuration",
-            )
-            db.add(setting)
-        db.commit()
-    finally:
-        db.close()
-
+    _setting_repo.upsert_json(
+        key="hierarchy_config",
+        value={"hierarchy": hierarchy},
+        category="nifi",
+        description="Hierarchical data format configuration",
+    )
     invalidate_hierarchy_cache()
     return deleted_count
 
@@ -214,76 +198,42 @@ def delete_attribute_values(attribute_name: str) -> int:
 
 def get_deployment_settings() -> dict:
     """Get deployment settings."""
-    db = get_db_session()
-    try:
-        global_setting = (
-            db.query(Setting).filter(Setting.key == "deployment_config").first()
-        )
-        global_settings = (
-            json.loads(global_setting.value)
-            if global_setting and global_setting.value
-            else {
-                "process_group_name_template": "{last_hierarchy_value}",
-                "disable_after_deploy": False,
-                "start_after_deploy": True,
-                "stop_versioning_after_deploy": False,
-            }
-        )
+    global_setting = _setting_repo.get_by_key("deployment_config")
+    global_settings = (
+        json.loads(global_setting.value)
+        if global_setting and global_setting.value
+        else {
+            "process_group_name_template": "{last_hierarchy_value}",
+            "disable_after_deploy": False,
+            "start_after_deploy": True,
+            "stop_versioning_after_deploy": False,
+        }
+    )
 
-        path_setting = (
-            db.query(Setting).filter(Setting.key == "deployment_paths").first()
-        )
-        path_settings = (
-            json.loads(path_setting.value)
-            if path_setting and path_setting.value
-            else {}
-        )
+    path_setting = _setting_repo.get_by_key("deployment_paths")
+    path_settings = (
+        json.loads(path_setting.value)
+        if path_setting and path_setting.value
+        else {}
+    )
 
-        return {"global": global_settings, "paths": path_settings}
-    finally:
-        db.close()
+    return {"global": global_settings, "paths": path_settings}
 
 
 def save_deployment_settings(data: dict) -> None:
     """Save deployment settings."""
-    db = get_db_session()
-    try:
-        if "global" in data:
-            _upsert_setting(
-                db,
-                key="deployment_config",
-                value=data["global"],
-                category="nifi",
-                description="Global deployment configuration",
-            )
-
-        if "paths" in data:
-            _upsert_setting(
-                db,
-                key="deployment_paths",
-                value=data["paths"],
-                category="nifi",
-                description="Deployment path settings per instance",
-            )
-
-        db.commit()
-    finally:
-        db.close()
-
-
-def _upsert_setting(db, key: str, value: dict, category: str, description: str):
-    """Create or update a setting."""
-    value_json = json.dumps(value)
-    setting = db.query(Setting).filter(Setting.key == key).first()
-
-    if setting:
-        setting.value = value_json
-    else:
-        setting = Setting(
-            key=key,
-            value=value_json,
-            category=category,
-            value_type="json",
-            description=description,
+    if "global" in data:
+        _setting_repo.upsert_json(
+            key="deployment_config",
+            value=data["global"],
+            category="nifi",
+            description="Global deployment configuration",
         )
-        db.add(setting)
+
+    if "paths" in data:
+        _setting_repo.upsert_json(
+            key="deployment_paths",
+            value=data["paths"],
+            category="nifi",
+            description="Deployment path settings per instance",
+        )
