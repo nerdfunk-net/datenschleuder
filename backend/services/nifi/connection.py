@@ -6,23 +6,45 @@ Supports three authentication methods (in priority order):
 3. Username/password (if username is provided)
 """
 
+from __future__ import annotations
+
 import ssl
 import logging
 from pathlib import Path
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import nipyapi
 from nipyapi import config, security
 
-from services.nifi.encryption import encryption_service
-from services.nifi.certificate_manager import certificate_manager
-from services.nifi.oidc_config import nifi_oidc_config
+if TYPE_CHECKING:
+    from services.nifi.encryption import EncryptionService
+    from services.nifi.certificate_manager import CertificateManager
+    from services.nifi.oidc_config import NifiOidcConfigManager
 
 logger = logging.getLogger(__name__)
 
 
 class NifiConnectionService:
     """Service for configuring nipyapi connections to NiFi instances."""
+
+    def __init__(
+        self,
+        encryption_service: "EncryptionService | None" = None,
+        certificate_manager: "CertificateManager | None" = None,
+        oidc_config: "NifiOidcConfigManager | None" = None,
+    ) -> None:
+        if encryption_service is None:
+            from services.nifi.encryption import EncryptionService
+            encryption_service = EncryptionService()
+        if certificate_manager is None:
+            from services.nifi.certificate_manager import CertificateManager
+            certificate_manager = CertificateManager()
+        if oidc_config is None:
+            from services.nifi.oidc_config import NifiOidcConfigManager
+            oidc_config = NifiOidcConfigManager()
+        self._enc = encryption_service
+        self._certs = certificate_manager
+        self._oidc = oidc_config
 
     def configure(
         self,
@@ -143,7 +165,7 @@ class NifiConnectionService:
 
     def _configure_oidc_auth(self, provider_id: str, verify_ssl: bool = True) -> None:
         """Configure OIDC authentication using a provider from oidc_providers.yaml."""
-        provider_config = nifi_oidc_config.get_oidc_provider(provider_id)
+        provider_config = self._oidc.get_oidc_provider(provider_id)
         if not provider_config:
             raise ValueError(
                 "OIDC provider '%s' not found in oidc_providers.yaml" % provider_id
@@ -208,7 +230,7 @@ class NifiConnectionService:
         check_hostname: bool = True,
     ) -> None:
         """Configure certificate-based authentication."""
-        cert_paths = certificate_manager.get_certificate_paths(certificate_name)
+        cert_paths = self._certs.get_certificate_paths(certificate_name)
         if not cert_paths:
             raise ValueError(
                 "Certificate '%s' not found in certificates.yaml" % certificate_name
@@ -277,7 +299,7 @@ class NifiConnectionService:
         """Configure username/password authentication."""
         password = None
         if password_encrypted:
-            password = encryption_service.decrypt(password_encrypted)
+            password = self._enc.decrypt(password_encrypted)
 
         if not password:
             logger.warning("Username provided but password is empty")
@@ -289,5 +311,6 @@ class NifiConnectionService:
         logger.info("Successfully authenticated with username: %s", username)
 
 
-# Global instance
+# Backward-compat singleton — used by nifi_context.py during the Phase 5 transition.
+# Removed once nifi_context.py is updated to use DI.
 nifi_connection_service = NifiConnectionService()

@@ -82,11 +82,13 @@ def build_git_auth_service():
 def build_git_cache_service(cache_service=None):
     """Build a GitCacheService instance.
 
-    If cache_service is not provided the module-level singleton is used (legacy).
+    Args:
+        cache_service: Optional RedisCacheService to inject. When *None* the
+                       instance lazily resolves its own cache on first use.
     """
     from services.settings.git.cache import GitCacheService
 
-    return GitCacheService()
+    return GitCacheService(cache_service=cache_service)
 
 
 def build_git_operations_service():
@@ -108,3 +110,39 @@ def build_git_diff_service():
     from services.settings.git.diff import GitDiffService
 
     return GitDiffService()
+
+
+def build_certificate_manager():
+    """Build a new CertificateManager instance."""
+    from services.nifi.certificate_manager import CertificateManager
+
+    return CertificateManager()
+
+
+def build_nifi_oidc_config():
+    """Build a NifiOidcConfigManager instance."""
+    from services.nifi.oidc_config import NifiOidcConfigManager
+
+    return NifiOidcConfigManager()
+
+
+def build_settings_manager():
+    """Return the app-scoped SettingsManager singleton.
+
+    Returns the existing module-level singleton to maintain consistency with
+    inline imports still used elsewhere (e.g. in main.py lifespan hooks).
+    """
+    from settings_manager import settings_manager
+
+    return settings_manager
+
+
+def build_git_repo_manager():
+    """Build a new GitRepositoryManager instance.
+
+    GitRepositoryManager is stateless (no cached DB connections); a fresh
+    instance per request is safe and avoids sharing mutable state.
+    """
+    from git_repositories_manager import GitRepositoryManager
+
+    return GitRepositoryManager()

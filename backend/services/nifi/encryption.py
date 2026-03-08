@@ -40,7 +40,3 @@ class EncryptionService:
             return self._fernet.decrypt(token).decode("utf-8")
         except InvalidToken as e:
             raise ValueError("Failed to decrypt stored password") from e
-
-
-# Global encryption service instance
-encryption_service = EncryptionService()

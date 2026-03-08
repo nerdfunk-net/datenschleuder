@@ -33,8 +33,11 @@ def cache_demo_task(self) -> Dict[str, Any]:
             state="PROGRESS", meta={"status": "Initializing cache demo..."}
         )
 
-        # Import cache service
-        from services.settings.cache import cache_service
+        # Build cache service via factory (deferred – avoids import-time crash
+        # when Redis is unavailable).
+        from service_factory import build_cache_service
+
+        cache_service = build_cache_service()
 
         # Simulate some work
         time.sleep(1)

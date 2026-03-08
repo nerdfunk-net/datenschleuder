@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Optional
 
 from services.settings.git.paths import repo_path
-from services.settings.git.service import git_service
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,8 @@ def _commit_file(repository: dict, abs_path: Path, operation: str) -> Optional[s
     commit_msg = f"cert-manager: {operation} → {relative}"
 
     try:
-        result = git_service.commit_and_push(
+        from services.settings.git.service import GitService
+        result = GitService().commit_and_push(
             repository,
             message=commit_msg,
             files=[str(relative)],

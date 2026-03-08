@@ -5,7 +5,6 @@ from typing import List, Optional
 
 from core.models import NifiInstance
 from repositories.nifi.nifi_instance_repository import NifiInstanceRepository
-from services.nifi.encryption import encryption_service
 from services.nifi.nifi_context import nifi_connection_scope, nifi_test_connection_scope
 from services.nifi.operations.connections import test_connection
 
@@ -42,7 +41,8 @@ def create_instance(
     """Create a new NiFi instance."""
     encrypted_password = None
     if password:
-        encrypted_password = encryption_service.encrypt(password)
+        from services.nifi.encryption import EncryptionService
+        encrypted_password = EncryptionService().encrypt(password)
 
     return _repo.create(
         name=name,
@@ -65,7 +65,8 @@ def update_instance(instance_id: int, **kwargs) -> Optional[NifiInstance]:
     """Update a NiFi instance."""
     password = kwargs.pop("password", None)
     if password is not None:
-        kwargs["password_encrypted"] = encryption_service.encrypt(password)
+        from services.nifi.encryption import EncryptionService
+        kwargs["password_encrypted"] = EncryptionService().encrypt(password)
 
     return _repo.update(instance_id, **kwargs)
 

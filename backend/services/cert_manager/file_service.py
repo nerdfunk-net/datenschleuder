@@ -16,7 +16,6 @@ from fastapi import HTTPException, status
 from git_repositories_manager import GitRepositoryManager
 from repositories.nifi.nifi_instance_repository import NifiInstanceRepository
 from services.settings.git.paths import repo_path
-from services.settings.git.service import git_service
 from models.cert_manager import CertFileInfo, NifiPasswordEntry
 
 logger = logging.getLogger(__name__)
@@ -78,7 +77,8 @@ def list_cert_files(instance_id: int) -> List[CertFileInfo]:
 
     # 3. Ensure local clone is up to date
     try:
-        git_service.open_or_clone(repository)
+        from services.settings.git.service import GitService
+        GitService().open_or_clone(repository)
     except Exception as exc:
         logger.error("Failed to open/clone git repository %s: %s", git_repo_id, exc)
         raise HTTPException(

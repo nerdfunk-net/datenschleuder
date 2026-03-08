@@ -83,7 +83,3 @@ class NifiOidcConfigManager:
         if provider_config and provider_config.get("enabled", False):
             return provider_config
         return None
-
-
-# Global instance
-nifi_oidc_config = NifiOidcConfigManager()

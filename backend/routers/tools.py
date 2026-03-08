@@ -5,6 +5,7 @@ from pathlib import Path
 import yaml
 from core.auth import verify_admin_token
 from core.schema_manager import SchemaManager
+from dependencies import get_certificate_manager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -171,7 +172,7 @@ async def list_certificates() -> Dict[str, Any]:
 
 
 @router.post("/certificates", dependencies=[Depends(verify_admin_token)])
-async def add_certificate(entry: CertificateEntry) -> Dict[str, Any]:
+async def add_certificate(entry: CertificateEntry, cert_mgr=Depends(get_certificate_manager)) -> Dict[str, Any]:
     """
     Add a new certificate to certs/certificates.yaml.
     PEM content for ca_cert, cert, and key is written to individual files
@@ -213,8 +214,7 @@ async def add_certificate(entry: CertificateEntry) -> Dict[str, Any]:
         _save_cert_config(entries)
 
         # Reload in-memory cache
-        from services.nifi.certificate_manager import certificate_manager
-        certificate_manager.reload()
+        cert_mgr.reload()
 
         logger.info("Certificate '%s' added successfully", entry.name)
         return {"success": True, "message": f"Certificate '{entry.name}' added.", "entry": new_entry}
@@ -227,7 +227,7 @@ async def add_certificate(entry: CertificateEntry) -> Dict[str, Any]:
 
 
 @router.delete("/certificates/{name}", dependencies=[Depends(verify_admin_token)])
-async def delete_certificate(name: str, delete_files: bool = False) -> Dict[str, Any]:
+async def delete_certificate(name: str, delete_files: bool = False, cert_mgr=Depends(get_certificate_manager)) -> Dict[str, Any]:
     """
     Remove a certificate entry from certs/certificates.yaml.
     Optionally deletes the associated PEM files from disk.
@@ -255,8 +255,7 @@ async def delete_certificate(name: str, delete_files: bool = False) -> Dict[str,
                         deleted_files.append(filename)
 
         # Reload in-memory cache
-        from services.nifi.certificate_manager import certificate_manager
-        certificate_manager.reload()
+        cert_mgr.reload()
 
         logger.info("Certificate '%s' removed (files deleted: %s)", name, deleted_files)
         return {

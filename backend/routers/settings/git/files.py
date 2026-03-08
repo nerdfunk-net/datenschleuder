@@ -13,9 +13,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from git import InvalidGitRepositoryError, GitCommandError
 
 from core.auth import require_permission
-from services.settings.cache import cache_service
+from dependencies import get_cache_service, get_git_repo_manager
 from services.settings.git.paths import repo_path as git_repo_path
-from services.settings.git.shared_utils import get_git_repo_by_id, git_repo_manager
+from services.settings.git.shared_utils import get_git_repo_by_id
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/git/{repo_id}", tags=["git-files"])
@@ -27,6 +27,7 @@ async def search_repository_files(
     query: str = "",
     limit: int = 50,
     current_user: dict = Depends(require_permission("git.repositories", "read")),
+    git_repo_manager=Depends(get_git_repo_manager),
 ):
     """Search for files in a specific Git repository with filtering and pagination."""
     try:
@@ -260,6 +261,7 @@ async def get_file_complete_history(
     file_path: str,
     from_commit: str = None,
     current_user: dict = Depends(require_permission("git.repositories", "read")),
+    cache_service=Depends(get_cache_service),
 ):
     """Get the complete history of a file from a specific commit backwards to its creation."""
     try:
@@ -402,6 +404,7 @@ async def get_file_content(
     repo_id: int,
     path: str,
     current_user: dict = Depends(require_permission("git.repositories", "read")),
+    git_repo_manager=Depends(get_git_repo_manager),
 ):
     """Read the content of a file from a Git repository.
 
@@ -490,6 +493,7 @@ async def get_file_content_parsed(
     repo_id: int,
     path: str,
     current_user: dict = Depends(require_permission("git.repositories", "read")),
+    git_repo_manager=Depends(get_git_repo_manager),
 ):
     """Read a YAML file from a Git repository and return parsed JSON.
 
@@ -581,6 +585,7 @@ async def get_directory_tree(
     repo_id: int,
     path: str = "",
     current_user: dict = Depends(require_permission("git.repositories", "read")),
+    git_repo_manager=Depends(get_git_repo_manager),
 ):
     """Get hierarchical directory structure of a Git repository.
 
@@ -711,6 +716,7 @@ async def get_directory_files(
     repo_id: int,
     path: str = "",
     current_user: dict = Depends(require_permission("git.repositories", "read")),
+    git_repo_manager=Depends(get_git_repo_manager),
 ):
     """Get files in a specific directory with last commit metadata.
 

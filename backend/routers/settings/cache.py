@@ -9,7 +9,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 
 from core.auth import require_permission
-from services.settings.cache import cache_service
+from dependencies import get_cache_service
 
 router = APIRouter(prefix="/api/cache", tags=["cache"])
 
@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/cache", tags=["cache"])
 @router.get("/stats")
 async def cache_stats(
     current_user: dict = Depends(require_permission("settings.cache", "write")),
+    cache_service=Depends(get_cache_service),
 ):
     """Return comprehensive cache statistics including performance metrics."""
     try:
@@ -32,6 +33,7 @@ async def cache_entries(
         False, description="Include expired entries in the response"
     ),
     current_user: dict = Depends(require_permission("settings.cache", "write")),
+    cache_service=Depends(get_cache_service),
 ):
     """Return detailed information about all cache entries."""
     try:
@@ -45,6 +47,7 @@ async def cache_entries(
 async def cache_namespace_info(
     namespace: str,
     current_user: dict = Depends(require_permission("settings.cache", "write")),
+    cache_service=Depends(get_cache_service),
 ):
     """Return detailed information about a specific cache namespace."""
     try:
@@ -57,6 +60,7 @@ async def cache_namespace_info(
 @router.get("/performance")
 async def cache_performance(
     current_user: dict = Depends(require_permission("settings.cache", "write")),
+    cache_service=Depends(get_cache_service),
 ):
     """Return detailed cache performance metrics."""
     try:
@@ -70,6 +74,7 @@ async def cache_performance(
 async def clear_cache(
     payload: dict = None,
     current_user: dict = Depends(require_permission("settings.cache", "write")),
+    cache_service=Depends(get_cache_service),
 ):
     """Clear cache entries. Accepts optional JSON { "namespace": "repo:123" }.
 
@@ -102,6 +107,7 @@ async def clear_cache(
 @router.post("/cleanup")
 async def cleanup_expired(
     current_user: dict = Depends(require_permission("settings.cache", "write")),
+    cache_service=Depends(get_cache_service),
 ):
     """Remove expired cache entries and return count of removed items."""
     try:

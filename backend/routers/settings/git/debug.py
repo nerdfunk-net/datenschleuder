@@ -14,10 +14,10 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
 
 from core.auth import require_permission
-from services.settings.git.auth import git_auth_service
+from dependencies import get_git_auth_service, get_git_repo_manager
 from services.settings.git.env import set_ssl_env
 from services.settings.git.config import set_git_author
-from services.settings.git.shared_utils import get_git_repo_by_id, git_repo_manager
+from services.settings.git.shared_utils import get_git_repo_by_id
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/git-repositories", tags=["git-debug"])
@@ -27,6 +27,7 @@ router = APIRouter(prefix="/api/git-repositories", tags=["git-debug"])
 async def debug_read_test(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.repositories", "write")),
+    git_repo_manager=Depends(get_git_repo_manager),
 ):
     """Debug operation: Test reading a file from the repository."""
     try:
@@ -105,6 +106,7 @@ async def debug_read_test(
 async def debug_write_test(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.repositories", "write")),
+    git_repo_manager=Depends(get_git_repo_manager),
 ):
     """Debug operation: Test writing a file to the repository."""
     try:
@@ -215,6 +217,7 @@ async def debug_write_test(
 async def debug_delete_test(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.repositories", "write")),
+    git_repo_manager=Depends(get_git_repo_manager),
 ):
     """Debug operation: Test deleting the test file from the repository."""
     try:
@@ -311,6 +314,8 @@ async def debug_delete_test(
 async def debug_push_test(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.repositories", "write")),
+    git_repo_manager=Depends(get_git_repo_manager),
+    git_auth_service=Depends(get_git_auth_service),
 ):
     """Debug operation: Test pushing changes to the remote repository."""
     try:
@@ -571,6 +576,8 @@ async def debug_push_test(
 async def debug_diagnostics(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.repositories", "read")),
+    git_repo_manager=Depends(get_git_repo_manager),
+    git_auth_service=Depends(get_git_auth_service),
 ):
     """Get comprehensive diagnostic information for the repository."""
     try:

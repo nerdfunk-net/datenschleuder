@@ -91,6 +91,39 @@ def get_git_diff_service():
 
 def get_git_cache_service(request: Request):
     """Return a GitCacheService backed by the app-scoped cache."""
-    # For now delegate to the factory; once singletons are removed this
-    # will explicitly pass the app-scoped cache_service.
-    return service_factory.build_git_cache_service()
+    return service_factory.build_git_cache_service(
+        cache_service=request.app.state.cache_service
+    )
+
+
+# ---------------------------------------------------------------------------
+# App-scoped providers — certificate & settings managers
+# ---------------------------------------------------------------------------
+
+
+def get_certificate_manager(request: Request):
+    """Return the app-scoped CertificateManager stored on app.state."""
+    return request.app.state.certificate_manager
+
+
+def get_nifi_oidc_config(request: Request):
+    """Return the app-scoped NifiOidcConfigManager stored on app.state."""
+    return request.app.state.nifi_oidc_config
+
+
+def get_settings_manager(request: Request):
+    """Return the app-scoped SettingsManager stored on app.state."""
+    return request.app.state.settings_manager
+
+
+# ---------------------------------------------------------------------------
+# Request-scoped providers — git repository manager
+# ---------------------------------------------------------------------------
+
+
+def get_git_repo_manager():
+    """Return a new GitRepositoryManager for each request.
+
+    GitRepositoryManager is stateless; a fresh instance per request is safe.
+    """
+    return service_factory.build_git_repo_manager()

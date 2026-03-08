@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from core.auth import require_permission
-from services.nifi.certificate_manager import certificate_manager
+from dependencies import get_certificate_manager
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ class CertificatesResponse(BaseModel):
 @router.get("/", response_model=CertificatesResponse)
 async def get_certificates(
     current_user: dict = Depends(require_permission("nifi", "read")),
+    certificate_manager=Depends(get_certificate_manager),
 ):
     """Get list of available client certificates for NiFi authentication."""
     certificates = certificate_manager.get_certificates()

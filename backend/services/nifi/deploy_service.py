@@ -4,8 +4,6 @@ import json
 import logging
 import urllib3
 
-from core.models import Setting
-from core.database import get_db_session
 from repositories.nifi.nifi_instance_repository import NifiInstanceRepository
 from repositories.nifi.registry_flow_repository import RegistryFlowRepository
 from services.nifi.nifi_context import nifi_connection_scope
@@ -356,24 +354,17 @@ def deploy_flow(instance_id: int, deployment_data: dict) -> dict:
 
 def _get_last_hierarchy_attr() -> str:
     """Get the last hierarchy attribute name from settings."""
-    db = get_db_session()
-    try:
-        setting = db.query(Setting).filter(Setting.key == "hierarchy_config").first()
-        if setting and setting.value:
-            try:
-                config = json.loads(setting.value)
-                hierarchy_list = None
-                if isinstance(config, dict) and "hierarchy" in config:
-                    hierarchy_list = config["hierarchy"]
-                elif isinstance(config, list):
-                    hierarchy_list = config
+    from services.nifi.hierarchy_service import get_hierarchy_config
 
-                if hierarchy_list and len(hierarchy_list) > 0:
-                    last_item = hierarchy_list[-1]
-                    if isinstance(last_item, dict) and "name" in last_item:
-                        return last_item["name"]
-            except (json.JSONDecodeError, Exception):
-                pass
-        return "cn"
-    finally:
-        db.close()
+    config = get_hierarchy_config()
+    hierarchy_list = None
+    if isinstance(config, dict) and "hierarchy" in config:
+        hierarchy_list = config["hierarchy"]
+    elif isinstance(config, list):
+        hierarchy_list = config
+
+    if hierarchy_list and len(hierarchy_list) > 0:
+        last_item = hierarchy_list[-1]
+        if isinstance(last_item, dict) and "name" in last_item:
+            return last_item["name"]
+    return "cn"

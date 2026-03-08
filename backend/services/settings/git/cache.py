@@ -14,7 +14,6 @@ import subprocess
 from typing import List, Optional, Dict, Any
 
 from git import Repo
-from services.settings.cache import cache_service
 from models.git import GitCommit, commit_to_dict
 
 logger = logging.getLogger(__name__)
@@ -23,11 +22,31 @@ logger = logging.getLogger(__name__)
 class GitCacheService:
     """Service for caching git operations data."""
 
-    def __init__(self):
-        """Initialize the git cache service."""
+    def __init__(self, cache_service=None):
+        """Initialize the git cache service.
+
+        Args:
+            cache_service: RedisCacheService instance to use.  When *None*
+                           the service is resolved lazily on first use via
+                           service_factory (supports the module-level singleton
+                           during the transition to full DI in Phase 5).
+        """
+        self._cache = cache_service  # None → lazy-resolved on first use
         self._cache_enabled = True
         self._max_commits = 500
         self._ttl_seconds = 600
+
+    def _get_cache(self):
+        """Return the backing RedisCacheService, resolving lazily if needed."""
+        if self._cache is not None:
+            return self._cache
+        # Lazy fallback: build once and store on this instance.  Used when
+        # GitCacheService() is constructed without an explicit cache_service
+        # (module-level singleton path, removed in Phase 5).
+        import service_factory  # local import avoids circular deps at module load
+
+        self._cache = service_factory.build_cache_service()
+        return self._cache
 
     def _get_cache_config(self) -> Dict[str, Any]:
         """Get cache configuration from settings.
@@ -87,7 +106,7 @@ class GitCacheService:
 
         # Try cache first if enabled
         if cache_cfg.get("enabled", True):
-            cached_commits = cache_service.get(cache_key)
+            cached_commits = self._get_cache().get(cache_key)
             if cached_commits is not None:
                 logger.debug(
                     "Cache hit for commits: repo %s, branch %s", repo_id, branch_name
@@ -146,7 +165,7 @@ class GitCacheService:
 
                     ttl = int(cache_cfg.get("ttl_seconds", 600))
                     cache_key = self._build_cache_key(repo_id, "commits", branch_name)
-                    cache_service.set(cache_key, full_commits, ttl)
+                    self._get_cache().set(cache_key, full_commits, ttl)
                     logger.debug(
                         "Cached %s commits for repo %s, branch %s", len(full_commits), repo_id, branch_name
                     )
@@ -245,7 +264,7 @@ class GitCacheService:
 
         # Try cache first if enabled
         if cache_cfg.get("enabled", True):
-            cached_history = cache_service.get(cache_key)
+            cached_history = self._get_cache().get(cache_key)
             if cached_history is not None:
                 logger.debug(
                     "Cache hit for file history: repo %s, file %s", repo_id, file_path
@@ -286,7 +305,7 @@ class GitCacheService:
             # Cache the results
             if cache_cfg.get("enabled", True):
                 ttl = int(cache_cfg.get("ttl_seconds", 600))
-                cache_service.set(cache_key, history_commits, ttl)
+                self._get_cache().set(cache_key, history_commits, ttl)
                 logger.debug(
                     "Cached %s commits for file %s in repo %s", len(history_commits), file_path, repo_id
                 )
@@ -315,7 +334,7 @@ class GitCacheService:
 
         # Try cache first if enabled
         if cache_cfg.get("enabled", True):
-            cached_commit = cache_service.get(cache_key)
+            cached_commit = self._get_cache().get(cache_key)
             if cached_commit is not None:
                 logger.debug("Cache hit for commit details: %s", commit_hash)
                 return cached_commit
@@ -339,7 +358,7 @@ class GitCacheService:
             # Cache the result
             if cache_cfg.get("enabled", True):
                 ttl = int(cache_cfg.get("ttl_seconds", 600))
-                cache_service.set(cache_key, commit_dict, ttl)
+                self._get_cache().set(cache_key, commit_dict, ttl)
 
             return commit_dict
 
@@ -366,8 +385,8 @@ class GitCacheService:
             logger.info("Invalidating cache for repo %s", repo_id)
 
             # If cache service supports pattern deletion:
-            if hasattr(cache_service, "delete_pattern"):
-                cache_service.delete_pattern(pattern)
+            if hasattr(self._get_cache(), "delete_pattern"):
+                self._get_cache().delete_pattern(pattern)
             else:
                 # Fallback: just log that we can't invalidate
                 logger.warning(
@@ -389,16 +408,12 @@ class GitCacheService:
 
             logger.warning("Invalidating ALL git caches")
 
-            if hasattr(cache_service, "delete_pattern"):
-                cache_service.delete_pattern(pattern)
-            elif hasattr(cache_service, "clear"):
-                cache_service.clear()
+            if hasattr(self._get_cache(), "delete_pattern"):
+                self._get_cache().delete_pattern(pattern)
+            elif hasattr(self._get_cache(), "clear"):
+                self._get_cache().clear()
             else:
                 logger.warning("Cache service doesn't support bulk deletion")
 
         except Exception as e:
             logger.error("Failed to invalidate all caches: %s", e)
-
-
-# Singleton instance for use across the application
-git_cache_service = GitCacheService()

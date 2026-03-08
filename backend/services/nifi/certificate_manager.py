@@ -91,7 +91,3 @@ class CertificateManager:
         """Force reload certificates from file."""
         self._certificates = None
         return self.get_certificates()
-
-
-# Global certificate manager instance
-certificate_manager = CertificateManager()

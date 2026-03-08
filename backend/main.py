@@ -113,6 +113,27 @@ async def lifespan(app: FastAPI):
         logger.warning("RedisCacheService unavailable at startup: %s", e)
         app.state.cache_service = None
 
+    try:
+        app.state.certificate_manager = service_factory.build_certificate_manager()
+        logger.info("CertificateManager initialised")
+    except Exception as e:
+        logger.error("Failed to initialise CertificateManager: %s", e)
+        raise
+
+    try:
+        app.state.nifi_oidc_config = service_factory.build_nifi_oidc_config()
+        logger.info("NifiOidcConfigManager initialised")
+    except Exception as e:
+        logger.error("Failed to initialise NifiOidcConfigManager: %s", e)
+        raise
+
+    try:
+        app.state.settings_manager = service_factory.build_settings_manager()
+        logger.info("SettingsManager initialised")
+    except Exception as e:
+        logger.error("Failed to initialise SettingsManager: %s", e)
+        raise
+
     # Initialize database tables first
     try:
         from core.database import init_db
@@ -182,12 +203,14 @@ async def lifespan(app: FastAPI):
         # Local imports to avoid circular dependencies at import time
         from settings_manager import settings_manager
         from services.settings.git.shared_utils import get_git_repo_by_id
-        from services.settings.cache import cache_service
 
+        cache_service = app.state.cache_service
         cache_cfg = settings_manager.get_cache_settings()
         logger.debug("Startup cache: settings loaded: %s", cache_cfg)
 
-        if cache_cfg.get("enabled", True):
+        if cache_service is None:
+            logger.warning("Startup cache: cache service unavailable; skipping prefetch")
+        elif cache_cfg.get("enabled", True):
 
             async def prefetch_commits_once():
                 try:
