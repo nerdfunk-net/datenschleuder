@@ -621,11 +621,15 @@ async def get_system_diagnostics(
     """Get system diagnostics (heap, CPU, threads, storage) for a NiFi instance."""
     import nipyapi
 
-    _setup_instance(instance_id)
     try:
-        diagnostics = nipyapi.system.get_system_diagnostics()
+        diagnostics = await _execute_with_retry(
+            instance_id,
+            lambda: nipyapi.system.get_system_diagnostics(),
+        )
         data = diagnostics.to_dict() if hasattr(diagnostics, "to_dict") else diagnostics
         return {"status": "success", "instance_id": instance_id, "data": data}
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(
             "Error getting system diagnostics for instance %d: %s", instance_id, exc
@@ -662,12 +666,14 @@ async def get_process_group_status(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="detail must be 'names' or 'all'",
         )
-    _setup_instance(instance_id)
     try:
-        pg_status = nipyapi.nifi.FlowApi().get_process_group_status(
-            id=pg_id,
-            recursive=recursive,
-            nodewise=nodewise,
+        pg_status = await _execute_with_retry(
+            instance_id,
+            lambda: nipyapi.nifi.FlowApi().get_process_group_status(
+                id=pg_id,
+                recursive=recursive,
+                nodewise=nodewise,
+            ),
         )
         if detail == "names":
             inner = getattr(pg_status, "process_group_status", None)
@@ -684,6 +690,8 @@ async def get_process_group_status(
             "nodewise": nodewise,
             "data": data,
         }
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(
             "Error getting process group %s status for instance %d: %s",
@@ -725,9 +733,11 @@ async def get_process_group_status_canvas(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="detail must be 'names' or 'all'",
         )
-    _setup_instance(instance_id)
     try:
-        pg_status = _canvas_status(pg_id)
+        pg_status = await _execute_with_retry(
+            instance_id,
+            lambda: _canvas_status(pg_id),
+        )
         if detail == "names":
             data = {pg_status["name"]: pg_id}
         else:
@@ -739,6 +749,8 @@ async def get_process_group_status_canvas(
             "detail": detail,
             "data": data,
         }
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(
             "Error getting canvas process group %s status for instance %d: %s",
@@ -773,12 +785,15 @@ async def list_components_by_kind(
     """
     from nipyapi import canvas
 
-    _setup_instance(instance_id)
     try:
-        raw_list = (
-            canvas.list_all_by_kind(kind=kind, pg_id=pg_id, descendants=descendants)
-            or []
+        raw_list = await _execute_with_retry(
+            instance_id,
+            lambda: canvas.list_all_by_kind(
+                kind=kind, pg_id=pg_id, descendants=descendants
+            ) or [],
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error("Failed to list components by kind '%s': %s", kind, exc)
         raise HTTPException(
