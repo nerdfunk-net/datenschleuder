@@ -1,23 +1,35 @@
 """Application service for NiFi flow management.
 
-Uses raw SQL against the dynamically-structured nifi_flows table whose columns
-are derived from the hierarchy configuration.  The ORM-based NifiFlowRepository
-is no longer used here because the table schema is not fixed at model time.
+All database access is delegated to NifiFlowRepository which uses SQLAlchemy Core
+table reflection so that the dynamically-structured nifi_flows schema (whose columns
+are derived from the hierarchy config) is handled without raw SQL text() calls.
 """
 
 import logging
 from typing import List, Optional
 
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect
 
 from core.database import engine
+from repositories.nifi.nifi_flow_repository import NifiFlowRepository
 from services.nifi.hierarchy_service import get_hierarchy_config
 
 logger = logging.getLogger(__name__)
 
+# Module-level repository instance — shares the reflected table cache.
+_repo = NifiFlowRepository(engine)
+
+
+def invalidate_flow_table_cache() -> None:
+    """Drop the cached reflected table so the next query re-reads the schema.
+
+    Call this whenever the nifi_flows table is dropped and recreated (e.g. after
+    saving a new hierarchy config).
+    """
+    _repo._invalidate_table_cache()
 
 # ---------------------------------------------------------------------------
-# Internal helpers
+# Constants
 # ---------------------------------------------------------------------------
 
 _STATIC_COLUMN_LABELS: dict = {
@@ -34,6 +46,11 @@ _STATIC_COLUMN_LABELS: dict = {
 }
 
 _INTERNAL_COLUMNS = {"id", "updated_at"}
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
 
 
 def _table_exists() -> bool:
@@ -98,9 +115,9 @@ def get_flow_columns() -> list:
     hierarchy_map = {attr["name"].lower(): attr for attr in hierarchy}
 
     raw_columns = [
-        col["name"]
-        for col in inspect(engine).get_columns("nifi_flows")
-        if col["name"] not in _INTERNAL_COLUMNS
+        col_name
+        for col_name in _repo.get_columns()
+        if col_name not in _INTERNAL_COLUMNS
     ]
 
     result = []
@@ -134,11 +151,8 @@ def list_flows() -> List[dict]:
     if not _table_exists():
         return []
     hierarchy = _get_hierarchy()
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT * FROM nifi_flows ORDER BY created_at DESC"))
-        rows = result.fetchall()
-        keys = list(result.keys())
-    return [_build_flow_response(dict(zip(keys, row)), hierarchy) for row in rows]
+    rows = _repo.list_all()
+    return [_build_flow_response(dict(row), hierarchy) for row in rows]
 
 
 def get_flow(flow_id: int) -> Optional[dict]:
@@ -146,15 +160,10 @@ def get_flow(flow_id: int) -> Optional[dict]:
     if not _table_exists():
         return None
     hierarchy = _get_hierarchy()
-    with engine.connect() as conn:
-        result = conn.execute(
-            text("SELECT * FROM nifi_flows WHERE id = :id"), {"id": flow_id}
-        )
-        row = result.fetchone()
-        if not row:
-            return None
-        keys = list(result.keys())
-    return _build_flow_response(dict(zip(keys, row)), hierarchy)
+    row = _repo.get_by_id(flow_id)
+    if row is None:
+        return None
+    return _build_flow_response(dict(row), hierarchy)
 
 
 def create_flow(
@@ -178,14 +187,11 @@ def create_flow(
     hierarchy = _get_hierarchy()
     _validate_hierarchy_values(hierarchy_values, hierarchy)
 
-    columns = []
-    values = {}
+    values: dict = {}
 
     for attr in hierarchy:
         attr_name = attr["name"]
         attr_lower = attr_name.lower()
-        columns.append(f"src_{attr_lower}")
-        columns.append(f"dest_{attr_lower}")
         values[f"src_{attr_lower}"] = hierarchy_values[attr_name]["source"]
         values[f"dest_{attr_lower}"] = hierarchy_values[attr_name]["destination"]
 
@@ -200,22 +206,9 @@ def create_flow(
         ("description", description),
         ("creator_name", creator_name),
     ]:
-        columns.append(col)
         values[col] = val
 
-    cols_str = ", ".join(columns)
-    placeholders = ", ".join([f":{c}" for c in columns])
-
-    with engine.connect() as conn:
-        result = conn.execute(
-            text(
-                f"INSERT INTO nifi_flows ({cols_str}) VALUES ({placeholders}) RETURNING id"
-            ),
-            values,
-        )
-        conn.commit()
-        new_id = result.fetchone()[0]
-
+    new_id = _repo.create(values)
     return get_flow(new_id)
 
 
@@ -227,8 +220,7 @@ def update_flow(flow_id: int, **kwargs) -> Optional[dict]:
     hierarchy = _get_hierarchy()
     hierarchy_values = kwargs.pop("hierarchy_values", None)
 
-    update_parts = []
-    values = {"flow_id": flow_id}
+    update_values: dict = {}
 
     if hierarchy_values:
         _validate_hierarchy_values(hierarchy_values, hierarchy)
@@ -237,11 +229,11 @@ def update_flow(flow_id: int, **kwargs) -> Optional[dict]:
             attr_lower = attr_name.lower()
             if attr_name in hierarchy_values:
                 if "source" in hierarchy_values[attr_name]:
-                    update_parts.append(f"src_{attr_lower} = :src_{attr_lower}")
-                    values[f"src_{attr_lower}"] = hierarchy_values[attr_name]["source"]
+                    update_values[f"src_{attr_lower}"] = hierarchy_values[attr_name][
+                        "source"
+                    ]
                 if "destination" in hierarchy_values[attr_name]:
-                    update_parts.append(f"dest_{attr_lower} = :dest_{attr_lower}")
-                    values[f"dest_{attr_lower}"] = hierarchy_values[attr_name][
+                    update_values[f"dest_{attr_lower}"] = hierarchy_values[attr_name][
                         "destination"
                     ]
 
@@ -256,22 +248,11 @@ def update_flow(flow_id: int, **kwargs) -> Optional[dict]:
         "description",
     ]:
         if col in kwargs and kwargs[col] is not None:
-            update_parts.append(f"{col} = :{col}")
-            values[col] = kwargs[col]
+            update_values[col] = kwargs[col]
 
-    update_parts.append("updated_at = CURRENT_TIMESTAMP")
-
-    with engine.connect() as conn:
-        result = conn.execute(
-            text(
-                f"UPDATE nifi_flows SET {', '.join(update_parts)} WHERE id = :flow_id"
-            ),
-            values,
-        )
-        conn.commit()
-        if result.rowcount == 0:
-            return None
-
+    updated = _repo.update(flow_id, update_values)
+    if not updated:
+        return None
     return get_flow(flow_id)
 
 
@@ -279,12 +260,7 @@ def delete_flow(flow_id: int) -> bool:
     """Delete a NiFi flow. Returns True if deleted, False if not found."""
     if not _table_exists():
         return False
-    with engine.connect() as conn:
-        result = conn.execute(
-            text("DELETE FROM nifi_flows WHERE id = :id"), {"id": flow_id}
-        )
-        conn.commit()
-        return result.rowcount > 0
+    return _repo.delete(flow_id)
 
 
 def copy_flow(flow_id: int) -> Optional[dict]:
@@ -292,32 +268,14 @@ def copy_flow(flow_id: int) -> Optional[dict]:
     if not _table_exists():
         return None
 
-    with engine.connect() as conn:
-        result = conn.execute(
-            text("SELECT * FROM nifi_flows WHERE id = :id"), {"id": flow_id}
-        )
-        row = result.fetchone()
-        if not row:
-            return None
-        keys = list(result.keys())
+    row = _repo.get_by_id(flow_id)
+    if row is None:
+        return None
 
-    values_dict = dict(zip(keys, row))
     excluded = {"id", "created_at", "updated_at"}
-    columns_to_copy = [k for k in keys if k not in excluded]
-    copy_values = {c: values_dict[c] for c in columns_to_copy}
+    copy_values = {k: v for k, v in row.items() if k not in excluded}
     copy_values["active"] = False
 
-    cols_str = ", ".join(columns_to_copy)
-    placeholders = ", ".join([f":{c}" for c in columns_to_copy])
-
-    with engine.connect() as conn:
-        result = conn.execute(
-            text(
-                f"INSERT INTO nifi_flows ({cols_str}) VALUES ({placeholders}) RETURNING id"
-            ),
-            copy_values,
-        )
-        conn.commit()
-        new_id = result.fetchone()[0]
-
+    new_id = _repo.create(copy_values)
     return get_flow(new_id)
+

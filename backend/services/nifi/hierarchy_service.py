@@ -2,6 +2,7 @@
 
 import json
 import logging
+import time
 from typing import List
 
 from sqlalchemy import (
@@ -26,6 +27,12 @@ logger = logging.getLogger(__name__)
 
 _value_repo = HierarchyValueRepository()
 
+# In-memory TTL cache — hierarchy config rarely changes.
+# Invalidated explicitly by save_hierarchy_config().
+_hierarchy_cache: dict | None = None
+_hierarchy_cache_time: float = 0.0
+_HIERARCHY_CACHE_TTL: float = 60.0  # seconds
+
 DEFAULT_HIERARCHY = [
     {"name": "CN", "label": "Common Name", "order": 0},
     {"name": "O", "label": "Organization", "order": 1},
@@ -35,15 +42,30 @@ DEFAULT_HIERARCHY = [
 
 
 def get_hierarchy_config() -> dict:
-    """Get the current hierarchy configuration."""
+    """Get the current hierarchy configuration, cached for up to 60 seconds."""
+    global _hierarchy_cache, _hierarchy_cache_time
+    now = time.monotonic()
+    if _hierarchy_cache is not None and (now - _hierarchy_cache_time) < _HIERARCHY_CACHE_TTL:
+        return _hierarchy_cache
+
     db = get_db_session()
     try:
         setting = db.query(Setting).filter(Setting.key == "hierarchy_config").first()
         if setting and setting.value:
-            return json.loads(setting.value)
-        return {"hierarchy": DEFAULT_HIERARCHY}
+            result = json.loads(setting.value)
+        else:
+            result = {"hierarchy": DEFAULT_HIERARCHY}
+        _hierarchy_cache = result
+        _hierarchy_cache_time = now
+        return result
     finally:
         db.close()
+
+
+def invalidate_hierarchy_cache() -> None:
+    """Invalidate the in-memory hierarchy config cache."""
+    global _hierarchy_cache
+    _hierarchy_cache = None
 
 
 def get_flow_count() -> int:
@@ -170,6 +192,7 @@ def save_hierarchy_config(hierarchy: list) -> int:
     finally:
         db.close()
 
+    invalidate_hierarchy_cache()
     return deleted_count
 
 

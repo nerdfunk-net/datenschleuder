@@ -40,7 +40,7 @@ def execute_check_queues(
         dict with keys ``success``, ``instances``, ``overall_status``,
         ``summary``, and ``thresholds``.
     """
-    from services.nifi.connection import nifi_connection_service
+    from services.nifi.nifi_context import nifi_connection_scope
     from services.nifi.operations import management as mgmt_ops
     from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
 
@@ -131,9 +131,9 @@ def execute_check_queues(
         )
 
         try:
-            nifi_connection_service.configure_from_instance(instance)
-            raw_connections = mgmt_ops.list_connections_raw()
-            connections, inst_status = mgmt_ops.check_connection_queues(
+            with nifi_connection_scope(instance):
+                raw_connections = mgmt_ops.list_connections_raw()
+                connections, inst_status = mgmt_ops.check_connection_queues(
                 raw_connections,
                 mode=mode,
                 count_yellow=count_yellow,

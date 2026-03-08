@@ -20,8 +20,8 @@ from models.nifi_deployment import (
     ConnectionRequest,
     ConnectionResponse,
 )
-from services.nifi.connection import nifi_connection_service
 from services.nifi import instance_service
+from services.nifi.nifi_context import with_nifi_instance
 from services.nifi.operations import (
     registries as reg_ops,
     flows as flow_ops,
@@ -50,27 +50,14 @@ _NIFI_RETRY_DELAY = 1.0  # seconds between attempts
 # ---------------------------------------------------------------------------
 
 
-def _setup_instance(instance_id: int):
-    """Fetch instance from DB and configure nipyapi connection."""
+def _get_instance(instance_id: int):
+    """Fetch instance from DB, raise 404 if missing."""
     instance = instance_service.get_instance(instance_id)
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="NiFi instance with ID %d not found" % instance_id,
         )
-    nifi_connection_service.configure_from_instance(instance)
-    return instance
-
-
-def _setup_instance_normalized(instance_id: int):
-    """Fetch instance from DB and configure nipyapi with a normalised API URL."""
-    instance = instance_service.get_instance(instance_id)
-    if not instance:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="NiFi instance with ID %d not found" % instance_id,
-        )
-    nifi_connection_service.configure_from_instance(instance, normalize_url=True)
     return instance
 
 
@@ -84,24 +71,21 @@ async def _execute_with_retry(
     Configure the NiFi connection and run *operation*, retrying up to
     _NIFI_MAX_RETRIES times when a transient network / connectivity error occurs.
 
+    nipyapi global config is isolated per-call via nifi_connection_scope so that
+    concurrent requests targeting different instances do not cross-contaminate.
+
     Rules:
     - ValueError  → re-raised immediately (resource not found / bad input).
     - HTTPException → re-raised immediately (already a handled error).
     - Any other exception → logged and retried after _NIFI_RETRY_DELAY seconds.
     - If every attempt fails → HTTPException(503) with a descriptive message.
-
-    The connection setup is repeated on every attempt so that re-authentication
-    is attempted after a transient failure (relevant for OIDC / username auth).
     """
     last_error: Exception = RuntimeError("No attempts made")
+    instance = _get_instance(instance_id)
 
     for attempt in range(1, _NIFI_MAX_RETRIES + 1):
         try:
-            if normalized_url:
-                _setup_instance_normalized(instance_id)
-            else:
-                _setup_instance(instance_id)
-            return operation()
+            return await with_nifi_instance(instance, operation, normalize_url=normalized_url)
 
         except (ValueError, HTTPException):
             # Logical errors – do not retry.

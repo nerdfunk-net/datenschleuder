@@ -7,7 +7,7 @@ from sqlalchemy import inspect, text
 
 from core.database import engine
 from services.nifi import instance_service, hierarchy_service
-from services.nifi.connection import nifi_connection_service
+from services.nifi.nifi_context import nifi_connection_scope
 
 logger = logging.getLogger(__name__)
 
@@ -142,11 +142,10 @@ def check_path(
     if not instance:
         raise ValueError("NiFi instance with ID %d not found" % instance_id)
 
-    nifi_connection_service.configure_from_instance(instance)
-
     # Fetch all process groups from NiFi
-    root_pg_id = canvas.get_root_pg_id()
-    all_pgs_raw = canvas.list_all_process_groups(root_pg_id) or []
+    with nifi_connection_scope(instance):
+        root_pg_id = canvas.get_root_pg_id()
+        all_pgs_raw = canvas.list_all_process_groups(root_pg_id) or []
     pg_by_path, pg_id_to_path = _build_pg_by_path(all_pgs_raw)
 
     logger.info(

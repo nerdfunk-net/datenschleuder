@@ -88,6 +88,31 @@ async def lifespan(app: FastAPI):
             "Change the admin password immediately after first login."
         )
 
+    # ── App-scoped service construction (store on app.state) ─────────────────
+    import service_factory
+
+    try:
+        app.state.encryption_service = service_factory.build_encryption_service()
+        logger.info("EncryptionService initialised")
+    except Exception as e:
+        logger.error("Failed to initialise EncryptionService: %s", e)
+        raise
+
+    try:
+        app.state.oidc_service = service_factory.build_oidc_service()
+        logger.info("OIDCService initialised")
+    except Exception as e:
+        logger.error("Failed to initialise OIDCService: %s", e)
+        raise
+
+    try:
+        app.state.cache_service = service_factory.build_cache_service()
+        logger.info("RedisCacheService initialised")
+    except Exception as e:
+        # Redis unavailability is non-fatal at startup; cache features degrade gracefully.
+        logger.warning("RedisCacheService unavailable at startup: %s", e)
+        app.state.cache_service = None
+
     # Initialize database tables first
     try:
         from core.database import init_db

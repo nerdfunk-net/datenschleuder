@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from core.auth import require_permission
 from models.nifi_hierarchy import HierarchyConfig, HierarchyValuesRequest
 from services.nifi import hierarchy_service
+from services.nifi.nifi_flow_service import invalidate_flow_table_cache
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ async def save_hierarchy_config(
     try:
         hierarchy_data = [attr.model_dump() for attr in settings.hierarchy]
         deleted_flows_count = hierarchy_service.save_hierarchy_config(hierarchy_data)
+        invalidate_flow_table_cache()
         return {
             "message": "Hierarchy settings saved successfully",
             "deleted_flows_count": deleted_flows_count,

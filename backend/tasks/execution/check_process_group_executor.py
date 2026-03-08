@@ -47,7 +47,7 @@ def execute_check_process_group(
         ``violations``, ``children`` (when *check_children* is True),
         and ``instance_id``.
     """
-    from services.nifi.connection import nifi_connection_service
+    from services.nifi.nifi_context import nifi_connection_scope
     from services.nifi.operations.process_groups import (
         get_process_group_status_canvas,
         evaluate_process_group_status,
@@ -108,135 +108,136 @@ def execute_check_process_group(
             "error": "No primary instance configured for NiFi cluster %d." % cluster_id,
         }
 
-    nifi_connection_service.configure_from_instance(instance)
-
-    # -------------------------------------------------------------------------
-    # Fetch and evaluate the target process group
-    # -------------------------------------------------------------------------
-    task_context.update_state(
-        state="PROGRESS",
-        meta={
-            "current": 30,
-            "total": 100,
-            "status": "Fetching status for process group '%s'…" % (pg_path or pg_id),
-        },
-    )
-
-    try:
-        pg_status = get_process_group_status_canvas(pg_id)
-    except Exception as exc:
-        logger.error(
-            "check_process_group: failed to fetch status for pg '%s': %s",
-            pg_id,
-            exc,
-            exc_info=True,
-        )
-        return {
-            "success": False,
-            "error": "Failed to fetch process group status: %s" % str(exc),
-            "cluster_id": cluster_id,
-            "instance_id": instance.id,
-            "process_group_id": pg_id,
-        }
-
-    evaluation = evaluate_process_group_status(pg_status, expected_status)
-    overall_passed: bool = evaluation["passed"]
-
-    # -------------------------------------------------------------------------
-    # Optionally check child process groups individually
-    # -------------------------------------------------------------------------
-    children_results: list = []
-
-    if check_children:
+    # nifi_connection_scope handles save/configure/restore around all nipyapi calls.
+    # Celery tasks run one-per-worker-process so no asyncio lock is needed.
+    with nifi_connection_scope(instance):
+        # -------------------------------------------------------------------------
+        # Fetch and evaluate the target process group
+        # -------------------------------------------------------------------------
         task_context.update_state(
             state="PROGRESS",
             meta={
-                "current": 60,
+                "current": 30,
                 "total": 100,
-                "status": "Checking child process groups…",
+                "status": "Fetching status for process group '%s'…" % (pg_path or pg_id),
             },
         )
+
         try:
-            children = list_child_process_groups(pg_id)
+            pg_status = get_process_group_status_canvas(pg_id)
         except Exception as exc:
-            logger.warning(
-                "check_process_group: could not list children for pg '%s': %s",
+            logger.error(
+                "check_process_group: failed to fetch status for pg '%s': %s",
                 pg_id,
                 exc,
+                exc_info=True,
             )
-            children = []
+            return {
+                "success": False,
+                "error": "Failed to fetch process group status: %s" % str(exc),
+                "cluster_id": cluster_id,
+                "instance_id": instance.id,
+                "process_group_id": pg_id,
+            }
 
-        for child in children:
-            child_id: str = child.get("id", "")
-            child_name: str = child.get("name", child_id)
+        evaluation = evaluate_process_group_status(pg_status, expected_status)
+        overall_passed: bool = evaluation["passed"]
+
+        # -------------------------------------------------------------------------
+        # Optionally check child process groups individually
+        # -------------------------------------------------------------------------
+        children_results: list = []
+
+        if check_children:
+            task_context.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": 60,
+                    "total": 100,
+                    "status": "Checking child process groups…",
+                },
+            )
             try:
-                child_status = get_process_group_status_canvas(child_id)
-                child_eval = evaluate_process_group_status(child_status, expected_status)
-                if not child_eval["passed"]:
-                    overall_passed = False
-                children_results.append(
-                    {
-                        "id": child_id,
-                        "name": child_name,
-                        "passed": child_eval["passed"],
-                        "counters": child_eval["counters"],
-                        "violations": child_eval["violations"],
-                    }
-                )
+                children = list_child_process_groups(pg_id)
             except Exception as exc:
                 logger.warning(
-                    "check_process_group: failed to check child '%s': %s",
-                    child_name,
+                    "check_process_group: could not list children for pg '%s': %s",
+                    pg_id,
                     exc,
                 )
-                overall_passed = False
-                children_results.append(
-                    {
-                        "id": child_id,
-                        "name": child_name,
-                        "passed": False,
-                        "error": str(exc),
-                    }
-                )
+                children = []
 
-    # -------------------------------------------------------------------------
-    # Final result
-    # -------------------------------------------------------------------------
-    task_context.update_state(
-        state="PROGRESS",
-        meta={
-            "current": 100,
-            "total": 100,
-            "status": "Done – check %s" % ("passed" if overall_passed else "FAILED"),
-        },
-    )
+            for child in children:
+                child_id: str = child.get("id", "")
+                child_name: str = child.get("name", child_id)
+                try:
+                    child_status = get_process_group_status_canvas(child_id)
+                    child_eval = evaluate_process_group_status(child_status, expected_status)
+                    if not child_eval["passed"]:
+                        overall_passed = False
+                    children_results.append(
+                        {
+                            "id": child_id,
+                            "name": child_name,
+                            "passed": child_eval["passed"],
+                            "counters": child_eval["counters"],
+                            "violations": child_eval["violations"],
+                        }
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "check_process_group: failed to check child '%s': %s",
+                        child_name,
+                        exc,
+                    )
+                    overall_passed = False
+                    children_results.append(
+                        {
+                            "id": child_id,
+                            "name": child_name,
+                            "passed": False,
+                            "error": str(exc),
+                        }
+                    )
 
-    logger.info(
-        "check_process_group: cluster=%d instance=%d pg=%s expected=%s passed=%s",
-        cluster_id,
-        instance.id,
-        pg_id,
-        expected_status,
-        overall_passed,
-    )
+        # -------------------------------------------------------------------------
+        # Final result
+        # -------------------------------------------------------------------------
+        task_context.update_state(
+            state="PROGRESS",
+            meta={
+                "current": 100,
+                "total": 100,
+                "status": "Done – check %s" % ("passed" if overall_passed else "FAILED"),
+            },
+        )
 
-    result: Dict[str, Any] = {
-        "success": True,
-        "passed": overall_passed,
-        "cluster_id": cluster_id,
-        "instance_id": instance.id,
-        "instance_name": instance.name or str(instance.id),
-        "process_group_id": pg_id,
-        "process_group_name": pg_status.get("name"),
-        "process_group_path": pg_path,
-        "expected_status": expected_status,
-        "check_children": check_children,
-        "counters": evaluation["counters"],
-        "violations": evaluation["violations"],
-    }
+        logger.info(
+            "check_process_group: cluster=%d instance=%d pg=%s expected=%s passed=%s",
+            cluster_id,
+            instance.id,
+            pg_id,
+            expected_status,
+            overall_passed,
+        )
 
-    if check_children:
-        result["children"] = children_results
-        result["children_count"] = len(children_results)
+        result: Dict[str, Any] = {
+            "success": True,
+            "passed": overall_passed,
+            "cluster_id": cluster_id,
+            "instance_id": instance.id,
+            "instance_name": instance.name or str(instance.id),
+            "process_group_id": pg_id,
+            "process_group_name": pg_status.get("name"),
+            "process_group_path": pg_path,
+            "expected_status": expected_status,
+            "check_children": check_children,
+            "counters": evaluation["counters"],
+            "violations": evaluation["violations"],
+        }
 
-    return result
+        if check_children:
+            result["children"] = children_results
+            result["children_count"] = len(children_results)
+
+        return result

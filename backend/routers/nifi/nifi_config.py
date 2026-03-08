@@ -13,7 +13,7 @@ from models.nifi_cluster import (
     NifiClusterPrimaryResponse,
 )
 from services.nifi import nifi_config_service
-from services.nifi.connection import nifi_connection_service
+from services.nifi.nifi_context import with_nifi_instance
 from services.nifi.operations import process_groups as pg_ops
 from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
 
@@ -151,8 +151,10 @@ async def get_cluster_process_group_paths(
         )
 
     try:
-        nifi_connection_service.configure_from_instance(primary_instance)
-        result = pg_ops.get_all_process_group_paths(start_pg_id)
+        result = await with_nifi_instance(
+            primary_instance,
+            lambda: pg_ops.get_all_process_group_paths(start_pg_id),
+        )
     except Exception as exc:
         logger.error(
             "Failed to fetch process groups for cluster %d via primary instance %d: %s",

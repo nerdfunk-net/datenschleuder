@@ -6,7 +6,7 @@ from typing import List, Optional
 from core.models import NifiInstance
 from repositories.nifi.nifi_instance_repository import NifiInstanceRepository
 from services.nifi.encryption import encryption_service
-from services.nifi.connection import nifi_connection_service
+from services.nifi.nifi_context import nifi_connection_scope, nifi_test_connection_scope
 from services.nifi.operations.connections import test_connection
 
 logger = logging.getLogger(__name__)
@@ -84,8 +84,8 @@ def test_instance_connection(instance_id: int) -> dict:
     logger.debug(
         "Testing saved NiFi instance id=%d url=%s", instance_id, instance.nifi_url
     )
-    nifi_connection_service.configure_from_instance(instance)
-    result = test_connection()
+    with nifi_connection_scope(instance):
+        result = test_connection()
     result["nifi_url"] = instance.nifi_url
     return result
 
@@ -106,7 +106,7 @@ def test_new_connection(
         username,
         verify_ssl,
     )
-    nifi_connection_service.configure_test(
+    with nifi_test_connection_scope(
         nifi_url=nifi_url,
         username=username,
         password=password,
@@ -114,7 +114,7 @@ def test_new_connection(
         certificate_name=certificate_name,
         check_hostname=check_hostname,
         oidc_provider_id=oidc_provider_id,
-    )
-    result = test_connection()
+    ):
+        result = test_connection()
     result["nifi_url"] = nifi_url
     return result
