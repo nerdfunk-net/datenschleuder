@@ -222,6 +222,14 @@ export const queryKeys = {
       [...queryKeys.certManager.all, 'nifi-passwords', instanceId, filePath] as const,
   },
 
+  // PKI Manager
+  pki: {
+    all: ['pki'] as const,
+    ca: () => [...queryKeys.pki.all, 'ca'] as const,
+    certificates: () => [...queryKeys.pki.all, 'certificates'] as const,
+    certificate: (id: number) => [...queryKeys.pki.all, 'certificate', id] as const,
+  },
+
   // Templates
   templates: {
     all: ['templates'] as const,

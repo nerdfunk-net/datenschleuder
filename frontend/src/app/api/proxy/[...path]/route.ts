@@ -128,7 +128,9 @@ async function handleRequest(
       contentType?.includes('application/x-yaml') ||
       contentType?.includes('text/csv') ||
       contentType?.includes('application/octet-stream') ||
-      contentType?.includes('application/zip')
+      contentType?.includes('application/zip') ||
+      contentType?.includes('application/x-pem-file') ||
+      contentType?.includes('application/x-pkcs12')
     ) {
       console.log(`Backend ${method} file download, passing through...`)
 

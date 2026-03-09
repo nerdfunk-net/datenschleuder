@@ -51,6 +51,7 @@ class AutoSchemaMigration:
             Boolean,
             DateTime,
             LargeBinary,
+            JSON,
         )
 
         col_type = column.type
@@ -74,6 +75,8 @@ class AutoSchemaMigration:
                 sql_type = "TIMESTAMP"
         elif isinstance(col_type, LargeBinary):
             sql_type = "BYTEA"
+        elif isinstance(col_type, JSON):
+            sql_type = "JSONB"
         else:
             # Fallback to string representation
             sql_type = str(col_type)

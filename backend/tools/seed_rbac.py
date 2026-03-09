@@ -230,6 +230,10 @@ def seed_permissions(verbose: bool = True):
         ("settings.templates", "read", "View Jinja/configuration templates"),
         ("settings.templates", "write", "Create/modify Jinja/configuration templates"),
         ("settings.templates", "delete", "Delete Jinja/configuration templates"),
+        # PKI Manager permissions
+        ("pki", "read", "View PKI Certificate Authority and certificates"),
+        ("pki", "write", "Create/issue/revoke PKI certificates and manage CA"),
+        ("pki", "delete", "Delete the PKI Certificate Authority"),
     ]
 
     created_count = 0

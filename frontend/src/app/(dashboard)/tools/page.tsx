@@ -11,6 +11,7 @@ import {
   Database,
   Key,
   ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react'
 
 interface ToolLink {
@@ -38,6 +39,12 @@ const tools: ToolLink[] = [
     description: 'Manage client certificates used for NiFi and other service authentication. Add, inspect, and remove PEM certificates.',
     href: '/tools/certificates',
     icon: <ShieldCheck className="w-6 h-6" />,
+  },
+  {
+    title: 'PKI Manager',
+    description: 'Create a private Certificate Authority, issue server/client/user certificates, manage revocation, and export PKCS#12 or PEM bundles.',
+    href: '/tools/pki',
+    icon: <ShieldAlert className="w-6 h-6" />,
   },
 ]
 
