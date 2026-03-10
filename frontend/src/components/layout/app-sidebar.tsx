@@ -61,7 +61,7 @@ const navigationSections: NavSection[] = [
       { label: 'Monitoring', href: '/nifi/monitoring', icon: Activity },
       { label: 'Parameter', href: '/nifi/parameter', icon: SlidersHorizontal },
       { label: 'Install', href: '/nifi/install', icon: HardDrive },
-      { label: 'Cert Manager', href: '/tools/cert-manager', icon: ShieldCheck },
+      { label: 'Cert Manager', href: '/nifi/cert-manager', icon: ShieldCheck },
     ],
   },
   {
