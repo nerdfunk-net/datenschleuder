@@ -1,9 +1,0 @@
-# Certificate configuration file
-# Each certificate entry defines a client certificate that can be used for NiFi authentication
-
-certificates:
-  - name: "Localhost (new)"
-    ca_cert_file: "ca_cert.pem"
-    cert_file: "localhost.crt.pem"
-    key_file: "localhost.key.pem"
-    password: ""
