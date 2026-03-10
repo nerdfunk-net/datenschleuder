@@ -207,4 +207,4 @@ apscheduler_jobs.db
 config/oidc_providers.yaml
 /certs/*.pem
 /certs/*.p12
-
+/certs/certificates.yaml
