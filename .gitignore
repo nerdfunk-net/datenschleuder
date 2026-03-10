@@ -205,6 +205,7 @@ apscheduler_jobs.db
 /agent-os
 /.claude
 config/oidc_providers.yaml
-/certs/*.pem
-/certs/*.p12
-/certs/certificates.yaml
+config/nipyapi/*.pem
+config/nipyapi/*.crt
+config/nipyapi/*.p12
+config/oidc/*.pem
