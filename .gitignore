@@ -205,4 +205,6 @@ apscheduler_jobs.db
 /agent-os
 /.claude
 config/oidc_providers.yaml
-/certs/
+/certs/*.pem
+/certs/*.p12
+
