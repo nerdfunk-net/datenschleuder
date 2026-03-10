@@ -208,4 +208,5 @@ config/oidc_providers.yaml
 config/nipyapi/*.pem
 config/nipyapi/*.crt
 config/nipyapi/*.p12
+config/nipyapi/certificates.yaml
 config/oidc/*.pem
