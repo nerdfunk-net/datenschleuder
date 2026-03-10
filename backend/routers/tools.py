@@ -10,8 +10,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Path to the shared certs directory (project_root/certs/)
-_CERTS_DIR = Path(__file__).parent.parent.parent / "certs"
+# Path to the NiPyAPI certs directory (project_root/config/nipyapi/)
+_CERTS_DIR = Path(__file__).parent.parent.parent / "config" / "nipyapi"
 _CERTS_CONFIG = _CERTS_DIR / "certificates.yaml"
 
 

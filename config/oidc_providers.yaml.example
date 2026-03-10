@@ -103,8 +103,8 @@ providers:
     # Path: Can be absolute or relative to project root
     # Format: MUST be in PEM format (text format starting with -----BEGIN CERTIFICATE-----)
     # Use case: Air-gapped environments or self-signed certificates
-    # Convert: Use config/certs/convert-cert.sh to convert DER/CRT/CER to PEM
-    ca_cert_path: "config/certs/corporate-ca.cert.pem"
+    # Convert: Use config/oidc/convert-cert.sh to convert DER/CRT/CER to PEM
+    ca_cert_path: "config/oidc/corporate-ca.cert.pem"
 
     # scopes: OAuth 2.0 scopes to request
     # Type: list of strings
@@ -348,7 +348,7 @@ global:
 # Solution: Use username_prefix to differentiate users
 #
 # Problem: Certificate format errors
-# Solution: Use config/certs/convert-cert.sh to convert to PEM format
+# Solution: Use config/oidc/convert-cert.sh to convert to PEM format
 #
 # For detailed troubleshooting, see: OIDC_SETUP.md
 #

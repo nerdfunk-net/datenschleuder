@@ -21,7 +21,7 @@ Environment Variables:
                          - "" or not set (ALL queues from database - default behavior)
 
     INSTALL_CERTIFICATE_FILES: Set to 'true' to install certificates from
-        config/certs/ to the system CA store on startup (for Docker environments).
+        config/oidc/ to the system CA store on startup (for Docker environments).
 
 Behavior:
     - If CELERY_WORKER_QUEUE is NOT set: Worker listens to ALL queues configured in database
@@ -76,9 +76,9 @@ except ImportError as e:
 
 def install_certificates():
     """
-    Install certificates from config/certs/ to the system CA store.
+    Install certificates from config/oidc/ to the system CA store.
 
-    This copies all .crt files from config/certs/ to /usr/local/share/ca-certificates/
+    This copies all .crt files from config/oidc/ to /usr/local/share/ca-certificates/
     and runs update-ca-certificates to update the system trust store.
 
     Only runs when INSTALL_CERTIFICATE_FILES environment variable is set to 'true'.
@@ -87,9 +87,9 @@ def install_certificates():
     if install_certs != "true":
         return
 
-    print("Installing certificates from config/certs/...")
+    print("Installing certificates from config/oidc/...")
 
-    config_certs_dir = Path(backend_dir) / ".." / "config" / "certs"
+    config_certs_dir = Path(backend_dir) / ".." / "config" / "oidc"
     system_ca_dir = Path("/usr/local/share/ca-certificates")
 
     if not config_certs_dir.exists():
@@ -99,7 +99,7 @@ def install_certificates():
     # Find all .crt files
     cert_files = list(config_certs_dir.glob("*.crt"))
     if not cert_files:
-        print("  No .crt files found in config/certs/")
+        print("  No .crt files found in config/oidc/")
         return
 
     # Ensure system CA directory exists

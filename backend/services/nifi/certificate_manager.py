@@ -24,9 +24,9 @@ class CertificateManager:
 
     def __init__(self, certs_dir: Optional[Path] = None):
         if certs_dir is None:
-            # Default to project_root/certs/
+            # Default to project_root/config/nipyapi/
             project_root = Path(__file__).parent.parent.parent.parent
-            certs_dir = project_root / "certs"
+            certs_dir = project_root / "config" / "nipyapi"
 
         self.certs_dir = certs_dir
         self.config_file = certs_dir / "certificates.yaml"

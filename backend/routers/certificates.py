@@ -19,8 +19,8 @@ from core.auth import verify_admin_token
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/certificates", tags=["certificates"])
 
-# config/certs/ directory relative to the project root
-CONFIG_CERTS_DIR = Path(__file__).parent.parent.parent / "config" / "certs"
+# config/oidc/ directory relative to the project root
+CONFIG_CERTS_DIR = Path(__file__).parent.parent.parent / "config" / "oidc"
 SYSTEM_CA_DIR = Path("/usr/local/share/ca-certificates")
 
 
@@ -63,7 +63,7 @@ async def scan_certificates(
     current_user: dict = Depends(verify_admin_token),
 ) -> ScanResponse:
     """
-    Scan the config/certs directory for .crt files.
+    Scan the config/oidc directory for .crt files.
 
     Returns a list of certificate files found in the directory.
     """
@@ -121,7 +121,7 @@ async def upload_certificate(
     current_user: dict = Depends(verify_admin_token),
 ) -> dict:
     """
-    Upload a certificate file to the config/certs directory.
+    Upload a certificate file to the config/oidc directory.
 
     The file must have a .crt extension.
     """
@@ -301,7 +301,7 @@ async def delete_certificate(
     current_user: dict = Depends(verify_admin_token),
 ) -> dict:
     """
-    Delete a certificate from the config/certs directory.
+    Delete a certificate from the config/oidc directory.
 
     Note: This does NOT remove the certificate from the system CA store.
     """

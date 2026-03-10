@@ -386,7 +386,7 @@ export default function AddCertificatePage() {
                 <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p className="text-lg font-medium">No certificates found</p>
                 <p className="text-sm mt-2">
-                  Upload a .crt file or add certificates to the config/certs directory
+                  Upload a .crt file or add certificates to the config/oidc directory
                 </p>
               </div>
             ) : (

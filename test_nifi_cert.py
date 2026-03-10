@@ -12,7 +12,7 @@ from pathlib import Path
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 NIFI_URL   = "https://localhost:8443/nifi-api"
-CERT_DIR   = Path("certs")
+CERT_DIR   = Path("config/nipyapi")
 CA_CERT    = CERT_DIR / "ca_cert.pem"
 CLIENT_CERT = CERT_DIR / "client_cert.pem"
 CLIENT_KEY  = CERT_DIR / "client_key.pem"

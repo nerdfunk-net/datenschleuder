@@ -228,7 +228,7 @@ providers:
       - openid
 
     # If Keycloak uses a self-signed certificate:
-    ca_cert_path: "config/certs/nifi-ca.cert.pem"
+    ca_cert_path: "config/oidc/nifi-ca.cert.pem"
 ```
 
 ### 3.2 Assign Provider to NiFi Instance
@@ -282,8 +282,8 @@ SSLError: certificate verify failed
 ```
 
 - Obtain the Keycloak CA certificate in PEM format
-- Place it in `config/certs/` (use `config/certs/convert-cert.sh` if needed)
-- Set `ca_cert_path: "config/certs/your-ca.cert.pem"` in `oidc_providers.yaml`
+- Place it in `config/oidc/` (use `config/oidc/convert-cert.sh` if needed)
+- Set `ca_cert_path: "config/oidc/your-ca.cert.pem"` in `oidc_providers.yaml`
 - Or set `verify_ssl: false` on the NiFi instance (development only)
 
 ---

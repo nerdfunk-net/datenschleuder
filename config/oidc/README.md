@@ -122,7 +122,7 @@ providers:
     client_secret: "secret"
 
     # Reference the CA certificate (path relative to project root)
-    ca_cert_path: "config/certs/corporate-ca.pem"
+    ca_cert_path: "config/oidc/corporate-ca.pem"
 ```
 
 ### Multiple Providers with Different CAs
@@ -132,13 +132,13 @@ Each provider can use a different CA certificate:
 ```yaml
 providers:
   corporate:
-    ca_cert_path: "config/certs/corporate-ca.pem"
+    ca_cert_path: "config/oidc/corporate-ca.pem"
 
   development:
-    ca_cert_path: "config/certs/dev-ca.pem"
+    ca_cert_path: "config/oidc/dev-ca.pem"
 
   partners:
-    ca_cert_path: "config/certs/partner-ca.pem"
+    ca_cert_path: "config/oidc/partner-ca.pem"
 ```
 
 ## Security Recommendations
@@ -169,7 +169,7 @@ chmod 755 .
 **Solution:**
 1. Verify certificate is in PEM format: `openssl x509 -in cert.pem -text -noout`
 2. Check file exists at the path specified in config
-3. Ensure file is readable: `ls -l config/certs/`
+3. Ensure file is readable: `ls -l config/oidc/`
 4. Check backend logs for certificate loading messages
 
 ### Error: "CA certificate not found"
@@ -177,7 +177,7 @@ chmod 755 .
 
 **Solution:**
 1. Verify path in `oidc_providers.yaml` matches actual file location
-2. Use relative path from project root: `config/certs/filename.pem`
+2. Use relative path from project root: `config/oidc/filename.pem`
 3. Check for typos in filename
 
 ### Error: "Failed to load CA certificate"
@@ -198,13 +198,13 @@ chmod 755 .
    ```bash
    cat intermediate-ca.pem root-ca.pem > ca-bundle.pem
    ```
-3. Use the bundle: `ca_cert_path: "config/certs/ca-bundle.pem"`
+3. Use the bundle: `ca_cert_path: "config/oidc/ca-bundle.pem"`
 
 ## Example: Complete Setup
 
 ```bash
 # 1. Navigate to certs directory
-cd config/certs
+cd config/oidc
 
 # 2. Export certificate from server
 openssl s_client -connect keycloak.company.com:443 -showcerts > cert-chain.txt
@@ -219,7 +219,7 @@ openssl x509 -in corporate-ca.pem -text -noout
 chmod 444 corporate-ca.pem
 
 # 6. Configure in oidc_providers.yaml
-# ca_cert_path: "config/certs/corporate-ca.pem"
+# ca_cert_path: "config/oidc/corporate-ca.pem"
 
 # 7. Restart backend
 cd ../../backend

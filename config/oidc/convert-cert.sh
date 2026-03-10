@@ -169,7 +169,7 @@ if openssl x509 -in "$OUTPUT_FILE" -text -noout &> /dev/null; then
     echo -e "${GREEN}Conversion successful!${NC}"
     echo ""
     echo "You can now use this certificate in your OIDC configuration:"
-    echo "  ca_cert_path: \"config/certs/$OUTPUT_FILE\""
+    echo "  ca_cert_path: \"config/oidc/$OUTPUT_FILE\""
     echo ""
     echo "To view certificate details:"
     echo "  openssl x509 -in $OUTPUT_FILE -text -noout"
