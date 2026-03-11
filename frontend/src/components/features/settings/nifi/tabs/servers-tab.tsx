@@ -13,32 +13,46 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Server, Plus, Loader2, Pencil, Trash2 } from 'lucide-react'
+import { Server, Plus, Loader2, Pencil, Trash2, Settings2 } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
 import { useNifiServersQuery } from '../hooks/use-nifi-servers-query'
 import { useNifiServersMutations } from '../hooks/use-nifi-servers-mutations'
+import { useNifiInstancesQuery } from '../hooks/use-nifi-instances-query'
 import { NifiServerDialog } from '../dialogs/nifi-server-dialog'
-import type { NifiServer } from '../types'
+import { BootstrapConfigDialog } from '../dialogs/bootstrap-config-dialog'
+import type { NifiServer, NifiInstance } from '../types'
 
 const EMPTY_SERVERS: NifiServer[] = []
+
+const EMPTY_INSTANCES: NifiInstance[] = []
 
 function ServerCard({
   server,
   canWrite,
   onEdit,
+  instances,
 }: {
   server: NifiServer
   canWrite: boolean
   onEdit: (s: NifiServer) => void
+  instances: NifiInstance[]
 }) {
   const { deleteServer } = useNifiServersMutations()
   const [showDelete, setShowDelete] = useState(false)
+  const [showBootstrap, setShowBootstrap] = useState(false)
 
   const handleDelete = useCallback(async () => {
     await deleteServer.mutateAsync(server.id)
     setShowDelete(false)
   }, [deleteServer, server.id])
+
+  // Find the first linked instance that has a git repo
+  const linkedInstance = instances.find(
+    (i) => i.server_id === server.id && i.git_config_repo_id != null
+  )
+  const gitRepoId = linkedInstance?.git_config_repo_id ?? null
 
   return (
     <>
@@ -49,6 +63,27 @@ function ServerCard({
           </span>
           {canWrite && (
             <div className="flex items-center gap-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-white hover:bg-white/20 hover:text-white"
+                        title="Edit Bootstrap"
+                        onClick={() => setShowBootstrap(true)}
+                        disabled={gitRepoId == null}
+                      >
+                        <Settings2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {gitRepoId == null && (
+                    <TooltipContent>No linked instance with a git config repo</TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
               <Button
                 variant="ghost"
                 size="sm"
@@ -104,6 +139,13 @@ function ServerCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BootstrapConfigDialog
+        open={showBootstrap}
+        onOpenChange={setShowBootstrap}
+        repoId={gitRepoId}
+        serverName={server.server_id}
+      />
     </>
   )
 }
@@ -113,6 +155,7 @@ export function ServersTab() {
   const canWrite = hasPermission(user, 'nifi', 'write')
 
   const { data: servers = EMPTY_SERVERS, isLoading } = useNifiServersQuery()
+  const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingServer, setEditingServer] = useState<NifiServer | null>(null)
 
@@ -189,6 +232,7 @@ export function ServersTab() {
                 server={server}
                 canWrite={canWrite}
                 onEdit={handleEdit}
+                instances={instances}
               />
             ))}
           </div>

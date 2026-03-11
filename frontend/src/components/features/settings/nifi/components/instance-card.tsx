@@ -13,10 +13,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Pencil, Trash2, Plug, Loader2 } from 'lucide-react'
+import { Pencil, Trash2, Plug, Loader2, FileSliders } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { useToast } from '@/hooks/use-toast'
 import { useNifiInstancesMutations } from '../hooks/use-nifi-instances-mutations'
 import { useGitRepositoriesQuery } from '@/components/features/settings/git/hooks/queries/use-git-repositories-query'
+import { NifiPropertiesDialog } from '../dialogs/nifi-properties-dialog'
 import type { NifiInstance } from '../types'
 import { tryParseNifiError } from '../utils/parse-error'
 
@@ -59,6 +61,7 @@ export function InstanceCard({ instance, canWrite, onEdit }: Props) {
     ? (gitData?.repositories.find(r => r.id === instance.git_config_repo_id)?.name ?? `Repo #${instance.git_config_repo_id}`)
     : null
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showProperties, setShowProperties] = useState(false)
 
   const handleTestConnection = async () => {
     try {
@@ -99,6 +102,27 @@ export function InstanceCard({ instance, canWrite, onEdit }: Props) {
           </span>
           {canWrite && (
             <div className="flex items-center gap-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-white hover:bg-white/20 hover:text-white"
+                        title="Edit Properties"
+                        onClick={() => setShowProperties(true)}
+                        disabled={instance.git_config_repo_id == null}
+                      >
+                        <FileSliders className="h-3.5 w-3.5" />
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {instance.git_config_repo_id == null && (
+                    <TooltipContent>No git config repo linked</TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
               <Button
                 variant="ghost"
                 size="sm"
@@ -187,6 +211,13 @@ export function InstanceCard({ instance, canWrite, onEdit }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <NifiPropertiesDialog
+        open={showProperties}
+        onOpenChange={setShowProperties}
+        repoId={instance.git_config_repo_id}
+        instanceName={displayTitle}
+      />
     </>
   )
 }

@@ -202,6 +202,8 @@ export const queryKeys = {
       [...queryKeys.nifi.all, 'cluster-process-groups-all-paths', clusterId] as const,
     servers: () => [...queryKeys.nifi.all, 'servers'] as const,
     clusters: () => [...queryKeys.nifi.all, 'clusters'] as const,
+    bootstrapConfig: (repoId: number) => [...queryKeys.nifi.all, 'bootstrap-config', repoId] as const,
+    nifiProperties: (repoId: number) => [...queryKeys.nifi.all, 'nifi-properties', repoId] as const,
   },
 
   // NiFi Install

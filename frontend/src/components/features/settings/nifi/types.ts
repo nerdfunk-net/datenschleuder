@@ -75,6 +75,25 @@ export interface NifiInstanceFormValues {
   git_config_repo_id: string
 }
 
+export interface BootstrapConfig {
+  runAs: string
+  minRam: string
+  maxRam: string
+  preserveEnvironment: boolean
+}
+
+export interface NifiProperty {
+  lineNumber: number
+  key: string
+  value: string
+  isComment: boolean
+}
+
+export interface NifiPropertyGroup {
+  prefix: string
+  properties: NifiProperty[]
+}
+
 export interface TestConnectionResult {
   status: 'success' | 'error'
   message: string

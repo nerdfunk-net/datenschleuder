@@ -11,9 +11,10 @@ import fnmatch
 import yaml
 from fastapi import APIRouter, Depends, HTTPException, status
 from git import InvalidGitRepositoryError, GitCommandError
+from pydantic import BaseModel
 
 from core.auth import require_permission
-from dependencies import get_cache_service, get_git_repo_manager
+from dependencies import get_cache_service, get_git_repo_manager, get_git_service
 from services.settings.git.paths import repo_path as git_repo_path
 from services.settings.git.shared_utils import get_git_repo_by_id
 
@@ -485,6 +486,105 @@ async def get_file_content(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error reading file content: {str(e)}",
+        )
+
+
+class WriteFileRequest(BaseModel):
+    """Request body for writing a file to a Git repository."""
+
+    path: str
+    content: str
+    commit_message: str
+
+
+@router.put("/file-content")
+async def write_file_content(
+    repo_id: int,
+    request: WriteFileRequest,
+    current_user: dict = Depends(require_permission("git.repositories", "write")),
+    git_repo_manager=Depends(get_git_repo_manager),
+    git_service=Depends(get_git_service),
+):
+    """Write content to a file in a Git repository, commit and push.
+
+    Args:
+        repo_id: Git repository ID
+        request: File path, content, and commit message
+        current_user: Current authenticated user
+
+    Returns:
+        Commit and push result
+    """
+    try:
+        # Get repository details
+        repository = git_repo_manager.get_repository(repo_id)
+        if not repository:
+            raise HTTPException(status_code=404, detail="Repository not found")
+
+        # Resolve repository working directory
+        repo_path = git_repo_path(repository)
+
+        if not os.path.exists(repo_path):
+            raise HTTPException(
+                status_code=404,
+                detail="Repository directory not found",
+            )
+
+        # Construct full file path
+        file_path = os.path.join(repo_path, request.path)
+
+        # Security check: ensure the file is within the repository
+        file_path_resolved = os.path.realpath(file_path)
+        repo_path_resolved = os.path.realpath(repo_path)
+
+        if not file_path_resolved.startswith(repo_path_resolved):
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied: file path is outside repository",
+            )
+
+        # Pull latest changes first to avoid conflicts
+        git_service.pull(repository)
+
+        # Ensure parent directory exists
+        parent_dir = os.path.dirname(file_path_resolved)
+        os.makedirs(parent_dir, exist_ok=True)
+
+        # Write file content
+        with open(file_path_resolved, "w", encoding="utf-8") as f:
+            f.write(request.content)
+
+        # Commit and push
+        result = git_service.commit_and_push(
+            repository=repository,
+            message=request.commit_message,
+            files=[request.path],
+        )
+
+        logger.info(
+            "User %s wrote file %s in repository %s: %s",
+            current_user.get("username"),
+            request.path,
+            repository["name"],
+            result.message,
+        )
+
+        return {
+            "success": result.success,
+            "message": result.message,
+            "commit_sha": result.commit_sha,
+            "files_changed": result.files_changed,
+            "pushed": result.pushed,
+            "branch": result.branch,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error writing file content: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error writing file content: %s" % str(e),
         )
 
 
