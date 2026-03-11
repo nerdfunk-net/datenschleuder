@@ -260,6 +260,9 @@ class NifiConnectionService:
         if hasattr(nifi_cfg, "key_file"):
             nifi_cfg.key_file = str(key_path)
 
+        if key_password and hasattr(nifi_cfg, "key_password"):
+            nifi_cfg.key_password = key_password
+
         if hasattr(nifi_cfg, "ssl_ca_cert"):
             if verify_ssl:
                 nifi_cfg.ssl_ca_cert = str(ca_cert_path)
