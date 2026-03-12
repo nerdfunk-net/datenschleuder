@@ -37,7 +37,7 @@ import {
   BookmarkCheck,
   ChevronLeft,
   ChevronRight,
-  Eye,
+  ExternalLink,
   Pencil,
   Copy,
   Trash2,
@@ -51,6 +51,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
+import { useToast } from '@/hooks/use-toast'
 import { useNifiHierarchyQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
 import { useNifiClustersQuery } from '@/components/features/settings/nifi/hooks/use-nifi-clusters-query'
 import { useFlowsQuery, useRegistryFlowsQuery, useFlowColumnsQuery } from './hooks/use-flows-query'
@@ -146,6 +147,7 @@ export function FlowsManagePage() {
   const { user } = useAuthStore()
   const canWrite = hasPermission(user, 'nifi', 'write')
   const canDelete = hasPermission(user, 'nifi', 'delete')
+  const { toast } = useToast()
 
   // Data
   const { data: flows = EMPTY_FLOWS, isLoading: flowsLoading } = useFlowsQuery()
@@ -170,7 +172,7 @@ export function FlowsManagePage() {
   )
 
   // Mutations
-  const { createFlow, updateFlow, deleteFlow, copyFlow } = useFlowsMutations()
+  const { createFlow, updateFlow, deleteFlow, copyFlow, fetchProcessGroups } = useFlowsMutations()
   const { createView, updateView, deleteView, setDefaultView } = useFlowViewsMutations()
 
   // Column state
@@ -256,11 +258,6 @@ export function FlowsManagePage() {
     setDialogOpen(true)
   }, [])
 
-  const handleView = useCallback((flow: NifiFlow) => {
-    setEditingFlow(flow)
-    setViewOnly(true)
-    setDialogOpen(true)
-  }, [])
 
   const handleDialogClose = useCallback((open: boolean) => {
     setDialogOpen(open)
@@ -382,6 +379,31 @@ export function FlowsManagePage() {
     },
     [setDefaultView],
   )
+
+  // NiFi link state
+  const [fetchingLinks, setFetchingLinks] = useState<Record<string, boolean>>({})
+
+  const handleOpenLink = useCallback(async (flow: NifiFlow, target: 'source' | 'destination') => {
+    const key = `${flow.id}-${target}`
+    setFetchingLinks(prev => ({ ...prev, [key]: true }))
+    try {
+      const result = await fetchProcessGroups.mutateAsync(flow.id)
+      const pg = target === 'source' ? result.source : result.destination
+      if (pg?.nifi_link) {
+        window.open(pg.nifi_link, '_blank', 'noopener,noreferrer')
+      } else {
+        toast({
+          title: 'Process group not found',
+          description: 'The process group was not found in NiFi. Make sure the flow has been deployed.',
+          variant: 'destructive',
+        })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to get process group information.', variant: 'destructive' })
+    } finally {
+      setFetchingLinks(prev => ({ ...prev, [key]: false }))
+    }
+  }, [fetchProcessGroups, toast])
 
   // Quick deploy
   const {
@@ -683,16 +705,36 @@ export function FlowsManagePage() {
                                 : <ArrowLeftCircle className="h-4 w-4" />}
                             </Button>
                           )}
-                          {/* View */}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            title="View"
-                            className="h-8 w-8 p-0 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-                            onClick={() => handleView(flow)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          {/* Link to Source */}
+                          {flow.src_template_id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              title="Open Source in NiFi"
+                              className="h-8 w-8 p-0 text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+                              disabled={!!fetchingLinks[`${flow.id}-source`]}
+                              onClick={() => handleOpenLink(flow, 'source')}
+                            >
+                              {fetchingLinks[`${flow.id}-source`]
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : <ExternalLink className="h-4 w-4" />}
+                            </Button>
+                          )}
+                          {/* Link to Destination */}
+                          {flow.dest_template_id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              title="Open Destination in NiFi"
+                              className="h-8 w-8 p-0 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                              disabled={!!fetchingLinks[`${flow.id}-destination`]}
+                              onClick={() => handleOpenLink(flow, 'destination')}
+                            >
+                              {fetchingLinks[`${flow.id}-destination`]
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : <ExternalLink className="h-4 w-4" />}
+                            </Button>
+                          )}
                           {/* Edit */}
                           {canWrite && (
                             <Button

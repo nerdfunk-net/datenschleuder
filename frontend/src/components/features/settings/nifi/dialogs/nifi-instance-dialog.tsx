@@ -207,7 +207,10 @@ export function NifiInstanceDialog({ open, onOpenChange, instance }: Props) {
   }, [form, testNewConnection, toast])
 
   const onSubmit = async (values: FormValues) => {
-    const payload = values as unknown as NifiInstanceFormValues
+    const payload = {
+      ...values,
+      nifi_url: values.nifi_url.replace(/\/+$/, ''),
+    } as unknown as NifiInstanceFormValues
     if (isEdit && instance) {
       await updateInstance.mutateAsync({ id: instance.id, values: payload })
     } else {

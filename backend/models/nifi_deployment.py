@@ -267,3 +267,24 @@ class AssignParameterContextResponse(BaseModel):
     process_group_id: str
     parameter_context_id: str
     cascade: bool
+
+
+class ProcessGroupLinkInfo(BaseModel):
+    """Process group info for linking into the NiFi UI."""
+
+    found: bool = False
+    process_group_id: Optional[str] = None
+    process_group_name: Optional[str] = None
+    path: Optional[str] = None
+    nifi_url: Optional[str] = None
+    nifi_link: Optional[str] = None
+    instance_id: Optional[int] = None
+
+
+class FlowProcessGroupsResponse(BaseModel):
+    """Response for /api/nifi/flows/{flow_id}/get-processgroups."""
+
+    status: str
+    flow_id: int
+    source: ProcessGroupLinkInfo
+    destination: ProcessGroupLinkInfo

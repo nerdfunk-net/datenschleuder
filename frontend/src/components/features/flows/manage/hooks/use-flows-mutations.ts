@@ -77,5 +77,21 @@ export function useFlowsMutations() {
     },
   })
 
-  return { createFlow, updateFlow, deleteFlow, copyFlow }
+  interface ProcessGroupLinkInfo {
+    found: boolean
+    nifi_link?: string | null
+  }
+  interface FlowProcessGroupsResult {
+    status: string
+    flow_id: number
+    source: ProcessGroupLinkInfo
+    destination: ProcessGroupLinkInfo
+  }
+
+  const fetchProcessGroups = useMutation({
+    mutationFn: (flowId: number) =>
+      apiCall(`nifi/flows/${flowId}/get-processgroups`, { method: 'GET' }) as Promise<FlowProcessGroupsResult>,
+  })
+
+  return { createFlow, updateFlow, deleteFlow, copyFlow, fetchProcessGroups }
 }

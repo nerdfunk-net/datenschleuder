@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
 from models.nifi_operations import NifiFlowCreate, NifiFlowUpdate, NifiFlowResponse
+from models.nifi_deployment import FlowProcessGroupsResponse
 from services.nifi import nifi_flow_service
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,25 @@ async def copy_flow(
             detail="Flow with id %d not found" % flow_id,
         )
     return flow
+
+
+@router.get("/{flow_id}/get-processgroups", response_model=FlowProcessGroupsResponse)
+async def get_flow_process_groups(
+    flow_id: int,
+    current_user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Get the NiFi process group IDs and UI links for a flow's source and destination."""
+    try:
+        result = nifi_flow_service.get_flow_process_groups(flow_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to get process groups for flow %d: %s", flow_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get process groups: %s" % str(e),
+        )
 
 
 @router.delete("/{flow_id}")
