@@ -1,6 +1,6 @@
-# Cockpit Agent - Remote Command Executor
+# Datenschleuer Agent - Remote Command Executor
 
-Lightweight Python agent that runs on remote hosts to execute commands remotely from Cockpit.
+Lightweight Python agent that runs on remote hosts to execute commands remotely from Datenschleuer.
 
 ## Features
 
@@ -14,7 +14,7 @@ Lightweight Python agent that runs on remote hosts to execute commands remotely 
 ## Architecture
 
 ```
-Cockpit Backend → Redis Pub/Sub → Cockpit Agent → Execute locally
+Datenschleuer Backend → Redis Pub/Sub → Datenschleuer Agent → Execute locally
                                         ↓
                                    Send Response
 ```
@@ -24,7 +24,7 @@ Cockpit Backend → Redis Pub/Sub → Cockpit Agent → Execute locally
 ### Prerequisites
 
 - Python 3.9+
-- Redis access to Cockpit Redis server
+- Redis access to Datenschleuer Redis server
 - Docker (for docker restart commands)
 - Git (for git pull commands)
 
@@ -32,41 +32,41 @@ Cockpit Backend → Redis Pub/Sub → Cockpit Agent → Execute locally
 
 ```bash
 # Create dedicated user
-sudo useradd -r -s /bin/bash -d /opt/cockpit-agent cockpit-agent
+sudo useradd -r -s /bin/bash -d /opt/datenschleuder-agent datenschleuder-agent
 
 # Add to docker group
-sudo usermod -aG docker cockpit-agent
+sudo usermod -aG docker datenschleuder-agent
 
 # Create home directory
-sudo mkdir -p /opt/cockpit-agent
-sudo chown cockpit-agent:cockpit-agent /opt/cockpit-agent
+sudo mkdir -p /opt/datenschleuder-agent
+sudo chown datenschleuder-agent:datenschleuder-agent /opt/datenschleuder-agent
 ```
 
 ### Step 2: Install Agent
 
 ```bash
 # Copy agent files
-sudo cp -r scripts/grafana_agent/* /opt/cockpit-agent/
-sudo chown -R cockpit-agent:cockpit-agent /opt/cockpit-agent
+sudo cp -r scripts/grafana_agent/* /opt/datenschleuder-agent/
+sudo chown -R datenschleuder-agent:datenschleuder-agent /opt/datenschleuder-agent
 
 # Create virtual environment
-sudo -u cockpit-agent python3 -m venv /opt/cockpit-agent/venv
-sudo -u cockpit-agent /opt/cockpit-agent/venv/bin/pip install -r /opt/cockpit-agent/requirements.txt
+sudo -u datenschleuder-agent python3 -m venv /opt/datenschleuder-agent/venv
+sudo -u datenschleuder-agent /opt/datenschleuder-agent/venv/bin/pip install -r /opt/datenschleuder-agent/requirements.txt
 ```
 
 ### Step 3: Configure
 
 ```bash
 # Copy environment template
-sudo cp /opt/cockpit-agent/.env.example /opt/cockpit-agent/.env
+sudo cp /opt/datenschleuder-agent/.env.example /opt/datenschleuder-agent/.env
 
 # Edit configuration
-sudo nano /opt/cockpit-agent/.env
+sudo nano /opt/datenschleuder-agent/.env
 ```
 
 **Required settings:**
 ```bash
-REDIS_HOST=cockpit.example.com      # Cockpit Redis host
+REDIS_HOST=datenschleuder.example.com      # Datenschleuer Redis host
 REDIS_PORT=6379
 REDIS_PASSWORD=your_redis_password
 GIT_REPO_PATH=/opt/app/config   # Git repo to pull
@@ -77,17 +77,17 @@ DOCKER_CONTAINER_NAME=grafana       # Container to restart
 
 ```bash
 # Copy service file
-sudo cp /opt/cockpit-agent/cockpit-agent.service /etc/systemd/system/
+sudo cp /opt/datenschleuder-agent/datenschleuder-agent.service /etc/systemd/system/
 
 # Reload systemd
 sudo systemctl daemon-reload
 
 # Enable and start
-sudo systemctl enable cockpit-agent
-sudo systemctl start cockpit-agent
+sudo systemctl enable datenschleuder-agent
+sudo systemctl start datenschleuder-agent
 
 # Check status
-sudo systemctl status cockpit-agent
+sudo systemctl status datenschleuder-agent
 ```
 
 ## Usage
@@ -96,29 +96,29 @@ sudo systemctl status cockpit-agent
 
 ```bash
 # View logs
-sudo journalctl -u cockpit-agent -f
+sudo journalctl -u datenschleuder-agent -f
 
 # Check if running
-sudo systemctl status cockpit-agent
+sudo systemctl status datenschleuder-agent
 
 # Restart agent
-sudo systemctl restart cockpit-agent
+sudo systemctl restart datenschleuder-agent
 ```
 
 ### Manual Testing (via redis-cli)
 
 ```bash
 # Connect to Redis
-redis-cli -h cockpit.example.com -a your_password
+redis-cli -h datenschleuder.example.com -a your_password
 
 # Check agent registration
 HGETALL agents:app-prod-01
 
 # Send echo command
-PUBLISH cockpit-agent:app-prod-01 '{"command_id":"test-123","command":"echo","params":{"message":"hello"}}'
+PUBLISH datenschleuder-agent:app-prod-01 '{"command_id":"test-123","command":"echo","params":{"message":"hello"}}'
 
 # Listen for response
-SUBSCRIBE cockpit-agent-response:app-prod-01
+SUBSCRIBE datenschleuder-agent-response:app-prod-01
 ```
 
 ## Supported Commands
@@ -186,7 +186,7 @@ self.register("my_command", my_custom_handler)
 - **No Shell Injection**: subprocess with list args
 - **Validation**: All parameters validated before execution
 - **Timeouts**: 30s for git, 60s for docker
-- **User Isolation**: Runs as non-root cockpit-agent user
+- **User Isolation**: Runs as non-root datenschleuder-agent user
 - **Logging**: All commands logged to syslog
 
 ## Troubleshooting
@@ -195,7 +195,7 @@ self.register("my_command", my_custom_handler)
 
 ```bash
 # Check logs
-sudo journalctl -u cockpit-agent -n 50
+sudo journalctl -u datenschleuder-agent -n 50
 
 # Common issues:
 # - Redis connection failed → Check REDIS_HOST/PASSWORD
@@ -207,34 +207,34 @@ sudo journalctl -u cockpit-agent -n 50
 
 ```bash
 # Check agent is online
-redis-cli -h cockpit.example.com -a password HGETALL agents:your-hostname
+redis-cli -h datenschleuder.example.com -a password HGETALL agents:your-hostname
 
 # Check last_heartbeat is recent (< 90s ago)
 
 # Check logs for errors
-sudo journalctl -u cockpit-agent -f
+sudo journalctl -u datenschleuder-agent -f
 ```
 
 ### Git pull fails
 
 ```bash
-# Test manually as cockpit-agent user
-sudo -u cockpit-agent git -C /opt/app/config pull
+# Test manually as datenschleuder-agent user
+sudo -u datenschleuder-agent git -C /opt/app/config pull
 
 # Common issues:
 # - Not a git repo → git init or git clone
 # - No remote origin → git remote add origin <url>
-# - Permission denied → chown cockpit-agent:cockpit-agent
+# - Permission denied → chown datenschleuder-agent:datenschleuder-agent
 ```
 
 ### Docker restart fails
 
 ```bash
 # Test manually
-sudo -u cockpit-agent docker restart grafana
+sudo -u datenschleuder-agent docker restart grafana
 
 # Common issues:
-# - User not in docker group → usermod -aG docker cockpit-agent
+# - User not in docker group → usermod -aG docker datenschleuder-agent
 # - Docker not running → systemctl start docker
 # - Container doesn't exist → docker ps -a
 ```
@@ -272,8 +272,8 @@ Fields:
 
 ### Pub/Sub Channels
 ```
-Command channel: cockpit-agent:{hostname}
-Response channel: cockpit-agent-response:{hostname}
+Command channel: datenschleuder-agent:{hostname}
+Response channel: datenschleuder-agent-response:{hostname}
 ```
 
 ## Configuration Reference
@@ -293,4 +293,4 @@ Response channel: cockpit-agent-response:{hostname}
 
 ## License
 
-Same as Cockpit-NG project
+Same as Datenschleuer-NG project

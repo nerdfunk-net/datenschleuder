@@ -1,20 +1,20 @@
 [Unit]
-Description=Cockpit Agent for Cockpit
+Description=Datenschleuder Agent for Datenschleuder
 After=network.target
 
 [Service]
 Type=simple
-User=cockpit-agent
+User=datenschleuder-agent
 Group=docker
-WorkingDirectory=/opt/cockpit-agent
-ExecStart=/opt/cockpit-agent/venv/bin/python agent.py
+WorkingDirectory=/opt/datenschleuder-agent
+ExecStart=/opt/datenschleuder-agent/venv/bin/python agent.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
 # Environment
-EnvironmentFile=/opt/cockpit-agent/.env
+EnvironmentFile=/opt/datenschleuder-agent/.env
 
 # Security
 NoNewPrivileges=true

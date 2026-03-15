@@ -1,4 +1,4 @@
-export type CertType = 'server' | 'client' | 'user'
+export type CertType = 'server' | 'client' | 'user' | 'server+client'
 
 export type RevocationReason =
   | 'unspecified'

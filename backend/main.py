@@ -54,6 +54,9 @@ from routers.nifi import (
     nifi_config_router,
 )
 
+# Agent router
+from routers.agent import router as agent_router
+
 # Health router
 from health import router as health_router
 
@@ -391,6 +394,9 @@ app.include_router(nifi_hierarchy_router)
 app.include_router(nifi_certificates_router)
 app.include_router(nifi_install_router)
 app.include_router(nifi_config_router)
+
+# Datenschleuder Agents
+app.include_router(agent_router)
 
 # Health Check
 app.include_router(health_router)

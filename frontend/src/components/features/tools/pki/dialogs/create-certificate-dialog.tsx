@@ -25,7 +25,7 @@ const schema = z.object({
   city: z.string().optional(),
   org_unit: z.string().optional(),
   email: z.string().optional(),
-  cert_type: z.enum(['server', 'client', 'user']),
+  cert_type: z.enum(['server', 'client', 'user', 'server+client']),
   validity_days: z.string().min(1),
   key_size: z.enum(['2048', '4096']),
   san_dns: z.string().optional(),
@@ -145,6 +145,7 @@ export function CreateCertificateDialog({ open, onOpenChange, onSubmit, isPendin
                     <SelectContent>
                       <SelectItem value="server">Server</SelectItem>
                       <SelectItem value="client">Client</SelectItem>
+                      <SelectItem value="server+client">Server + Client (NiFi)</SelectItem>
                       <SelectItem value="user">User</SelectItem>
                     </SelectContent>
                   </Select>

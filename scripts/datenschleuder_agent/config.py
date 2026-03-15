@@ -1,5 +1,5 @@
 """
-Configuration management for Cockpit Agent
+Configuration management for Datenschleueder Agent
 """
 
 import logging
@@ -26,7 +26,7 @@ class AgentConfig:
         self.redis_password = os.getenv("REDIS_PASSWORD")
         self.redis_db = int(os.getenv("REDIS_DB", "0"))
 
-        # Agent identity - used to connect to Redis and must match Cockpit configuration
+        # Agent identity - used to connect to Redis and must match Datenschleuder configuration
         self.agent_id = os.getenv("AGENT_ID") or socket.gethostname()
 
         # Command configuration (support comma-separated lists)
@@ -52,11 +52,11 @@ class AgentConfig:
 
     def get_command_channel(self) -> str:
         """Get the Redis channel name for receiving commands"""
-        return f"cockpit-agent:{self.agent_id}"
+        return f"datenschleuder-agent:{self.agent_id}"
 
     def get_response_channel(self) -> str:
         """Get the Redis channel name for sending responses"""
-        return f"cockpit-agent-response:{self.agent_id}"
+        return f"datenschleuder-agent-response:{self.agent_id}"
 
     def get_agent_key(self) -> str:
         """Get the Redis key for agent registry"""

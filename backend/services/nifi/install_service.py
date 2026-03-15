@@ -6,8 +6,11 @@ from typing import List, Literal, Dict, Any, Set
 from sqlalchemy import inspect, text
 
 from core.database import engine
-from services.nifi import instance_service, hierarchy_service
+from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
+from services.nifi import hierarchy_service
 from services.nifi.nifi_context import nifi_connection_scope
+
+_cluster_repo = NifiClusterRepository()
 
 logger = logging.getLogger(__name__)
 
@@ -121,26 +124,28 @@ def _build_expected_paths(
 
 
 def check_path(
-    instance_id: int,
+    cluster_id: int,
     path_type: Literal["source", "destination"],
 ) -> List[Dict[str, Any]]:
     """Check which process group paths exist for all managed flows.
 
     Args:
-        instance_id: NiFi instance ID to connect to.
+        cluster_id: NiFi cluster ID (primary instance is resolved automatically).
         path_type: Whether to check source or destination paths.
 
     Returns:
         List of {"path": str, "exists": bool} dicts sorted by path.
 
     Raises:
-        ValueError: If instance not found or path not configured.
+        ValueError: If cluster/instance not found or path not configured.
     """
     from nipyapi import canvas
 
-    instance = instance_service.get_instance(instance_id)
+    instance = _cluster_repo.get_primary_instance(cluster_id)
     if not instance:
-        raise ValueError("NiFi instance with ID %d not found" % instance_id)
+        raise ValueError(
+            "No primary instance configured for cluster id %d" % cluster_id
+        )
 
     # Fetch all process groups from NiFi
     with nifi_connection_scope(instance):
@@ -149,7 +154,10 @@ def check_path(
     pg_by_path, pg_id_to_path = _build_pg_by_path(all_pgs_raw)
 
     logger.info(
-        "Found %d process groups in NiFi instance %d", len(pg_by_path), instance_id
+        "Found %d process groups via cluster %d (primary instance %d)",
+        len(pg_by_path),
+        cluster_id,
+        instance.id,
     )
 
     # Load flows and configuration
@@ -158,13 +166,13 @@ def check_path(
 
     deployment_settings = hierarchy_service.get_deployment_settings()
     paths_config = deployment_settings.get("paths", {})
-    instance_paths = paths_config.get(str(instance_id), {})
+    cluster_paths = paths_config.get(str(cluster_id), {})
 
     path_key = "source_path" if path_type == "source" else "dest_path"
-    path_config = instance_paths.get(path_key)
+    path_config = cluster_paths.get(path_key)
 
     if not path_config:
-        raise ValueError("No %s path configured for this instance." % path_type)
+        raise ValueError("No %s path configured for this cluster." % path_type)
 
     # Resolve the configured path from the stored PG id (authoritative) or fall back
     # to the stored path string. The stored path may use a display format ("→") that
@@ -191,7 +199,7 @@ def check_path(
         )
 
     if not configured_path:
-        raise ValueError("Invalid %s path configuration for this instance." % path_type)
+        raise ValueError("Invalid %s path configuration for this cluster." % path_type)
 
     hierarchy_config = hierarchy_service.get_hierarchy_config()
     hierarchy = sorted(

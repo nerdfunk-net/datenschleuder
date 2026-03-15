@@ -72,6 +72,12 @@ const navigationSections: NavSection[] = [
     ],
   },
   {
+    title: 'Agents',
+    items: [
+      { label: 'Operating', href: '/agents/operating', icon: Activity },
+    ],
+  },
+  {
     title: 'Jobs',
     items: [
       { label: 'Job Templates', href: '/jobs/templates', icon: FileText },

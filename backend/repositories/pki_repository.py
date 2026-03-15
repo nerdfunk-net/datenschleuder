@@ -64,6 +64,20 @@ class PKICertificateRepository(BaseRepository[PKICertificate]):
         finally:
             db.close()
 
+    def delete_all_for_ca(self, ca_id: int) -> int:
+        """Delete all certificates for a CA. Returns the number deleted."""
+        db = get_db_session()
+        try:
+            count = (
+                db.query(PKICertificate)
+                .filter(PKICertificate.ca_id == ca_id)
+                .delete(synchronize_session=False)
+            )
+            db.commit()
+            return count
+        finally:
+            db.close()
+
     def revoke(self, cert_id: int, reason: str) -> Optional[PKICertificate]:
         """Mark a certificate as revoked."""
         db = get_db_session()

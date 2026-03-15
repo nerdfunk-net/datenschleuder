@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Cockpit Agent - Remote command executor for Cockpit
+Datenschleuder Agent - Remote command executor for Datenschleuder
 Listens for commands via Redis Pub/Sub and executes them locally
 """
 
@@ -28,7 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class CockpitAgent:
+class DatenschleuderAgent:
     """Main agent class"""
 
     def __init__(self):
@@ -226,7 +226,7 @@ class CockpitAgent:
 
     async def run(self):
         """Main agent run loop with reconnection logic"""
-        logger.info(f"Starting Cockpit Agent v{config.agent_version}")
+        logger.info(f"Starting Datenschleuder Agent v{config.agent_version}")
         logger.info(f"Agent ID: {config.agent_id}")
 
         # Validate configuration
@@ -277,7 +277,7 @@ class CockpitAgent:
 
 def main():
     """Main entry point"""
-    agent = CockpitAgent()
+    agent = DatenschleuderAgent()
 
     try:
         asyncio.run(agent.run())

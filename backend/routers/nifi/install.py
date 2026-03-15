@@ -29,7 +29,7 @@ class CheckPathResponse(BaseModel):
 
 @router.get("/check-path", response_model=CheckPathResponse)
 async def check_path(
-    instance_id: int = Query(..., description="NiFi instance ID"),
+    cluster_id: int = Query(..., description="NiFi cluster ID"),
     path_type: Literal["source", "destination"] = Query(
         ..., description="Path type to check (source or destination)"
     ),
@@ -38,10 +38,10 @@ async def check_path(
     """Check if process groups exist for all managed flows.
 
     For each flow, builds the expected path hierarchy and checks whether
-    the corresponding process groups exist in the NiFi instance.
+    the corresponding process groups exist in the NiFi cluster's primary instance.
     """
     try:
-        items = install_service.check_path(instance_id, path_type)
+        items = install_service.check_path(cluster_id, path_type)
         return CheckPathResponse(status=[PathStatus(**item) for item in items])
     except ValueError as exc:
         raise HTTPException(
@@ -50,7 +50,7 @@ async def check_path(
         )
     except Exception as exc:
         logger.error(
-            "Error checking %s paths for instance %d: %s", path_type, instance_id, exc
+            "Error checking %s paths for cluster %d: %s", path_type, cluster_id, exc
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast'
 import { queryKeys } from '@/lib/query-keys'
 
 interface DeployFlowParams {
+  clusterId: number
   instanceId: number
   missingPath: string
   flowId: number
@@ -18,6 +19,7 @@ export function useDeployFlowMutation() {
 
   return useMutation({
     mutationFn: async ({
+      clusterId: _clusterId,
       instanceId,
       missingPath,
       flowId,
@@ -48,17 +50,17 @@ export function useDeployFlowMutation() {
         body: JSON.stringify(body),
       })
     },
-    onSuccess: (_data, { instanceId, missingPath }) => {
+    onSuccess: (_data, { clusterId, missingPath }) => {
       toast({
         title: 'Flow deployed',
         description: `Successfully deployed flow to ${missingPath}`,
       })
-      // Invalidate both source and destination check-path results for this instance
+      // Invalidate both source and destination check-path results for this cluster
       queryClient.invalidateQueries({
-        queryKey: queryKeys.nifiInstall.checkPath(instanceId, 'source'),
+        queryKey: queryKeys.nifiInstall.checkPath(clusterId, 'source'),
       })
       queryClient.invalidateQueries({
-        queryKey: queryKeys.nifiInstall.checkPath(instanceId, 'destination'),
+        queryKey: queryKeys.nifiInstall.checkPath(clusterId, 'destination'),
       })
     },
     onError: (error: Error) => {

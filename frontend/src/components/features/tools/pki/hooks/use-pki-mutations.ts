@@ -153,6 +153,18 @@ export function usePKIMutations() {
     },
   })
 
+  const exportCAPKCS12WithKey = useMutation({
+    mutationFn: (password: string) =>
+      _fetchFile('pki/ca/export/pkcs12/withkey', 'POST', { password }),
+    onSuccess: ({ blob, filename }) => {
+      _download(blob, filename)
+      toast({ title: 'Exported', description: 'CA PKCS#12 with private key downloaded.' })
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Export failed', description: error.message, variant: 'destructive' })
+    },
+  })
+
   return useMemo(
     () => ({
       createCA,
@@ -163,7 +175,8 @@ export function usePKIMutations() {
       exportPEM,
       exportPKCS12,
       exportPrivateKey,
+      exportCAPKCS12WithKey,
     }),
-    [createCA, deleteCA, createCertificate, revokeCertificate, exportCert, exportPEM, exportPKCS12, exportPrivateKey],
+    [createCA, deleteCA, createCertificate, revokeCertificate, exportCert, exportPEM, exportPKCS12, exportPrivateKey, exportCAPKCS12WithKey],
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   Download,
   Upload,
@@ -24,19 +24,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
+import { useNifiClustersQuery } from '@/components/features/settings/nifi/hooks/use-nifi-clusters-query'
 import {
   useCheckPathQuery,
   useParameterContextsQuery,
   useRegistryFlowsByInstanceQuery,
 } from './hooks/use-install-query'
 import { useDeployFlowMutation } from './hooks/use-install-mutations'
-import type { NifiInstance } from '@/components/features/settings/nifi/types'
+import type { NifiCluster } from '@/components/features/settings/nifi/types'
 import type { RegistryFlow } from '@/components/features/flows/manage/types'
 import type { PathStatus, ParameterContext } from './types'
 
 // Stable empty defaults (prevent re-render loops)
-const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
 const EMPTY_REGISTRY_FLOWS: RegistryFlow[] = []
 const EMPTY_PARAM_CONTEXTS: ParameterContext[] = []
 
@@ -48,9 +48,9 @@ interface PathSectionProps {
   title: string
   icon: React.ReactNode
   gradientClass: string
-  instances: NifiInstance[]
-  selectedInstanceId: number | null
-  onInstanceChange: (id: number | null) => void
+  clusters: NifiCluster[]
+  selectedClusterId: number | null
+  onClusterChange: (id: number | null) => void
   pathStatuses: PathStatus[]
   isLoadingPaths: boolean
   hasChecked: boolean
@@ -69,9 +69,9 @@ function PathSection({
   title,
   icon,
   gradientClass,
-  instances,
-  selectedInstanceId,
-  onInstanceChange,
+  clusters,
+  selectedClusterId,
+  onClusterChange,
   pathStatuses,
   isLoadingPaths,
   hasChecked,
@@ -118,7 +118,7 @@ function PathSection({
             variant="outline"
             size="sm"
             className="h-7 text-xs bg-white/10 border-white/30 text-white hover:bg-white/20"
-            disabled={!selectedInstanceId || isLoadingPaths}
+            disabled={!selectedClusterId || isLoadingPaths}
             onClick={onReload}
           >
             {isLoadingPaths ? (
@@ -139,20 +139,20 @@ function PathSection({
             be checked.
           </p>
 
-          {/* Instance selector */}
+          {/* Cluster selector */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Select NiFi Instance</label>
+            <label className="text-sm font-medium text-gray-700">Select NiFi Cluster</label>
             <Select
-              value={selectedInstanceId?.toString() ?? ''}
-              onValueChange={(v) => onInstanceChange(v ? Number(v) : null)}
+              value={selectedClusterId?.toString() ?? ''}
+              onValueChange={(v) => onClusterChange(v ? Number(v) : null)}
             >
               <SelectTrigger className="w-full max-w-sm">
-                <SelectValue placeholder="Select an instance..." />
+                <SelectValue placeholder="Select a cluster..." />
               </SelectTrigger>
               <SelectContent>
-                {instances.map((inst) => (
-                  <SelectItem key={inst.id} value={inst.id.toString()}>
-                    {inst.hierarchy_value} — {inst.nifi_url}
+                {clusters.map((cluster) => (
+                  <SelectItem key={cluster.id} value={cluster.id.toString()}>
+                    {cluster.hierarchy_value} ({cluster.cluster_id})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -265,22 +265,22 @@ function PathSection({
           )}
 
           {/* Prompt: no check run yet */}
-          {!isLoadingPaths && !hasChecked && selectedInstanceId && (
+          {!isLoadingPaths && !hasChecked && selectedClusterId && (
             <Alert className="bg-blue-50 border-blue-200">
               <AlertCircle className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800">
                 Click <strong>Reload paths</strong> to check process group status for this
-                instance.
+                cluster.
               </AlertDescription>
             </Alert>
           )}
 
-          {/* Prompt: select an instance */}
-          {!selectedInstanceId && (
+          {/* Prompt: select a cluster */}
+          {!selectedClusterId && (
             <Alert className="bg-blue-50 border-blue-200">
               <AlertCircle className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800">
-                Select a NiFi instance to get started.
+                Select a NiFi cluster to get started.
               </AlertDescription>
             </Alert>
           )}
@@ -306,13 +306,14 @@ function PathSection({
 // ============================================================================
 
 interface SectionWrapperProps {
-  instances: NifiInstance[]
+  clusters: NifiCluster[]
   pathType: 'source' | 'destination'
   title: string
   icon: React.ReactNode
   gradientClass: string
   onDeployRequest: (
-    instanceId: number,
+    clusterId: number,
+    primaryInstanceId: number,
     path: string,
     flowId: number,
     paramContextId: string | null,
@@ -321,7 +322,7 @@ interface SectionWrapperProps {
 }
 
 function SectionWrapper({
-  instances,
+  clusters,
   pathType,
   title,
   icon,
@@ -329,22 +330,31 @@ function SectionWrapper({
   onDeployRequest,
   deployingPaths,
 }: SectionWrapperProps) {
-  const [instanceId, setInstanceId] = useState<number | null>(null)
+  const [clusterId, setClusterId] = useState<number | null>(null)
   const [collapsed, setCollapsed] = useState(false)
   const [hasChecked, setHasChecked] = useState(false)
 
+  // Resolve the primary instance ID for operations that still need an instance (deploy, params)
+  const primaryInstanceId = useMemo(
+    () =>
+      clusters
+        .find((c) => c.id === clusterId)
+        ?.members.find((m) => m.is_primary)?.instance_id ?? null,
+    [clusters, clusterId],
+  )
+
   const { data: pathData, isLoading: isLoadingPaths, refetch } = useCheckPathQuery(
-    instanceId,
+    clusterId,
     pathType,
     false, // never auto-fetch
   )
   const { data: registryFlows = EMPTY_REGISTRY_FLOWS, isLoading: isLoadingFlows } =
-    useRegistryFlowsByInstanceQuery(instanceId)
+    useRegistryFlowsByInstanceQuery(primaryInstanceId)
   const { data: paramContexts = EMPTY_PARAM_CONTEXTS, isLoading: isLoadingParams } =
-    useParameterContextsQuery(instanceId)
+    useParameterContextsQuery(primaryInstanceId)
 
-  const handleInstanceChange = useCallback((id: number | null) => {
-    setInstanceId(id)
+  const handleClusterChange = useCallback((id: number | null) => {
+    setClusterId(id)
     setHasChecked(false)
   }, [])
 
@@ -355,12 +365,12 @@ function SectionWrapper({
 
   const handleDeploy = useCallback(
     async (path: string, flowId: number, paramContextId: string | null) => {
-      if (!instanceId) return
-      await onDeployRequest(instanceId, path, flowId, paramContextId)
+      if (!clusterId || !primaryInstanceId) return
+      await onDeployRequest(clusterId, primaryInstanceId, path, flowId, paramContextId)
       // Re-check paths after successful deploy
       refetch()
     },
-    [instanceId, onDeployRequest, refetch],
+    [clusterId, primaryInstanceId, onDeployRequest, refetch],
   )
 
   return (
@@ -368,9 +378,9 @@ function SectionWrapper({
       title={title}
       icon={icon}
       gradientClass={gradientClass}
-      instances={instances}
-      selectedInstanceId={instanceId}
-      onInstanceChange={handleInstanceChange}
+      clusters={clusters}
+      selectedClusterId={clusterId}
+      onClusterChange={handleClusterChange}
       pathStatuses={pathData?.status ?? []}
       isLoadingPaths={isLoadingPaths}
       hasChecked={hasChecked}
@@ -394,14 +404,15 @@ function SectionWrapper({
 export function NifiInstallPage() {
   const [deployingPaths, setDeployingPaths] = useState<Set<string>>(new Set())
 
-  const { data: instancesData, isLoading: isLoadingInstances } = useNifiInstancesQuery()
-  const instances = instancesData ?? EMPTY_INSTANCES
+  const { data: clustersData, isLoading: isLoadingClusters } = useNifiClustersQuery()
+  const clusters = clustersData ?? EMPTY_CLUSTERS
 
   const deployMutation = useDeployFlowMutation()
 
   const handleDeployRequest = useCallback(
     async (
-      instanceId: number,
+      clusterId: number,
+      primaryInstanceId: number,
       path: string,
       flowId: number,
       paramContextId: string | null,
@@ -409,7 +420,8 @@ export function NifiInstallPage() {
       setDeployingPaths((prev) => new Set([...prev, path]))
       try {
         await deployMutation.mutateAsync({
-          instanceId,
+          clusterId,
+          instanceId: primaryInstanceId,
           missingPath: path,
           flowId,
           parameterContextId: paramContextId,
@@ -426,7 +438,7 @@ export function NifiInstallPage() {
     [deployMutation],
   )
 
-  if (isLoadingInstances) {
+  if (isLoadingClusters) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -479,7 +491,7 @@ export function NifiInstallPage() {
 
       {/* Source Path Panel */}
       <SectionWrapper
-        instances={instances}
+        clusters={clusters}
         pathType="source"
         title="Source Path"
         icon={<Upload className="h-4 w-4" />}
@@ -490,7 +502,7 @@ export function NifiInstallPage() {
 
       {/* Destination Path Panel */}
       <SectionWrapper
-        instances={instances}
+        clusters={clusters}
         pathType="destination"
         title="Destination Path"
         icon={<Download className="h-4 w-4" />}

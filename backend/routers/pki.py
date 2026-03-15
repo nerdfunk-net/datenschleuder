@@ -12,6 +12,7 @@ from models.pki import (
     CertificateResponse,
     CreateCARequest,
     CreateCertificateRequest,
+    ExportCAPKCS12WithKeyRequest,
     ExportPKCS12Request,
     ExportPrivateKeyRequest,
     RevokeCertificateRequest,
@@ -68,6 +69,34 @@ async def get_ca_cert():
     return Response(
         content=ca.cert_pem.encode(),
         media_type="application/x-pem-file",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/ca/export/pkcs12")
+async def export_ca_pkcs12():
+    ca = _get_ca_or_404()
+    p12_bytes = _pki_service.export_ca_pkcs12(ca)
+    filename = f"{ca.common_name.replace(' ', '_')}.ca.p12"
+    return Response(
+        content=p12_bytes,
+        media_type="application/x-pkcs12",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/ca/export/pkcs12/withkey")
+async def export_ca_pkcs12_with_key(
+    request: ExportCAPKCS12WithKeyRequest,
+    user: dict = Depends(verify_admin_token),
+    encryption_service=Depends(get_encryption_service),
+):
+    ca = _get_ca_or_404()
+    p12_bytes = _pki_service.export_ca_pkcs12_with_key(ca, encryption_service, request.password)
+    filename = f"{ca.common_name.replace(' ', '_')}.ca.p12"
+    return Response(
+        content=p12_bytes,
+        media_type="application/x-pkcs12",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 

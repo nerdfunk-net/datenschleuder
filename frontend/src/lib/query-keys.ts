@@ -210,8 +210,8 @@ export const queryKeys = {
   // NiFi Install
   nifiInstall: {
     all: ['nifiInstall'] as const,
-    checkPath: (instanceId: number, pathType: 'source' | 'destination') =>
-      [...['nifiInstall'], 'check-path', instanceId, pathType] as const,
+    checkPath: (clusterId: number, pathType: 'source' | 'destination') =>
+      [...['nifiInstall'], 'check-path', clusterId, pathType] as const,
   },
 
   // Certificate Manager
@@ -231,6 +231,13 @@ export const queryKeys = {
     ca: () => [...queryKeys.pki.all, 'ca'] as const,
     certificates: () => [...queryKeys.pki.all, 'certificates'] as const,
     certificate: (id: number) => [...queryKeys.pki.all, 'certificate', id] as const,
+  },
+
+  // Datenschleuder Agents
+  agents: {
+    all: ['agents'] as const,
+    list: () => [...queryKeys.agents.all, 'list'] as const,
+    history: (agentId: string) => [...queryKeys.agents.all, 'history', agentId] as const,
   },
 
   // Templates

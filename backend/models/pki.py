@@ -8,7 +8,7 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
 
-CertType = Literal["server", "client", "user"]
+CertType = Literal["server", "client", "user", "server+client"]
 RevocationReason = Literal[
     "unspecified",
     "keyCompromise",
@@ -112,3 +112,7 @@ class ExportPKCS12Request(BaseModel):
 
 class ExportPrivateKeyRequest(BaseModel):
     passphrase: Optional[str] = None
+
+
+class ExportCAPKCS12WithKeyRequest(BaseModel):
+    password: str = Field(min_length=1)

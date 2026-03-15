@@ -9,19 +9,19 @@ const EMPTY_REGISTRY_FLOWS: RegistryFlow[] = []
 const EMPTY_CONTEXTS: ParameterContext[] = []
 
 export function useCheckPathQuery(
-  instanceId: number | null,
+  clusterId: number | null,
   pathType: 'source' | 'destination',
   enabled = true,
 ) {
   const { apiCall } = useApi()
 
   return useQuery<CheckPathResponse>({
-    queryKey: queryKeys.nifiInstall.checkPath(instanceId ?? 0, pathType),
+    queryKey: queryKeys.nifiInstall.checkPath(clusterId ?? 0, pathType),
     queryFn: () =>
       apiCall(
-        `nifi/install/check-path?instance_id=${instanceId}&path_type=${pathType}`,
+        `nifi/install/check-path?cluster_id=${clusterId}&path_type=${pathType}`,
       ),
-    enabled: enabled && instanceId !== null,
+    enabled: enabled && clusterId !== null,
     staleTime: 0, // Always re-fetch — paths change when flows are deployed
   })
 }
@@ -35,7 +35,8 @@ export function useParameterContextsQuery(instanceId: number | null) {
       const result = await apiCall<{ parameter_contexts: ParameterContext[] }>(
         `nifi/instances/${instanceId}/ops/parameters`,
       )
-      return result?.parameter_contexts ?? EMPTY_CONTEXTS
+      const contexts = result?.parameter_contexts
+      return Array.isArray(contexts) ? contexts : EMPTY_CONTEXTS
     },
     enabled: instanceId !== null,
     staleTime: 2 * 60 * 1000,
@@ -52,7 +53,7 @@ export function useRegistryFlowsByInstanceQuery(instanceId: number | null) {
         ? `nifi/registry-flows/?nifi_instance=${instanceId}`
         : 'nifi/registry-flows/'
       const result = await apiCall<RegistryFlow[]>(url)
-      return result ?? EMPTY_REGISTRY_FLOWS
+      return Array.isArray(result) ? result : EMPTY_REGISTRY_FLOWS
     },
     enabled: instanceId !== null,
     staleTime: 5 * 60 * 1000,

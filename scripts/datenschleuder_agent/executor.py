@@ -1,5 +1,5 @@
 """
-Command executor for Cockpit Agent
+Command executor for Datenschleuder Agent
 Handles execution of git, docker, and other commands
 """
 

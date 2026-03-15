@@ -3,17 +3,37 @@
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
 import type { CertificateResponse } from '../types'
 
 interface Props {
   cert: CertificateResponse
 }
 
+function buildNifiIdentity(cert: CertificateResponse): string {
+  const parts: string[] = []
+  parts.push(`CN=${cert.common_name}`)
+  if (cert.organization) parts.push(`O=${cert.organization}`)
+  if (cert.country) parts.push(`C=${cert.country}`)
+  if (cert.state) parts.push(`ST=${cert.state}`)
+  if (cert.city) parts.push(`L=${cert.city}`)
+  if (cert.org_unit) parts.push(`OU=${cert.org_unit}`)
+  return parts.join(', ')
+}
+
 export function CertificateDetail({ cert }: Props) {
   const [showPem, setShowPem] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString()
+
+  const nifiIdentity = buildNifiIdentity(cert)
+
+  const copyNifiIdentity = () => {
+    navigator.clipboard.writeText(nifiIdentity)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div className="space-y-4 text-sm">
@@ -51,6 +71,22 @@ export function CertificateDetail({ cert }: Props) {
             </p>
           </div>
         )}
+        <div className="col-span-2">
+          <span className="text-muted-foreground">NiFi Identity</span>
+          <div className="flex items-start gap-2 mt-0.5">
+            <p className="font-mono text-xs break-all">{nifiIdentity}</p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 shrink-0"
+              onClick={copyNifiIdentity}
+              title="Copy NiFi identity string"
+            >
+              {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+            </Button>
+          </div>
+        </div>
       </div>
       <div>
         <Button

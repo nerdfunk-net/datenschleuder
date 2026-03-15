@@ -18,6 +18,7 @@ import { ShieldAlert, Trash2, Download } from 'lucide-react'
 import { useCAQuery } from '../hooks/use-pki-query'
 import { usePKIMutations } from '../hooks/use-pki-mutations'
 import { CreateCADialog } from '../dialogs/create-ca-dialog'
+import { ExportCAPKCS12Dialog } from '../dialogs/export-ca-pkcs12-dialog'
 import type { CreateCARequest } from '../types'
 
 export function CAPanel() {
@@ -25,6 +26,7 @@ export function CAPanel() {
   const mutations = usePKIMutations()
   const [createOpen, setCreateOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [caPkcs12WithKeyOpen, setCAPkcs12WithKeyOpen] = useState(false)
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString()
   const isExpired = ca ? new Date(ca.not_after) < new Date() : false
@@ -96,17 +98,31 @@ export function CAPanel() {
             </div>
             {ca.created_by && <div><span className="text-muted-foreground">Created by</span><p>{ca.created_by}</p></div>}
           </div>
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-wrap gap-2 pt-2">
             <a href={`/api/proxy/pki/ca/cert`} download={`${ca.common_name.replace(/ /g, '_')}.ca.pem`}>
               <Button variant="outline" size="sm">
                 <Download className="w-4 h-4 mr-1" />
-                Download CA Cert
+                PEM
               </Button>
             </a>
+            <a href={`/api/proxy/pki/ca/export/pkcs12`} download={`${ca.common_name.replace(/ /g, '_')}.ca.p12`}>
+              <Button variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-1" />
+                PKCS12
+              </Button>
+            </a>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCAPkcs12WithKeyOpen(true)}
+            >
+              <Download className="w-4 h-4 mr-1" />
+              PKCS12 + Key
+            </Button>
             <a href="/api/proxy/pki/crl" download="ca.crl.pem">
               <Button variant="outline" size="sm">
                 <Download className="w-4 h-4 mr-1" />
-                Download CRL
+                CRL
               </Button>
             </a>
             <Button
@@ -120,6 +136,17 @@ export function CAPanel() {
           </div>
         </CardContent>
       </Card>
+
+      <ExportCAPKCS12Dialog
+        open={caPkcs12WithKeyOpen}
+        onOpenChange={setCAPkcs12WithKeyOpen}
+        onSubmit={(password) => {
+          mutations.exportCAPKCS12WithKey.mutate(password, {
+            onSuccess: () => setCAPkcs12WithKeyOpen(false),
+          })
+        }}
+        isPending={mutations.exportCAPKCS12WithKey.isPending}
+      />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>

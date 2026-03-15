@@ -152,10 +152,11 @@ class PKIService:
         )
 
     def delete_ca(self) -> bool:
-        """Delete the CA and all issued certificates (cascade)."""
+        """Delete all issued certificates and then the CA itself."""
         ca = self.ca_repo.get_active_ca()
         if not ca:
             return False
+        self.cert_repo.delete_all_for_ca(ca.id)
         return self.ca_repo.delete(ca.id)
 
     # -------------------------------------------------------------- Certs --
@@ -217,6 +218,10 @@ class PKIService:
             eku = x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH])
         elif request.cert_type == "client":
             eku = x509.ExtendedKeyUsage([ExtendedKeyUsageOID.CLIENT_AUTH])
+        elif request.cert_type == "server+client":
+            eku = x509.ExtendedKeyUsage(
+                [ExtendedKeyUsageOID.SERVER_AUTH, ExtendedKeyUsageOID.CLIENT_AUTH]
+            )
         else:  # user
             eku = x509.ExtendedKeyUsage(
                 [ExtendedKeyUsageOID.CLIENT_AUTH, ExtendedKeyUsageOID.EMAIL_PROTECTION]
@@ -236,7 +241,7 @@ class PKIService:
             .add_extension(
                 x509.KeyUsage(
                     digital_signature=True,
-                    key_encipherment=(request.cert_type != "user"),
+                    key_encipherment=(request.cert_type in ("server", "client", "server+client")),
                     content_commitment=False,
                     key_cert_sign=False,
                     crl_sign=False,
@@ -297,6 +302,30 @@ class PKIService:
         )
 
     # ------------------------------------------------------------ Exports --
+
+    def export_ca_pkcs12(self, ca) -> bytes:
+        """Export CA certificate as PKCS#12 without private key."""
+        ca_cert_obj = x509.load_pem_x509_certificate(ca.cert_pem.encode())
+        return pkcs12.serialize_key_and_certificates(
+            name=ca.common_name.encode(),
+            key=None,
+            cert=ca_cert_obj,
+            cas=None,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+
+    def export_ca_pkcs12_with_key(self, ca, encryption_service: "EncryptionService", password: str) -> bytes:
+        """Export CA certificate and private key as PKCS#12."""
+        key_pem = encryption_service.decrypt(ca.private_key_encrypted)
+        private_key = serialization.load_pem_private_key(key_pem.encode(), password=None)
+        ca_cert_obj = x509.load_pem_x509_certificate(ca.cert_pem.encode())
+        return pkcs12.serialize_key_and_certificates(
+            name=ca.common_name.encode(),
+            key=private_key,
+            cert=ca_cert_obj,
+            cas=None,
+            encryption_algorithm=serialization.BestAvailableEncryption(password.encode()),
+        )
 
     def export_pem_bundle(self, cert, ca) -> bytes:
         """Return cert PEM + CA cert PEM concatenated."""
