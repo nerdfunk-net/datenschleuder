@@ -143,8 +143,14 @@ function InstancePropertiesPanel({ instance, server, cert, zookeeperConfig }: In
     [repoId]
   )
 
+  const setNifiPropertiesContent = useWizardStore((s) => s.setNifiPropertiesContent)
+  const savedContent = useWizardStore((s) => s.nifiPropertiesContent[instance.tempId])
+
+  // Skip fetching when the user already has edits in the store for this instance
+  const hasSavedContent = !!savedContent
+
   const { data: rawContent, isLoading, isError } = useNifiConfigFileQuery(
-    repoId,
+    hasSavedContent ? null : repoId,
     'nifi.properties',
     qk
   )
@@ -155,11 +161,9 @@ function InstancePropertiesPanel({ instance, server, cert, zookeeperConfig }: In
   const { data: freshTemplate, isLoading: isFreshLoading } = useQuery<string>({
     queryKey: ['nifi-fresh-properties'],
     queryFn: () => apiCall<string>('nifi/get-fresh-properties'),
-    enabled: isError && repoId != null,
+    enabled: isError && repoId != null && !hasSavedContent,
     staleTime: Infinity,
   })
-
-  const setNifiPropertiesContent = useWizardStore((s) => s.setNifiPropertiesContent)
 
   const defaults = useMemo(
     () => buildDefaults(server, cert, zookeeperConfig),
@@ -173,16 +177,31 @@ function InstancePropertiesPanel({ instance, server, cert, zookeeperConfig }: In
   const [filter, setFilter] = useState('')
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
 
-  // Initialise / re-initialise when file loads (or when fresh template arrives as fallback)
+  // Track whether we've already initialised from saved/fetched content
+  const [initialised, setInitialised] = useState(false)
+
+  // Initialise / re-initialise when file loads (or when fresh template arrives as fallback).
+  // If the store already has content for this instance (user edited before switching away),
+  // restore from there instead of re-fetching — this preserves edits across tab switches.
   useEffect(() => {
-    const content = rawContent ?? freshTemplate ?? ''
+    // If already initialised from saved store content, skip re-initialisation
+    // to avoid overwriting user edits when rawContent/freshTemplate arrive later.
+    if (initialised && savedContent) return
+
+    const isFromFreshTemplate = !savedContent && !rawContent && !!freshTemplate
+    const content = savedContent ?? rawContent ?? freshTemplate ?? ''
+    if (!content) return
+
     setOriginalRaw(content)
 
-    const parsed = content ? parseNifiProperties(content) : []
+    const parsed = parseNifiProperties(content)
     const byKey = new Map(parsed.map((p) => [p.key, p]))
 
     // Ensure every mandatory key exists in the properties array.
     // If missing from file, create a virtual entry (lineNumber = 0).
+    // When loading the fresh template (not a real git file), always apply computed
+    // defaults — the template may have placeholder values like "localhost" that
+    // must be replaced with the actual wizard values (server hostname, passwords, etc.).
     const mandatoryDefaults = defaults
     const extraProps: NifiProperty[] = []
     for (const key of MANDATORY_KEYS) {
@@ -194,22 +213,24 @@ function InstancePropertiesPanel({ instance, server, cert, zookeeperConfig }: In
           isComment: false,
         })
       } else {
-        // If the file has the key but the value is empty, apply default
         const existing = byKey.get(key)!
-        if (!existing.value && mandatoryDefaults[key]) {
+        // For fresh template: always override with computed defaults (e.g. replace "localhost")
+        // For real git file: only fill in empty values
+        if ((isFromFreshTemplate || !existing.value) && mandatoryDefaults[key]) {
           byKey.set(key, { ...existing, value: mandatoryDefaults[key] })
         }
       }
     }
 
     setProperties([...byKey.values(), ...extraProps])
+    setInitialised(true)
 
     if (content) {
       const groups = groupNifiProperties(parsed)
       setOpenGroups(new Set(groups.map((g) => g.prefix)))
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawContent, freshTemplate])
+  }, [rawContent, freshTemplate, savedContent])
 
   // Update value by key — used by both mandatory and full panels
   const handleValueChange = useCallback((key: string, newValue: string) => {
