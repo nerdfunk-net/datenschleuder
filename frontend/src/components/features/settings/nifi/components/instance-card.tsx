@@ -21,11 +21,13 @@ import { useGitRepositoriesQuery } from '@/components/features/settings/git/hook
 import { NifiPropertiesDialog } from '../dialogs/nifi-properties-dialog'
 import type { NifiInstance } from '../types'
 import { tryParseNifiError } from '../utils/parse-error'
+import { DEFAULT_HEADER_GRADIENT, type ClusterColorInfo } from '../utils/cluster-colors'
 
 interface Props {
   instance: NifiInstance
   canWrite: boolean
   onEdit: (instance: NifiInstance) => void
+  clusterInfo?: ClusterColorInfo | null
 }
 
 function AuthBadge({ instance }: { instance: NifiInstance }) {
@@ -53,7 +55,7 @@ function YesNoBadge({ value }: { value: boolean }) {
     : <Badge className="bg-amber-500 text-white hover:bg-amber-600">No</Badge>
 }
 
-export function InstanceCard({ instance, canWrite, onEdit }: Props) {
+export function InstanceCard({ instance, canWrite, onEdit, clusterInfo }: Props) {
   const { toast } = useToast()
   const { deleteInstance, testSavedConnection } = useNifiInstancesMutations()
   const { data: gitData } = useGitRepositoriesQuery()
@@ -96,10 +98,17 @@ export function InstanceCard({ instance, canWrite, onEdit }: Props) {
     <>
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5">
         {/* Card header */}
-        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 px-4 py-3 flex items-center justify-between">
-          <span className="text-sm font-semibold text-white bg-white/20 rounded-full px-3 py-1">
-            {displayTitle}
-          </span>
+        <div className={`bg-gradient-to-r ${clusterInfo?.gradient ?? DEFAULT_HEADER_GRADIENT} px-4 py-3 flex items-center justify-between`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-semibold text-white bg-white/20 rounded-full px-3 py-1 truncate">
+              {displayTitle}
+            </span>
+            {clusterInfo && (
+              <span className="text-[10px] text-white/80 bg-white/15 rounded-full px-2 py-0.5 whitespace-nowrap flex-shrink-0">
+                {clusterInfo.clusterLabel}
+              </span>
+            )}
+          </div>
           {canWrite && (
             <div className="flex items-center gap-1">
               <TooltipProvider>

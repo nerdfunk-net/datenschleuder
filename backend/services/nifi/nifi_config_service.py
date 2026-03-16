@@ -280,7 +280,7 @@ def update_cluster(cluster_db_id: int, data: NifiClusterUpdate) -> NifiClusterRe
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="At least one member instance is required",
             )
-        primary_count = sum(1 for m in members_input if m.is_primary)
+        primary_count = sum(1 for m in members_input if m["is_primary"])
         if primary_count != 1:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -288,13 +288,13 @@ def update_cluster(cluster_db_id: int, data: NifiClusterUpdate) -> NifiClusterRe
             )
         # Validate instances exist and don't belong to a DIFFERENT cluster
         for m in members_input:
-            inst = instance_repo.get_by_id(m.instance_id)
+            inst = instance_repo.get_by_id(m["instance_id"])
             if not inst:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Instance with id %d not found" % m.instance_id,
+                    detail="Instance with id %d not found" % m["instance_id"],
                 )
-            existing_membership = cluster_repo.get_cluster_for_instance(m.instance_id)
+            existing_membership = cluster_repo.get_cluster_for_instance(m["instance_id"])
             if existing_membership and existing_membership.cluster_id != cluster_db_id:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
@@ -303,7 +303,7 @@ def update_cluster(cluster_db_id: int, data: NifiClusterUpdate) -> NifiClusterRe
 
         cluster_repo.set_members(
             cluster_db_id,
-            [{"instance_id": m.instance_id, "is_primary": m.is_primary} for m in members_input],
+            [{"instance_id": m["instance_id"], "is_primary": m["is_primary"]} for m in members_input],
         )
 
     # Re-fetch with members

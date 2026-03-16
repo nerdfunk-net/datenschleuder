@@ -1,22 +1,27 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Server, Plus, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { hasPermission } from '@/lib/permissions'
 import { useNifiInstancesQuery } from '../hooks/use-nifi-instances-query'
+import { useNifiClustersQuery } from '../hooks/use-nifi-clusters-query'
 import { InstanceCard } from '../components/instance-card'
 import { NifiInstanceDialog } from '../dialogs/nifi-instance-dialog'
-import type { NifiInstance } from '../types'
+import type { NifiInstance, NifiCluster } from '../types'
+import { buildClusterColorMap, getInstanceColorInfo } from '../utils/cluster-colors'
 
 const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
 
 export function NifiInstancesTab() {
   const { user } = useAuthStore()
   const canWrite = hasPermission(user, 'nifi', 'write')
 
   const { data: instances = EMPTY_INSTANCES, isLoading } = useNifiInstancesQuery()
+  const { data: clusters = EMPTY_CLUSTERS } = useNifiClustersQuery()
+  const clusterColorMap = useMemo(() => buildClusterColorMap(clusters), [clusters])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingInstance, setEditingInstance] = useState<NifiInstance | null>(null)
 
@@ -92,6 +97,7 @@ export function NifiInstancesTab() {
                 instance={instance}
                 canWrite={canWrite}
                 onEdit={handleEdit}
+                clusterInfo={getInstanceColorInfo(instance.id, clusters, clusterColorMap)}
               />
             ))}
           </div>

@@ -372,18 +372,19 @@ export function NifiClusterDialog({ open, onOpenChange, cluster }: Props) {
                               Primary
                             </Badge>
                           ) : (
-                            <button
-                              type="button"
+                            <div
+                              role="button"
+                              tabIndex={0}
                               onClick={() => handleSetPrimary(m.instance_id)}
-                              className="text-xs text-slate-400 hover:text-blue-600 transition-colors whitespace-nowrap flex items-center gap-1"
+                              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleSetPrimary(m.instance_id) }}
+                              className="text-xs text-slate-400 hover:text-blue-600 transition-colors whitespace-nowrap flex items-center gap-1 cursor-pointer"
                             >
                               <Checkbox
                                 checked={false}
                                 onCheckedChange={() => handleSetPrimary(m.instance_id)}
-                                className="pointer-events-none"
                               />
                               Set primary
-                            </button>
+                            </div>
                           )}
                           <Button
                             type="button"

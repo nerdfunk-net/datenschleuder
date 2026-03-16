@@ -41,16 +41,37 @@ def _run_openssl(*args: str, input_data: Optional[bytes] = None, timeout: int = 
         return ""
 
 
+# Maps OID dotted strings to the standard abbreviations used by OpenSSL.
+# Keyed by ObjectIdentifier.dotted_string for reliability across cryptography versions.
+_OID_ABBR: dict[str, str] = {
+    "2.5.4.3": "CN",           # commonName
+    "2.5.4.6": "C",            # countryName
+    "2.5.4.7": "L",            # localityName
+    "2.5.4.8": "ST",           # stateOrProvinceName
+    "2.5.4.9": "STREET",       # streetAddress
+    "2.5.4.10": "O",           # organizationName
+    "2.5.4.11": "OU",          # organizationalUnitName
+    "2.5.4.5": "serialNumber", # serialNumber
+    "2.5.4.12": "title",       # title
+    "2.5.4.42": "GN",          # givenName
+    "2.5.4.4": "SN",           # surname
+    "1.2.840.113549.1.9.1": "emailAddress",
+    "0.9.2342.19200300.100.1.25": "DC",  # domainComponent
+    "0.9.2342.19200300.100.1.1": "UID",  # userId
+}
+
+
 def _parse_crypto_cert(cert, index: int, raw_text: str, has_private_key: bool = False) -> CertificateInfo:
     """Convert a `cryptography` x509.Certificate to CertificateInfo."""
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes
 
-    # Subject / Issuer
+    # Subject / Issuer — use standard OpenSSL abbreviations (CN, OU, O, C, …)
     def dn_string(name) -> str:
         parts = []
         for attr in name:
-            parts.append(f"{attr.oid._name}={attr.value}")
+            abbr = _OID_ABBR.get(attr.oid.dotted_string, attr.oid._name)
+            parts.append(f"{abbr}={attr.value}")
         return ", ".join(parts) if parts else str(name)
 
     subject = dn_string(cert.subject)

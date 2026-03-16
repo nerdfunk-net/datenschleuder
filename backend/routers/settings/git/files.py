@@ -543,8 +543,8 @@ async def write_file_content(
                 detail="Access denied: file path is outside repository",
             )
 
-        # Pull latest changes first to avoid conflicts
-        git_service.pull(repository)
+        # Fetch remote and hard-reset to discard any local changes before writing
+        git_service.fetch_and_reset(repository)
 
         # Ensure parent directory exists
         parent_dir = os.path.dirname(file_path_resolved)

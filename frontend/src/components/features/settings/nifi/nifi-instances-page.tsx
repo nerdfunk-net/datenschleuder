@@ -1,6 +1,8 @@
 'use client'
 
-import { Server } from 'lucide-react'
+import Link from 'next/link'
+import { Server, Wand2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   Tabs,
   TabsContent,
@@ -27,6 +29,12 @@ export function NifiInstancesPage() {
             </p>
           </div>
         </div>
+        <Button asChild>
+          <Link href="/settings/nifi/cluster-wizard">
+            <Wand2 className="mr-2 h-4 w-4" />
+            Cluster Wizard
+          </Link>
+        </Button>
       </div>
 
       <Tabs defaultValue="servers" className="w-full">

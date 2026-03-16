@@ -337,6 +337,50 @@ class GitService:
                 branch=repository.get("branch", "main"),
             )
 
+    def fetch_and_reset(self, repository: Dict, repo: Optional[Repo] = None) -> None:
+        """Fetch from remote and hard-reset the working tree to the remote branch.
+
+        Unlike pull(), this always discards local uncommitted changes and
+        ensures the working tree exactly matches the remote. Safe to call
+        before writing files that must be based on the latest remote state.
+
+        Args:
+            repository: Repository metadata dict
+            repo: Optional existing Repo instance (will open/clone if not provided)
+        """
+        if repo is None:
+            repo = self.open_or_clone(repository)
+
+        branch = repository.get("branch", "main")
+
+        with set_ssl_env(repository):
+            with self._auth.setup_auth_environment(repository) as (
+                auth_url,
+                username,
+                token,
+                ssh_key_path,
+            ):
+                origin = repo.remotes.origin
+                original_url = None
+                try:
+                    if token and not ssh_key_path:
+                        original_url = list(origin.urls)[0]
+                        origin.set_url(auth_url)
+
+                    origin.fetch()
+                    repo.git.reset("--hard", "origin/%s" % branch)
+                    logger.info(
+                        "fetch_and_reset: repository %s reset to origin/%s",
+                        repository.get("name"),
+                        branch,
+                    )
+                finally:
+                    if original_url:
+                        try:
+                            origin.set_url(original_url)
+                        except Exception:
+                            pass
+
     def push(
         self,
         repository: Dict,

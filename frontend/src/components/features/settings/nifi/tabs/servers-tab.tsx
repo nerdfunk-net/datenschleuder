@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -20,24 +20,33 @@ import { hasPermission } from '@/lib/permissions'
 import { useNifiServersQuery } from '../hooks/use-nifi-servers-query'
 import { useNifiServersMutations } from '../hooks/use-nifi-servers-mutations'
 import { useNifiInstancesQuery } from '../hooks/use-nifi-instances-query'
+import { useNifiClustersQuery } from '../hooks/use-nifi-clusters-query'
 import { NifiServerDialog } from '../dialogs/nifi-server-dialog'
 import { BootstrapConfigDialog } from '../dialogs/bootstrap-config-dialog'
-import type { NifiServer, NifiInstance } from '../types'
+import type { NifiServer, NifiInstance, NifiCluster } from '../types'
+import {
+  buildClusterColorMap,
+  getServerColorInfo,
+  DEFAULT_HEADER_GRADIENT,
+  type ClusterColorInfo,
+} from '../utils/cluster-colors'
 
 const EMPTY_SERVERS: NifiServer[] = []
-
 const EMPTY_INSTANCES: NifiInstance[] = []
+const EMPTY_CLUSTERS: NifiCluster[] = []
 
 function ServerCard({
   server,
   canWrite,
   onEdit,
   instances,
+  clusterInfo,
 }: {
   server: NifiServer
   canWrite: boolean
   onEdit: (s: NifiServer) => void
   instances: NifiInstance[]
+  clusterInfo: ClusterColorInfo | null
 }) {
   const { deleteServer } = useNifiServersMutations()
   const [showDelete, setShowDelete] = useState(false)
@@ -57,10 +66,17 @@ function ServerCard({
   return (
     <>
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5">
-        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 px-4 py-3 flex items-center justify-between">
-          <span className="text-sm font-semibold text-white bg-white/20 rounded-full px-3 py-1">
-            {server.server_id}
-          </span>
+        <div className={`bg-gradient-to-r ${clusterInfo?.gradient ?? DEFAULT_HEADER_GRADIENT} px-4 py-3 flex items-center justify-between`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-semibold text-white bg-white/20 rounded-full px-3 py-1 truncate">
+              {server.server_id}
+            </span>
+            {clusterInfo && (
+              <span className="text-[10px] text-white/80 bg-white/15 rounded-full px-2 py-0.5 whitespace-nowrap flex-shrink-0">
+                {clusterInfo.clusterLabel}
+              </span>
+            )}
+          </div>
           {canWrite && (
             <div className="flex items-center gap-1">
               <TooltipProvider>
@@ -156,6 +172,8 @@ export function ServersTab() {
 
   const { data: servers = EMPTY_SERVERS, isLoading } = useNifiServersQuery()
   const { data: instances = EMPTY_INSTANCES } = useNifiInstancesQuery()
+  const { data: clusters = EMPTY_CLUSTERS } = useNifiClustersQuery()
+  const clusterColorMap = useMemo(() => buildClusterColorMap(clusters), [clusters])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingServer, setEditingServer] = useState<NifiServer | null>(null)
 
@@ -233,6 +251,7 @@ export function ServersTab() {
                 canWrite={canWrite}
                 onEdit={handleEdit}
                 instances={instances}
+                clusterInfo={getServerColorInfo(server.id, instances, clusters, clusterColorMap)}
               />
             ))}
           </div>
