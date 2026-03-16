@@ -27,6 +27,7 @@ class GitConnectionService:
     def __init__(self, auth_service=None):
         if auth_service is None:
             from services.settings.git.auth import GitAuthenticationService
+
             auth_service = GitAuthenticationService()
         self._auth = auth_service
 
@@ -89,13 +90,14 @@ class GitConnectionService:
                 # Log resolved credentials (without exposing secrets)
                 logger.info("Credential resolution results:")
                 logger.info(
-                    "  - Username: %s", resolved_username if resolved_username else 'None'
+                    "  - Username: %s",
+                    resolved_username if resolved_username else "None",
                 )
                 logger.info(
-                    "  - Token/Password: %s", '<present>' if resolved_token else 'None'
+                    "  - Token/Password: %s", "<present>" if resolved_token else "None"
                 )
                 logger.info(
-                    "  - SSH Key Path: %s", ssh_key_path if ssh_key_path else 'None'
+                    "  - SSH Key Path: %s", ssh_key_path if ssh_key_path else "None"
                 )
 
                 # Validate credential resolution
@@ -223,7 +225,10 @@ class GitConnectionService:
             logger.debug("Authentication added to URL (credentials hidden)")
         else:
             logger.info(
-                "No authentication added to URL (auth_type=%s, has_username=%s, has_token=%s)", auth_type, bool(resolved_username), bool(resolved_token)
+                "No authentication added to URL (auth_type=%s, has_username=%s, has_token=%s)",
+                auth_type,
+                bool(resolved_username),
+                bool(resolved_token),
             )
 
         return clone_url
@@ -276,7 +281,7 @@ class GitConnectionService:
             "Command: git clone --depth 1 --branch %s <url> %s", branch, test_path
         )
         logger.debug(
-            "Environment SSH_COMMAND: %s", env.get('GIT_SSH_COMMAND', 'not set')
+            "Environment SSH_COMMAND: %s", env.get("GIT_SSH_COMMAND", "not set")
         )
 
         # Execute clone with timeout
@@ -291,7 +296,9 @@ class GitConnectionService:
         # Parse result
         if result.returncode == 0:
             logger.info(
-                "Git connection test successful for %s (branch: %s)", test_request.url, branch
+                "Git connection test successful for %s (branch: %s)",
+                test_request.url,
+                branch,
             )
             return GitConnectionTestResponse(
                 success=True,

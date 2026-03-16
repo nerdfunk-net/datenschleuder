@@ -90,7 +90,9 @@ def _restore_nifi_config(saved: dict[str, Any]) -> None:
 
 
 @contextmanager
-def nifi_connection_scope(instance, *, normalize_url: bool = False) -> Generator[None, None, None]:
+def nifi_connection_scope(
+    instance, *, normalize_url: bool = False
+) -> Generator[None, None, None]:
     """Synchronous context manager that scopes nipyapi config to one NiFi instance.
 
     Usage (sync code / Celery tasks)::
@@ -107,7 +109,9 @@ def nifi_connection_scope(instance, *, normalize_url: bool = False) -> Generator
     try:
         from services.nifi.connection import nifi_connection_service
 
-        nifi_connection_service.configure_from_instance(instance, normalize_url=normalize_url)
+        nifi_connection_service.configure_from_instance(
+            instance, normalize_url=normalize_url
+        )
         yield
     finally:
         _restore_nifi_config(saved)
@@ -135,7 +139,9 @@ def nifi_test_connection_scope(**configure_kwargs) -> Generator[None, None, None
         _restore_nifi_config(saved)
 
 
-async def with_nifi_instance(instance, sync_operation: Callable[[], Any], *, normalize_url: bool = False) -> Any:
+async def with_nifi_instance(
+    instance, sync_operation: Callable[[], Any], *, normalize_url: bool = False
+) -> Any:
     """Run a synchronous nipyapi operation scoped to a specific NiFi instance.
 
     Intended for FastAPI async route handlers. Acquires the per-process asyncio

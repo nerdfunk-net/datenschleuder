@@ -195,7 +195,9 @@ def serialize_connection(item: Any) -> Dict[str, Any]:
             "run_status": getattr(item_status, "run_status", None),
             "aggregate_snapshot": (
                 {
-                    "active_thread_count": getattr(snapshot, "active_thread_count", None),
+                    "active_thread_count": getattr(
+                        snapshot, "active_thread_count", None
+                    ),
                     "bytes_in": getattr(snapshot, "bytes_in", None),
                     "bytes_out": getattr(snapshot, "bytes_out", None),
                     "flow_files_in": getattr(snapshot, "flow_files_in", None),
@@ -247,7 +249,9 @@ def serialize_component_by_kind(item: Any, kind: str) -> Dict[str, Any]:
             "run_status": getattr(item_status, "run_status", None),
             "aggregate_snapshot": (
                 {
-                    "active_thread_count": getattr(snapshot, "active_thread_count", None),
+                    "active_thread_count": getattr(
+                        snapshot, "active_thread_count", None
+                    ),
                     "bytes_in": getattr(snapshot, "bytes_in", None),
                     "bytes_out": getattr(snapshot, "bytes_out", None),
                     "flow_files_in": getattr(snapshot, "flow_files_in", None),
@@ -363,4 +367,3 @@ def check_connection_queues(
         results.append(data)
 
     return results, overall_status
-

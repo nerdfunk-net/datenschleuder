@@ -448,7 +448,9 @@ async def execute_job_manually(
         template_id = schedule.get("job_template_id")
         if not template_id:
             logger.error(
-                "Schedule %s has no associated template. Schedule data: %s", schedule_id, schedule
+                "Schedule %s has no associated template. Schedule data: %s",
+                schedule_id,
+                schedule,
             )
             raise HTTPException(
                 status_code=400,

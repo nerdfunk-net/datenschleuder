@@ -14,7 +14,11 @@ logger = logging.getLogger(__name__)
 # Create database engine
 DATABASE_URL = settings.database_url
 logger.info(
-    "Connecting to database: postgresql://%s:***@%s:%s/%s", settings.database_username, settings.database_host, settings.database_port, settings.database_name
+    "Connecting to database: postgresql://%s:***@%s:%s/%s",
+    settings.database_username,
+    settings.database_host,
+    settings.database_port,
+    settings.database_name,
 )
 
 engine = create_engine(
@@ -109,6 +113,7 @@ def init_db():
         # Run versioned migrations (adds/alters columns, indexes, etc.)
         try:
             from migrations.runner import MigrationRunner
+
             runner = MigrationRunner(engine, Base)
             runner.run_migrations()
         except Exception as migration_error:

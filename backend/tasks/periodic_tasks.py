@@ -7,10 +7,8 @@ from celery import shared_task
 from celery_app import celery_app
 import logging
 from datetime import datetime, timezone
-from typing import Optional
 
 logger = logging.getLogger(__name__)
-
 
 
 @shared_task(name="tasks.worker_health_check")
@@ -81,7 +79,8 @@ def cleanup_celery_data_task() -> dict:
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=cleanup_age_hours)
 
         logger.info(
-            "Starting Celery cleanup: removing data older than %s hours", cleanup_age_hours
+            "Starting Celery cleanup: removing data older than %s hours",
+            cleanup_age_hours,
         )
 
         # Connect to Redis
@@ -123,7 +122,9 @@ def cleanup_celery_data_task() -> dict:
             logger.warning("Error cleaning up job runs: %s", e)
 
         logger.info(
-            "Cleanup completed: %s results, %s job runs removed", removed_results, removed_job_runs
+            "Cleanup completed: %s results, %s job runs removed",
+            removed_results,
+            removed_job_runs,
         )
 
         return {
@@ -204,7 +205,10 @@ def check_stale_jobs_task() -> dict:
                         }
                     )
                     logger.warning(
-                        "Marked stale job %s (%s) as failed - running for %s minutes", job['id'], job['job_name'], int(running_duration / 60)
+                        "Marked stale job %s (%s) as failed - running for %s minutes",
+                        job["id"],
+                        job["job_name"],
+                        int(running_duration / 60),
                     )
 
         # Check pending jobs
@@ -232,7 +236,10 @@ def check_stale_jobs_task() -> dict:
                     }
                 )
                 logger.warning(
-                    "Marked pending job %s (%s) as failed - pending for %s minutes", job['id'], job['job_name'], int(pending_duration / 60)
+                    "Marked pending job %s (%s) as failed - pending for %s minutes",
+                    job["id"],
+                    job["job_name"],
+                    int(pending_duration / 60),
                 )
 
         if marked_failed:

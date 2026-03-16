@@ -52,7 +52,9 @@ def build_authorization_url(
             detail=f"OIDC provider '{provider_id}' missing required 'client_id' in configuration",
         )
 
-    scopes = scopes_override or provider_config.get("scopes", ["openid", "profile", "email"])
+    scopes = scopes_override or provider_config.get(
+        "scopes", ["openid", "profile", "email"]
+    )
     response_type = response_type_override or "code"
 
     if not redirect_uri:
@@ -64,13 +66,20 @@ def build_authorization_url(
             )
 
     if any([client_id_override, scopes_override, response_type_override]):
-        logger.info("[OIDC Test] Generating authorization URL with overrides for '%s'", provider_id)
+        logger.info(
+            "[OIDC Test] Generating authorization URL with overrides for '%s'",
+            provider_id,
+        )
         if client_id_override:
             logger.info("[OIDC Test] - client_id overridden: %s", client_id_override)
         if scopes_override:
-            logger.info("[OIDC Test] - scopes overridden: %s", ", ".join(scopes_override))
+            logger.info(
+                "[OIDC Test] - scopes overridden: %s", ", ".join(scopes_override)
+            )
         if response_type_override:
-            logger.info("[OIDC Test] - response_type overridden: %s", response_type_override)
+            logger.info(
+                "[OIDC Test] - response_type overridden: %s", response_type_override
+            )
 
     params = {
         "client_id": client_id,
@@ -93,7 +102,9 @@ def _sanitize_token_response(token_response: Dict[str, Any]) -> Dict[str, Any]:
     for field in ("access_token", "refresh_token", "id_token"):
         if field in sanitized and sanitized[field]:
             token = sanitized[field]
-            sanitized[field] = f"{token[:10]}...{token[-10:]}" if len(token) > 20 else "***MASKED***"
+            sanitized[field] = (
+                f"{token[:10]}...{token[-10:]}" if len(token) > 20 else "***MASKED***"
+            )
     return sanitized
 
 
@@ -167,10 +178,14 @@ async def exchange_code_for_tokens(
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             logger.debug(
-                "Token endpoint response status from provider '%s': %s", provider_id, response.status_code
+                "Token endpoint response status from provider '%s': %s",
+                provider_id,
+                response.status_code,
             )
             logger.debug(
-                "Token endpoint response headers from provider '%s': %s", provider_id, dict(response.headers)
+                "Token endpoint response headers from provider '%s': %s",
+                provider_id,
+                dict(response.headers),
             )
             response.raise_for_status()
             token_response = response.json()

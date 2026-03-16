@@ -12,7 +12,9 @@ class CredentialCreate(BaseModel):
     username: str = Field(min_length=1, max_length=128)
     type: str
     password: Optional[str] = None  # Optional for ssh_key type
-    ssh_private_key: Optional[str] = None  # Required for ssh_key type (or use ssh_keyfile_path)
+    ssh_private_key: Optional[str] = (
+        None  # Required for ssh_key type (or use ssh_keyfile_path)
+    )
     ssh_passphrase: Optional[str] = None  # Optional passphrase for ssh_key
     ssh_keyfile_path: Optional[str] = None  # Path to SSH key file on disk
     valid_until: Optional[date] = None

@@ -102,7 +102,8 @@ def _validate_credential(credential_id: int) -> None:
     if cred.type not in _VALID_SSH_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Credential must be of type 'ssh' or 'ssh_key', got '%s'" % cred.type,
+            detail="Credential must be of type 'ssh' or 'ssh_key', got '%s'"
+            % cred.type,
         )
 
 
@@ -153,7 +154,8 @@ def update_server(server_db_id: int, data: NifiServerUpdate) -> NifiServerRespon
         if conflict:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Server with server_id '%s' already exists" % update_kwargs["server_id"],
+                detail="Server with server_id '%s' already exists"
+                % update_kwargs["server_id"],
             )
 
     if "credential_id" in update_kwargs and update_kwargs["credential_id"] is not None:
@@ -194,7 +196,8 @@ def _validate_cluster_members(members) -> None:
     if primary_count > 1:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Exactly one member must be marked as primary (%d found)" % primary_count,
+            detail="Exactly one member must be marked as primary (%d found)"
+            % primary_count,
         )
 
 
@@ -227,7 +230,8 @@ def create_cluster(data: NifiClusterCreate) -> NifiClusterResponse:
         if existing_membership:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Instance id %d is already assigned to another cluster" % m.instance_id,
+                detail="Instance id %d is already assigned to another cluster"
+                % m.instance_id,
             )
 
     cluster = cluster_repo.create(
@@ -238,17 +242,26 @@ def create_cluster(data: NifiClusterCreate) -> NifiClusterResponse:
 
     cluster_repo.set_members(
         cluster.id,
-        [{"instance_id": m.instance_id, "is_primary": m.is_primary} for m in data.members],
+        [
+            {"instance_id": m.instance_id, "is_primary": m.is_primary}
+            for m in data.members
+        ],
     )
 
     # Re-fetch with members loaded
     refreshed = cluster_repo.get_all_with_members()
     for c in refreshed:
         if c.id == cluster.id:
-            logger.info("Created NiFi cluster cluster_id=%s id=%d", cluster.cluster_id, cluster.id)
+            logger.info(
+                "Created NiFi cluster cluster_id=%s id=%d",
+                cluster.cluster_id,
+                cluster.id,
+            )
             return _cluster_to_response(c)
 
-    raise HTTPException(status_code=500, detail="Cluster created but could not be retrieved")
+    raise HTTPException(
+        status_code=500, detail="Cluster created but could not be retrieved"
+    )
 
 
 def update_cluster(cluster_db_id: int, data: NifiClusterUpdate) -> NifiClusterResponse:
@@ -263,12 +276,16 @@ def update_cluster(cluster_db_id: int, data: NifiClusterUpdate) -> NifiClusterRe
     update_kwargs = data.model_dump(exclude_unset=True)
     members_input = update_kwargs.pop("members", None)
 
-    if "cluster_id" in update_kwargs and update_kwargs["cluster_id"] != cluster.cluster_id:
+    if (
+        "cluster_id" in update_kwargs
+        and update_kwargs["cluster_id"] != cluster.cluster_id
+    ):
         conflict = cluster_repo.get_by_cluster_id(update_kwargs["cluster_id"])
         if conflict:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Cluster with cluster_id '%s' already exists" % update_kwargs["cluster_id"],
+                detail="Cluster with cluster_id '%s' already exists"
+                % update_kwargs["cluster_id"],
             )
 
     if update_kwargs:
@@ -294,16 +311,22 @@ def update_cluster(cluster_db_id: int, data: NifiClusterUpdate) -> NifiClusterRe
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Instance with id %d not found" % m["instance_id"],
                 )
-            existing_membership = cluster_repo.get_cluster_for_instance(m["instance_id"])
+            existing_membership = cluster_repo.get_cluster_for_instance(
+                m["instance_id"]
+            )
             if existing_membership and existing_membership.cluster_id != cluster_db_id:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail="Instance id %d is already assigned to another cluster" % m.instance_id,
+                    detail="Instance id %d is already assigned to another cluster"
+                    % m.instance_id,
                 )
 
         cluster_repo.set_members(
             cluster_db_id,
-            [{"instance_id": m["instance_id"], "is_primary": m["is_primary"]} for m in members_input],
+            [
+                {"instance_id": m["instance_id"], "is_primary": m["is_primary"]}
+                for m in members_input
+            ],
         )
 
     # Re-fetch with members
@@ -313,7 +336,9 @@ def update_cluster(cluster_db_id: int, data: NifiClusterUpdate) -> NifiClusterRe
             logger.info("Updated NiFi cluster id=%d", cluster_db_id)
             return _cluster_to_response(c)
 
-    raise HTTPException(status_code=500, detail="Cluster updated but could not be retrieved")
+    raise HTTPException(
+        status_code=500, detail="Cluster updated but could not be retrieved"
+    )
 
 
 def delete_cluster(cluster_db_id: int) -> None:
@@ -346,7 +371,9 @@ def get_primary_instance(cluster_db_id: int) -> NifiClusterPrimaryResponse:
             detail="No primary instance configured for cluster id %d" % cluster_db_id,
         )
 
-    logger.info("Retrieved primary instance id=%d for cluster id=%d", inst.id, cluster_db_id)
+    logger.info(
+        "Retrieved primary instance id=%d for cluster id=%d", inst.id, cluster_db_id
+    )
     return NifiClusterPrimaryResponse(
         instance_id=inst.id,
         name=inst.name,

@@ -241,7 +241,9 @@ class Credential(Base):
     ssh_passphrase_encrypted = Column(
         LargeBinary, nullable=True
     )  # Encrypted passphrase
-    ssh_keyfile_path = Column(String(1024), nullable=True)  # Path to SSH key file on disk
+    ssh_keyfile_path = Column(
+        String(1024), nullable=True
+    )  # Path to SSH key file on disk
     valid_until = Column(String(255))  # ISO8601 datetime string
     is_active = Column(Boolean, nullable=False, default=True)
     source = Column(String(50), nullable=False, default="general")  # general or private
@@ -405,9 +407,7 @@ class JobTemplate(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
-    job_type = Column(
-        String(50), nullable=False
-    )  # check_queues, check_progress_group
+    job_type = Column(String(50), nullable=False)  # check_queues, check_progress_group
     description = Column(Text)
     check_queues_mode = Column(
         String(10), nullable=True, default="count"
@@ -795,9 +795,7 @@ class NifiServer(Base):
     id = Column(Integer, primary_key=True, index=True)
     server_id = Column(String(255), unique=True, nullable=False, index=True)
     hostname = Column(String(1024), nullable=False)
-    credential_id = Column(
-        Integer, ForeignKey("credentials.id"), nullable=True
-    )
+    credential_id = Column(Integer, ForeignKey("credentials.id"), nullable=True)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -905,9 +903,7 @@ class NifiInstance(Base):
     name = Column(String(255), nullable=True)
     hierarchy_attribute = Column(String(255), nullable=True)
     hierarchy_value = Column(String(255), nullable=True, index=True)
-    server_id = Column(
-        Integer, ForeignKey("nifi_servers.id"), nullable=True
-    )
+    server_id = Column(Integer, ForeignKey("nifi_servers.id"), nullable=True)
     nifi_url = Column(String(1000), nullable=False)
     username = Column(String(255), nullable=True)
     password_encrypted = Column(LargeBinary, nullable=True)
@@ -1015,9 +1011,7 @@ class RegistryFlowMetadata(Base):
 
     registry_flow = relationship("RegistryFlow", back_populates="flow_metadata")
 
-    __table_args__ = (
-        Index("idx_registry_flow_metadata_flow_id", "registry_flow_id"),
-    )
+    __table_args__ = (Index("idx_registry_flow_metadata_flow_id", "registry_flow_id"),)
 
 
 class FlowView(Base):
@@ -1179,4 +1173,3 @@ class DatenschleuderAgentCommand(Base):
         Index("idx_ds_agent_command_sent_at", "sent_at"),
         Index("idx_ds_agent_command_status", "status"),
     )
-

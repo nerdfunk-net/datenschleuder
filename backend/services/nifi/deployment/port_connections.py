@@ -92,9 +92,7 @@ def _auto_connect_port(
         )
 
     except Exception as connect_error:
-        logger.warning(
-            "Could not auto-connect %s ports: %s", port_type, connect_error
-        )
+        logger.warning("Could not auto-connect %s ports: %s", port_type, connect_error)
 
 
 def _connect_input_ports(
@@ -107,9 +105,7 @@ def _connect_input_ports(
     try:
         child_response = pg_api.get_input_ports(id=child_pg_id)
         child_ports = (
-            child_response.input_ports
-            if hasattr(child_response, "input_ports")
-            else []
+            child_response.input_ports if hasattr(child_response, "input_ports") else []
         )
 
         if not child_ports:
@@ -191,11 +187,7 @@ def _connect_input_ports(
         )
         properties = {}
 
-        if (
-            config_obj
-            and hasattr(config_obj, "properties")
-            and config_obj.properties
-        ):
+        if config_obj and hasattr(config_obj, "properties") and config_obj.properties:
             properties = dict(config_obj.properties)
 
         property_exists = child_pg_name in properties

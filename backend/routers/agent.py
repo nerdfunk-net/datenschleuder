@@ -77,14 +77,18 @@ def send_command(
     try:
         service = AgentService(db)
         if not service.check_agent_online(request.agent_id):
-            raise HTTPException(status_code=503, detail="Agent is offline or not responding")
+            raise HTTPException(
+                status_code=503, detail="Agent is offline or not responding"
+            )
         command_id = service.send_command(
             agent_id=request.agent_id,
             command=request.command,
             params=request.params,
             sent_by=user.get("sub", "system"),
         )
-        return CommandResponse(command_id=command_id, status="pending", execution_time_ms=0)
+        return CommandResponse(
+            command_id=command_id, status="pending", execution_time_ms=0
+        )
     except HTTPException:
         raise
     except Exception as exc:
@@ -130,7 +134,9 @@ def docker_restart(
     """Send a docker_restart command and wait up to 60 s for the result."""
     try:
         service = AgentService(db)
-        result = service.send_docker_restart(agent_id, sent_by=user.get("sub", "system"))
+        result = service.send_docker_restart(
+            agent_id, sent_by=user.get("sub", "system")
+        )
         if result["status"] in ("error", "timeout"):
             status_code = 504 if result["status"] == "timeout" else 500
             raise HTTPException(status_code=status_code, detail=result.get("error"))

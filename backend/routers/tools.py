@@ -36,6 +36,7 @@ def _save_cert_config(certificates: List[Dict]) -> None:
     with open(_CERTS_CONFIG, "w") as f:
         yaml.safe_dump({"certificates": certificates}, f, default_flow_style=False)
 
+
 router = APIRouter(
     prefix="/api/tools",
     tags=["tools"],
@@ -168,11 +169,15 @@ async def list_certificates() -> Dict[str, Any]:
         }
     except Exception as e:
         logger.error("Error listing certificates: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to list certificates: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list certificates: {str(e)}"
+        )
 
 
 @router.post("/certificates", dependencies=[Depends(verify_admin_token)])
-async def add_certificate(entry: CertificateEntry, cert_mgr=Depends(get_certificate_manager)) -> Dict[str, Any]:
+async def add_certificate(
+    entry: CertificateEntry, cert_mgr=Depends(get_certificate_manager)
+) -> Dict[str, Any]:
     """
     Add a new certificate to certs/certificates.yaml.
     PEM content for ca_cert, cert, and key is written to individual files
@@ -217,17 +222,25 @@ async def add_certificate(entry: CertificateEntry, cert_mgr=Depends(get_certific
         cert_mgr.reload()
 
         logger.info("Certificate '%s' added successfully", entry.name)
-        return {"success": True, "message": f"Certificate '{entry.name}' added.", "entry": new_entry}
+        return {
+            "success": True,
+            "message": f"Certificate '{entry.name}' added.",
+            "entry": new_entry,
+        }
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Error adding certificate '%s': %s", entry.name, e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to add certificate: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to add certificate: {str(e)}"
+        )
 
 
 @router.delete("/certificates/{name}", dependencies=[Depends(verify_admin_token)])
-async def delete_certificate(name: str, delete_files: bool = False, cert_mgr=Depends(get_certificate_manager)) -> Dict[str, Any]:
+async def delete_certificate(
+    name: str, delete_files: bool = False, cert_mgr=Depends(get_certificate_manager)
+) -> Dict[str, Any]:
     """
     Remove a certificate entry from certs/certificates.yaml.
     Optionally deletes the associated PEM files from disk.
@@ -268,8 +281,6 @@ async def delete_certificate(name: str, delete_files: bool = False, cert_mgr=Dep
         raise
     except Exception as e:
         logger.error("Error deleting certificate '%s': %s", name, e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to delete certificate: {str(e)}")
-
-
-
-
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete certificate: {str(e)}"
+        )

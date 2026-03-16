@@ -17,7 +17,6 @@ from models.pki import (
     ExportPrivateKeyRequest,
     RevokeCertificateRequest,
 )
-from repositories.pki_repository import PKICARepository, PKICertificateRepository
 from services.pki_service import PKIService
 
 router = APIRouter(prefix="/api/pki", tags=["pki"])
@@ -40,6 +39,7 @@ def _get_cert_or_404(cert_id: int):
 
 
 # --------------------------------------------------------------------------- CA
+
 
 @router.get("/ca", response_model=CAResponse)
 async def get_ca(user: dict = Depends(verify_token)):
@@ -92,7 +92,9 @@ async def export_ca_pkcs12_with_key(
     encryption_service=Depends(get_encryption_service),
 ):
     ca = _get_ca_or_404()
-    p12_bytes = _pki_service.export_ca_pkcs12_with_key(ca, encryption_service, request.password)
+    p12_bytes = _pki_service.export_ca_pkcs12_with_key(
+        ca, encryption_service, request.password
+    )
     filename = f"{ca.common_name.replace(' ', '_')}.ca.p12"
     return Response(
         content=p12_bytes,
@@ -110,6 +112,7 @@ async def delete_ca(user: dict = Depends(verify_admin_token)):
 
 
 # ---------------------------------------------------------------------- Certs
+
 
 @router.get("/certificates", response_model=CertificateListResponse)
 async def list_certificates(user: dict = Depends(verify_token)):
@@ -158,6 +161,7 @@ async def revoke_certificate(
 
 # ------------------------------------------------------------------- Exports
 
+
 @router.get("/certificates/{cert_id}/export/cert")
 async def export_cert(cert_id: int, user: dict = Depends(verify_token)):
     cert = _get_cert_or_404(cert_id)
@@ -191,7 +195,9 @@ async def export_pkcs12(
 ):
     cert = _get_cert_or_404(cert_id)
     ca = _get_ca_or_404()
-    p12_bytes = _pki_service.export_pkcs12(cert, ca, encryption_service, request.password)
+    p12_bytes = _pki_service.export_pkcs12(
+        cert, ca, encryption_service, request.password
+    )
     filename = f"{cert.common_name.replace(' ', '_')}.p12"
     return Response(
         content=p12_bytes,
@@ -208,7 +214,9 @@ async def export_private_key(
     encryption_service=Depends(get_encryption_service),
 ):
     cert = _get_cert_or_404(cert_id)
-    key_pem = _pki_service.export_private_key(cert, encryption_service, request.passphrase)
+    key_pem = _pki_service.export_private_key(
+        cert, encryption_service, request.passphrase
+    )
     filename = f"{cert.common_name.replace(' ', '_')}.key.pem"
     return Response(
         content=key_pem,
@@ -218,6 +226,7 @@ async def export_private_key(
 
 
 # ----------------------------------------------------------------------- CRL
+
 
 @router.get("/crl")
 async def get_crl(encryption_service=Depends(get_encryption_service)):

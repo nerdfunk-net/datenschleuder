@@ -338,7 +338,7 @@ class SettingsManager:
                     current_queues.append(builtin_queue)
                     queues_added.append(builtin_queue["name"])
                     logger.info(
-                        "Restored missing built-in queue: %s", builtin_queue['name']
+                        "Restored missing built-in queue: %s", builtin_queue["name"]
                     )
                 else:
                     # Ensure existing built-in queue has built_in flag set
@@ -347,7 +347,8 @@ class SettingsManager:
                             if not q.get("built_in"):
                                 q["built_in"] = True
                                 logger.info(
-                                    "Set built_in flag for queue: %s", builtin_queue['name']
+                                    "Set built_in flag for queue: %s",
+                                    builtin_queue["name"],
                                 )
 
             # Update settings if changes were made
@@ -361,7 +362,9 @@ class SettingsManager:
 
                 if success and queues_added:
                     logger.info(
-                        "Restored %s built-in queue(s): %s", len(queues_added), ', '.join(queues_added)
+                        "Restored %s built-in queue(s): %s",
+                        len(queues_added),
+                        ", ".join(queues_added),
                     )
 
                 return success
@@ -562,7 +565,8 @@ class SettingsManager:
                 config["global"] = {"allow_traditional_login": True}
 
             logger.info(
-                "Loaded %s OIDC provider(s) from config", len(config.get('providers', {}))
+                "Loaded %s OIDC provider(s) from config",
+                len(config.get("providers", {})),
             )
             return config
 

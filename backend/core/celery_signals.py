@@ -137,7 +137,8 @@ def shutdown_worker_process(**kwargs):
     from core import database
 
     logger.info(
-        "[Worker Shutdown] Cleaning up database connections for worker %s", kwargs.get('sender')
+        "[Worker Shutdown] Cleaning up database connections for worker %s",
+        kwargs.get("sender"),
     )
 
     if hasattr(database, "engine") and database.engine:

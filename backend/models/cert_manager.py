@@ -37,7 +37,9 @@ class CertificateInfo(BaseModel):
     signature_algorithm: str
     fingerprint_sha256: str
     raw_text: str  # full openssl output
-    has_private_key: bool = False  # True when the paired private key is present in the P12
+    has_private_key: bool = (
+        False  # True when the paired private key is present in the P12
+    )
     cert_type: str = "end_entity"  # "root_ca" | "intermediate_ca" | "end_entity"
 
 
@@ -126,8 +128,8 @@ class RemoveCertificatesRequest(BaseModel):
 
     instance_id: int
     file_path: str
-    cert_indices: List[int]           # 0-based indices of certs to remove
-    password: Optional[str] = None    # required for encrypted P12
+    cert_indices: List[int]  # 0-based indices of certs to remove
+    password: Optional[str] = None  # required for encrypted P12
 
 
 class AddCertificateRequest(BaseModel):
@@ -135,8 +137,8 @@ class AddCertificateRequest(BaseModel):
 
     instance_id: int
     file_path: str
-    cert_pem: str                     # full PEM text (with headers/footers)
-    password: Optional[str] = None    # required for encrypted P12
+    cert_pem: str  # full PEM text (with headers/footers)
+    password: Optional[str] = None  # required for encrypted P12
 
 
 class CertModifyResponse(BaseModel):
@@ -148,7 +150,7 @@ class CertModifyResponse(BaseModel):
 
 
 class NifiPasswordEntry(BaseModel):
-    key: str    # e.g. "nifi.security.keystorePasswd"
+    key: str  # e.g. "nifi.security.keystorePasswd"
     value: str  # the password string
 
 

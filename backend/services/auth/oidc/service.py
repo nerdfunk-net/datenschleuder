@@ -21,6 +21,7 @@ from services.auth.oidc.user_provisioning import (
     extract_user_data as _extract_user_data,
     provision_or_get_user as _provision_or_get_user,
 )
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +31,7 @@ class OIDCService:
     def __init__(self, settings_manager=None) -> None:
         if settings_manager is None:
             from settings_manager import settings_manager as _sm
+
             settings_manager = _sm
         self._settings_manager = settings_manager
         # Cache per provider: {provider_id: config}

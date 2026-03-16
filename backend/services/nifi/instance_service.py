@@ -42,6 +42,7 @@ def create_instance(
     encrypted_password = None
     if password:
         from services.nifi.encryption import EncryptionService
+
         encrypted_password = EncryptionService().encrypt(password)
 
     return _repo.create(
@@ -66,6 +67,7 @@ def update_instance(instance_id: int, **kwargs) -> Optional[NifiInstance]:
     password = kwargs.pop("password", None)
     if password is not None:
         from services.nifi.encryption import EncryptionService
+
         kwargs["password_encrypted"] = EncryptionService().encrypt(password)
 
     return _repo.update(instance_id, **kwargs)

@@ -15,7 +15,9 @@ from models.auth import OIDCConfig
 logger = logging.getLogger(__name__)
 
 
-def build_ssl_context(provider_config: Dict[str, Any], provider_id: str) -> Optional[ssl.SSLContext]:
+def build_ssl_context(
+    provider_config: Dict[str, Any], provider_id: str
+) -> Optional[ssl.SSLContext]:
     """Create an SSL context with a custom CA certificate for the provider.
 
     Returns None if no custom CA is configured or the file is missing.
@@ -39,7 +41,9 @@ def build_ssl_context(provider_config: Dict[str, Any], provider_id: str) -> Opti
         ssl_context = ssl.create_default_context()
         ssl_context.load_verify_locations(cafile=str(ca_cert_file))
         logger.info(
-            "Loaded custom CA certificate for provider '%s': %s", provider_id, ca_cert_file
+            "Loaded custom CA certificate for provider '%s': %s",
+            provider_id,
+            ca_cert_file,
         )
         return ssl_context
     except Exception as exc:
@@ -84,9 +88,7 @@ async def fetch_oidc_config(
             detail=f"Unable to connect to OIDC provider '{provider_id}'",
         ) from exc
     except Exception as exc:
-        logger.error(
-            "Error parsing OIDC configuration for '%s': %s", provider_id, exc
-        )
+        logger.error("Error parsing OIDC configuration for '%s': %s", provider_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Invalid OIDC provider configuration for '{provider_id}'",

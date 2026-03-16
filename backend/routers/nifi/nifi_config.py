@@ -102,7 +102,9 @@ async def create_cluster(
     return nifi_config_service.create_cluster(data)
 
 
-@router.get("/clusters/{cluster_id}/get-primary", response_model=NifiClusterPrimaryResponse)
+@router.get(
+    "/clusters/{cluster_id}/get-primary", response_model=NifiClusterPrimaryResponse
+)
 async def get_cluster_primary_instance(
     cluster_id: int,
     current_user: dict = Depends(require_permission("nifi", "read")),
@@ -211,7 +213,9 @@ async def ensure_static_nifi_files(
     """
     repository = git_repo_manager.get_repository(repo_id)
     if not repository:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found"
+        )
 
     repo_dir = git_repo_path(repository)
     if not os.path.exists(repo_dir):
@@ -251,7 +255,8 @@ async def ensure_static_nifi_files(
         if copied:
             result = git_service.commit_and_push(
                 repository=repository,
-                message="[Wizard] Add missing static NiFi config files: %s" % ", ".join(copied),
+                message="[Wizard] Add missing static NiFi config files: %s"
+                % ", ".join(copied),
                 files=copied,
             )
             if not result.success:

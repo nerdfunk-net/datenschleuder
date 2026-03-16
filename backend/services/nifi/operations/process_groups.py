@@ -356,9 +356,21 @@ def evaluate_process_group_status(
     stale = counters.get("stale_count", 0)
 
     checks: Dict[str, int] = {
-        "Running": {"stale_count": stale, "stopped_count": stopped, "disabled_count": disabled},
-        "Stopped": {"running_count": running, "stale_count": stale, "disabled_count": disabled},
-        "Disabled": {"running_count": running, "stale_count": stale, "stopped_count": stopped},
+        "Running": {
+            "stale_count": stale,
+            "stopped_count": stopped,
+            "disabled_count": disabled,
+        },
+        "Stopped": {
+            "running_count": running,
+            "stale_count": stale,
+            "disabled_count": disabled,
+        },
+        "Disabled": {
+            "running_count": running,
+            "stale_count": stale,
+            "stopped_count": stopped,
+        },
         "Enabled": {"disabled_count": disabled},
     }.get(expected_status, {})
 

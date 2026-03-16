@@ -28,6 +28,7 @@ class GitOperationsService:
     def __init__(self, auth_service=None):
         if auth_service is None:
             from services.settings.git.auth import GitAuthenticationService
+
             auth_service = GitAuthenticationService()
         self._auth = auth_service
 
@@ -89,7 +90,7 @@ class GitOperationsService:
                         )
                     with set_ssl_env(repository):
                         logger.info(
-                            "Cloning branch %s into %s", repository['branch'], repo_path
+                            "Cloning branch %s into %s", repository["branch"], repo_path
                         )
                         Repo.clone_from(
                             clone_url, repo_path, branch=repository["branch"]
@@ -127,7 +128,8 @@ class GitOperationsService:
                         ):
                             shutil.rmtree(repo_path)
                             logger.info(
-                                "Removed empty directory after failed clone: %s", repo_path
+                                "Removed empty directory after failed clone: %s",
+                                repo_path,
                             )
                     except Exception as ce:
                         logger.warning("Cleanup after failed clone skipped: %s", ce)
@@ -174,7 +176,9 @@ class GitOperationsService:
         """
         repo_path = str(get_repo_path(repository))
         logger.info(
-            "Removing and re-syncing repository '%s' at %s", repository['name'], repo_path
+            "Removing and re-syncing repository '%s' at %s",
+            repository["name"],
+            repo_path,
         )
 
         # Remove existing repository if present
@@ -206,7 +210,9 @@ class GitOperationsService:
 
                 with set_ssl_env(repository):
                     logger.info(
-                        "Cloning fresh copy of branch %s into %s", repository['branch'], repo_path
+                        "Cloning fresh copy of branch %s into %s",
+                        repository["branch"],
+                        repo_path,
                     )
                     Repo.clone_from(clone_url, repo_path, branch=repository["branch"])
 
@@ -375,6 +381,7 @@ class GitOperationsService:
             # Get recent commits using cache service
             try:
                 import service_factory
+
                 cache_svc = service_factory.build_git_cache_service()
                 status_info["commits"] = cache_svc.get_commits(
                     repo_id=repo_id,

@@ -36,11 +36,15 @@ def extract_user_data(
     name_claim = claim_mappings.get("name", "name")
 
     logger.debug(
-        "[OIDC Debug] Available claims in ID token from '%s': %s", provider_id, list(claims.keys())
+        "[OIDC Debug] Available claims in ID token from '%s': %s",
+        provider_id,
+        list(claims.keys()),
     )
     logger.debug(
         "[OIDC Debug] Claim mappings - username: %s, email: %s, name: %s",
-        username_claim, email_claim, name_claim,
+        username_claim,
+        email_claim,
+        name_claim,
     )
 
     username = claims.get(username_claim)
@@ -53,7 +57,9 @@ def extract_user_data(
 
     if not username:
         logger.error(
-            "Username claim '%s' not found in token from provider '%s'", username_claim, provider_id
+            "Username claim '%s' not found in token from provider '%s'",
+            username_claim,
+            provider_id,
         )
         logger.error("Available claims: %s", claims)
         raise HTTPException(
@@ -63,7 +69,10 @@ def extract_user_data(
 
     logger.info(
         "Extracted user data from provider '%s': username=%s, email=%s, name=%s",
-        provider_id, username, email, name,
+        provider_id,
+        username,
+        email,
+        name,
     )
 
     return {
@@ -99,7 +108,9 @@ async def provision_or_get_user(
 
     # Check if auto-provisioning is enabled (default to True for backward compatibility)
     auto_provision_config = provider_config.get("auto_provision")
-    auto_provision = True if auto_provision_config is None else bool(auto_provision_config)
+    auto_provision = (
+        True if auto_provision_config is None else bool(auto_provision_config)
+    )
 
     from services.auth.user_management import (
         create_user,
@@ -122,17 +133,21 @@ async def provision_or_get_user(
             user = update_user(user["id"], **updates)
             logger.info(
                 "[OIDC Debug] Updated user '%s' information from provider '%s'",
-                username, provider_id,
+                username,
+                provider_id,
             )
         else:
             logger.info(
                 "[OIDC Debug] Existing user '%s' logged in via OIDC provider '%s'",
-                username, provider_id,
+                username,
+                provider_id,
             )
 
         logger.debug(
             "[OIDC Debug] User ID: %s, is_active: %s, role: %s",
-            user["id"], user.get("is_active", True), user.get("role", "unknown"),
+            user["id"],
+            user.get("is_active", True),
+            user.get("role", "unknown"),
         )
         return user, False
 
@@ -159,7 +174,8 @@ async def provision_or_get_user(
 
         logger.info(
             "Auto-provisioned new INACTIVE OIDC user '%s' from provider '%s' — requires admin approval",
-            username, provider_id,
+            username,
+            provider_id,
         )
         return user, True
 

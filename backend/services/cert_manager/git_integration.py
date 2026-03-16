@@ -22,6 +22,7 @@ def _commit_file(repository: dict, abs_path: Path, operation: str) -> Optional[s
 
     try:
         from services.settings.git.service import GitService
+
         result = GitService().commit_and_push(
             repository,
             message=commit_msg,

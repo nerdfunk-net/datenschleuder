@@ -17,9 +17,7 @@ class NifiServerRepository(BaseRepository[NifiServer]):
         db = get_db_session()
         try:
             return (
-                db.query(NifiServer)
-                .filter(NifiServer.server_id == server_id)
-                .first()
+                db.query(NifiServer).filter(NifiServer.server_id == server_id).first()
             )
         finally:
             db.close()

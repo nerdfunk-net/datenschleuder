@@ -7,7 +7,6 @@ Table: credentials
 
 from __future__ import annotations
 import base64
-import hashlib
 import os
 from datetime import datetime, date
 from typing import Any, Dict, List, Optional
@@ -23,6 +22,7 @@ _creds_repo = CredentialsRepository()
 def _build_key(secret: str) -> bytes:
     from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     from cryptography.hazmat.primitives import hashes
+
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
@@ -257,9 +257,7 @@ def update_credential(
     if ssh_private_key is not None:
         update_kwargs["ssh_key_encrypted"] = _get_enc().encrypt(ssh_private_key)
     if ssh_passphrase is not None:
-        update_kwargs["ssh_passphrase_encrypted"] = _get_enc().encrypt(
-            ssh_passphrase
-        )
+        update_kwargs["ssh_passphrase_encrypted"] = _get_enc().encrypt(ssh_passphrase)
     if ssh_keyfile_path is not None:
         update_kwargs["ssh_keyfile_path"] = ssh_keyfile_path or None
 

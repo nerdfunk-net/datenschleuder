@@ -78,6 +78,7 @@ def list_cert_files(instance_id: int) -> List[CertFileInfo]:
     # 3. Ensure local clone is up to date
     try:
         from services.settings.git.service import GitService
+
         GitService().open_or_clone(repository)
     except Exception as exc:
         logger.error("Failed to open/clone git repository %s: %s", git_repo_id, exc)

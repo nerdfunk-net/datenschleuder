@@ -54,7 +54,11 @@ def import_certificate(
 
     if target_suffix == ".pem" and src_suffix in (".pem", ".crt", ".cer"):
         # Append PEM cert to existing truststore
-        out_abs.write_bytes(out_abs.read_bytes() + b"\n" + cert_bytes if out_abs.exists() else cert_bytes)
+        out_abs.write_bytes(
+            out_abs.read_bytes() + b"\n" + cert_bytes
+            if out_abs.exists()
+            else cert_bytes
+        )
     elif target_suffix == ".p12" or src_suffix == ".p12":
         # Replace P12 entirely
         out_abs.write_bytes(cert_bytes)

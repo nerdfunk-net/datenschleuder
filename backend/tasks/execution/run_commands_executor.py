@@ -46,4 +46,3 @@ def execute_run_commands(
         "success": False,
         "error": "The 'run_commands' job type is not available in this scaffold.",
     }
-    import asyncio

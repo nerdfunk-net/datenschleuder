@@ -130,9 +130,7 @@ def disable_process_group(pg_id: str) -> None:
         logger.warning("Could not disable process group: %s", e)
 
 
-def assign_parameter_context(
-    pg_id: str, parameter_context_name: Optional[str]
-) -> None:
+def assign_parameter_context(pg_id: str, parameter_context_name: Optional[str]) -> None:
     """Assign parameter context to a process group by name lookup."""
     if not parameter_context_name:
         return
@@ -146,14 +144,10 @@ def assign_parameter_context(
         )
 
         if not param_context:
-            logger.warning(
-                "Parameter context '%s' not found", parameter_context_name
-            )
+            logger.warning("Parameter context '%s' not found", parameter_context_name)
             return
 
-        param_context_id = (
-            param_context.id if hasattr(param_context, "id") else None
-        )
+        param_context_id = param_context.id if hasattr(param_context, "id") else None
         if not param_context_id:
             return
 

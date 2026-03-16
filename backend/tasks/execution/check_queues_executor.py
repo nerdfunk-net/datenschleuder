@@ -134,13 +134,13 @@ def execute_check_queues(
             with nifi_connection_scope(instance):
                 raw_connections = mgmt_ops.list_connections_raw()
                 connections, inst_status = mgmt_ops.check_connection_queues(
-                raw_connections,
-                mode=mode,
-                count_yellow=count_yellow,
-                count_red=count_red,
-                bytes_yellow_mb=bytes_yellow_mb,
-                bytes_red_mb=bytes_red_mb,
-            )
+                    raw_connections,
+                    mode=mode,
+                    count_yellow=count_yellow,
+                    count_red=count_red,
+                    bytes_yellow_mb=bytes_yellow_mb,
+                    bytes_red_mb=bytes_red_mb,
+                )
             logger.info(
                 "check_queues: instance '%s' → %d connection(s), overall=%s",
                 instance_name,

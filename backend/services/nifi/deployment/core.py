@@ -34,9 +34,7 @@ def check_existing_process_group(
     except ValueError:
         raise
     except Exception as check_error:
-        logger.warning(
-            "Could not check for existing process group: %s", check_error
-        )
+        logger.warning("Could not check for existing process group: %s", check_error)
 
 
 def deploy_flow_version(

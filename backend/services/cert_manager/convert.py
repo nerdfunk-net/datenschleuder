@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Optional
 
 from fastapi import HTTPException, status
@@ -68,7 +67,15 @@ def convert_cert_file(
 
     elif target_format == "p12" and src_suffix == ".pem":
         # PEM → P12
-        cmd = ["pkcs12", "-export", "-in", str(src_abs), "-out", str(out_abs), "-nokeys"]
+        cmd = [
+            "pkcs12",
+            "-export",
+            "-in",
+            str(src_abs),
+            "-out",
+            str(out_abs),
+            "-nokeys",
+        ]
         if password:
             cmd += ["-passout", f"pass:{password}"]
         else:
@@ -85,7 +92,9 @@ def convert_cert_file(
             detail=f"Cannot convert from '{src_suffix}' to '{target_format}'.",
         )
 
-    commit_sha = _commit_file(repository, out_abs, f"convert {src_abs.name} to {target_format}")
+    commit_sha = _commit_file(
+        repository, out_abs, f"convert {src_abs.name} to {target_format}"
+    )
     return {
         "success": True,
         "message": f"Converted '{src_abs.name}' to '{target_format}' as '{output_filename}'.",

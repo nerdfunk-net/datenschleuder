@@ -32,7 +32,7 @@ class NifiClusterRepository(BaseRepository[NifiCluster]):
             # Eagerly load members and their instance data so they survive session close
             for cluster in clusters:
                 for member in cluster.members:
-                    _ = member.instance.nifi_url  # noqa: force load
+                    _ = member.instance.nifi_url  # noqa  # force load
             return clusters
         finally:
             db.close()
@@ -50,7 +50,9 @@ class NifiClusterRepository(BaseRepository[NifiCluster]):
         finally:
             db.close()
 
-    def get_cluster_for_instance(self, instance_id: int) -> Optional[NifiClusterInstance]:
+    def get_cluster_for_instance(
+        self, instance_id: int
+    ) -> Optional[NifiClusterInstance]:
         """Return the NifiClusterInstance row for an instance if it's in any cluster."""
         db = get_db_session()
         try:
@@ -70,7 +72,10 @@ class NifiClusterRepository(BaseRepository[NifiCluster]):
         try:
             inst = (
                 db.query(NifiInstance)
-                .join(NifiClusterInstance, NifiClusterInstance.instance_id == NifiInstance.id)
+                .join(
+                    NifiClusterInstance,
+                    NifiClusterInstance.instance_id == NifiInstance.id,
+                )
                 .filter(
                     NifiClusterInstance.cluster_id == cluster_db_id,
                     NifiClusterInstance.is_primary.is_(True),

@@ -35,12 +35,15 @@ class NifiConnectionService:
     ) -> None:
         if encryption_service is None:
             from services.nifi.encryption import EncryptionService
+
             encryption_service = EncryptionService()
         if certificate_manager is None:
             from services.nifi.certificate_manager import CertificateManager
+
             certificate_manager = CertificateManager()
         if oidc_config is None:
             from services.nifi.oidc_config import NifiOidcConfigManager
+
             oidc_config = NifiOidcConfigManager()
         self._enc = encryption_service
         self._certs = certificate_manager
@@ -255,7 +258,9 @@ class NifiConnectionService:
         if hasattr(nifi_cfg, "cert_file"):
             nifi_cfg.cert_file = str(cert_path)
         else:
-            logger.warning("nipyapi nifi_config has no 'cert_file' attribute — client cert may not be sent")
+            logger.warning(
+                "nipyapi nifi_config has no 'cert_file' attribute — client cert may not be sent"
+            )
 
         if hasattr(nifi_cfg, "key_file"):
             nifi_cfg.key_file = str(key_path)
@@ -291,7 +296,9 @@ class NifiConnectionService:
         logger.info(
             "Successfully configured certificate authentication: %s "
             "(verify_ssl=%s, check_hostname=%s)",
-            certificate_name, verify_ssl, check_hostname,
+            certificate_name,
+            verify_ssl,
+            check_hostname,
         )
 
     def _configure_username_auth(

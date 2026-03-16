@@ -46,7 +46,10 @@ def get_hierarchy_config() -> dict:
     """Get the current hierarchy configuration, cached for up to 60 seconds."""
     global _hierarchy_cache, _hierarchy_cache_time
     now = time.monotonic()
-    if _hierarchy_cache is not None and (now - _hierarchy_cache_time) < _HIERARCHY_CACHE_TTL:
+    if (
+        _hierarchy_cache is not None
+        and (now - _hierarchy_cache_time) < _HIERARCHY_CACHE_TTL
+    ):
         return _hierarchy_cache
 
     setting = _setting_repo.get_by_key("hierarchy_config")
@@ -212,9 +215,7 @@ def get_deployment_settings() -> dict:
 
     path_setting = _setting_repo.get_by_key("deployment_paths")
     path_settings = (
-        json.loads(path_setting.value)
-        if path_setting and path_setting.value
-        else {}
+        json.loads(path_setting.value) if path_setting and path_setting.value else {}
     )
 
     return {"global": global_settings, "paths": path_settings}

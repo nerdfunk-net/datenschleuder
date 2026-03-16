@@ -64,7 +64,7 @@ class CreateCertificateRequest(BaseModel):
     validity_days: int = Field(default=365, ge=1, le=36500)
     key_size: Literal[2048, 4096] = 2048
     san_dns: Optional[str] = None  # comma-separated DNS names
-    san_ip: Optional[str] = None   # comma-separated IP addresses
+    san_ip: Optional[str] = None  # comma-separated IP addresses
 
 
 class CertificateResponse(BaseModel):

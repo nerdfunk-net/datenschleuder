@@ -31,8 +31,12 @@ class CommandRequest(BaseModel):
     """Generic command request."""
 
     agent_id: str = Field(..., description="Agent ID")
-    command: str = Field(..., description="Command name (echo, git_pull, docker_restart, git_status)")
-    params: Dict[str, Any] = Field(default_factory=dict, description="Command parameters")
+    command: str = Field(
+        ..., description="Command name (echo, git_pull, docker_restart, git_status)"
+    )
+    params: Dict[str, Any] = Field(
+        default_factory=dict, description="Command parameters"
+    )
 
 
 class CommandResponse(BaseModel):

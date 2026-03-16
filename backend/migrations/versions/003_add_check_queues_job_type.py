@@ -30,9 +30,7 @@ class Migration(BaseMigration):
 
             if "nifi_instance_ids" not in existing_columns:
                 conn.execute(
-                    text(
-                        "ALTER TABLE job_templates ADD COLUMN nifi_instance_ids TEXT"
-                    )
+                    text("ALTER TABLE job_templates ADD COLUMN nifi_instance_ids TEXT")
                 )
                 conn.commit()
                 stats["columns_added"] += 1
@@ -59,7 +57,9 @@ class Migration(BaseMigration):
                 )
                 conn.commit()
                 stats["constraints_updated"] += 1
-                self.log_info("Updated ck_job_templates_job_type constraint to include check_queues")
+                self.log_info(
+                    "Updated ck_job_templates_job_type constraint to include check_queues"
+                )
             except Exception as exc:
                 self.log_warning(f"Could not update check constraint: {exc}")
 

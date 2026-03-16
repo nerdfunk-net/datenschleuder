@@ -644,7 +644,8 @@ async def trigger_check_process_group(
     if request.expected_status not in valid_statuses:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="expected_status must be one of: %s" % ", ".join(sorted(valid_statuses)),
+            detail="expected_status must be one of: %s"
+            % ", ".join(sorted(valid_statuses)),
         )
 
     job_params: Dict[str, Any] = {

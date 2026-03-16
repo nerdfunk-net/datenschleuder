@@ -101,7 +101,9 @@ class JobTemplateUpdate(BaseModel):
     check_queues_bytes_red: Optional[int] = Field(None, ge=0)
     check_progress_group_nifi_cluster_id: Optional[int] = None
     check_progress_group_process_group_id: Optional[str] = Field(None, max_length=255)
-    check_progress_group_process_group_path: Optional[str] = Field(None, max_length=1000)
+    check_progress_group_process_group_path: Optional[str] = Field(
+        None, max_length=1000
+    )
     check_progress_group_check_children: Optional[bool] = None
     check_progress_group_expected_status: Optional[str] = None
     is_global: Optional[bool] = None

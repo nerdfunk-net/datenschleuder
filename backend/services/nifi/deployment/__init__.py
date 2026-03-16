@@ -73,9 +73,7 @@ class NiFiDeploymentService:
             y_position,
         )
 
-    def rename_process_group(
-        self, deployed_pg: Any, new_name: str
-    ) -> Tuple[str, str]:
+    def rename_process_group(self, deployed_pg: Any, new_name: str) -> Tuple[str, str]:
         return core.rename_process_group(deployed_pg, new_name)
 
     def extract_deployed_version(self, deployed_pg: Any) -> Optional[int]:

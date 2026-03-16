@@ -246,7 +246,9 @@ async def oidc_callback(
         # Check if user is inactive (new users awaiting approval)
         if not user.get("is_active", True):
             logger.info(
-                "[OIDC Debug] User '%s' created but awaiting admin approval from provider '%s'", user['username'], provider_id
+                "[OIDC Debug] User '%s' created but awaiting admin approval from provider '%s'",
+                user["username"],
+                provider_id,
             )
             return ApprovalPendingResponse(
                 status="approval_pending",
@@ -276,7 +278,9 @@ async def oidc_callback(
         )
 
         logger.info(
-            "[OIDC Debug] User '%s' authenticated successfully via OIDC provider '%s'", user['username'], provider_id
+            "[OIDC Debug] User '%s' authenticated successfully via OIDC provider '%s'",
+            user["username"],
+            provider_id,
         )
 
         # Log successful OIDC login to audit log
@@ -463,7 +467,9 @@ async def get_oidc_debug_info(
 
                 except Exception as e:
                     logger.error(
-                        "Failed to load configuration for provider '%s': %s", provider_id, e
+                        "Failed to load configuration for provider '%s': %s",
+                        provider_id,
+                        e,
                     )
                     providers_debug.append(
                         {

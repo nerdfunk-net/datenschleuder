@@ -63,7 +63,9 @@ class AgentRepository:
         self.db.refresh(record)
         return record
 
-    def get_command_history(self, agent_id: str, limit: int = 50) -> List[DatenschleuderAgentCommand]:
+    def get_command_history(
+        self, agent_id: str, limit: int = 50
+    ) -> List[DatenschleuderAgentCommand]:
         return (
             self.db.query(DatenschleuderAgentCommand)
             .filter(DatenschleuderAgentCommand.agent_id == agent_id)
@@ -72,7 +74,9 @@ class AgentRepository:
             .all()
         )
 
-    def get_all_command_history(self, limit: int = 100) -> List[DatenschleuderAgentCommand]:
+    def get_all_command_history(
+        self, limit: int = 100
+    ) -> List[DatenschleuderAgentCommand]:
         return (
             self.db.query(DatenschleuderAgentCommand)
             .order_by(desc(DatenschleuderAgentCommand.sent_at))

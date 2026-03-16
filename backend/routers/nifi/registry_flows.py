@@ -24,9 +24,7 @@ async def list_registry_flows(
     nifi_instance: Optional[int] = Query(
         None, description="Filter by NiFi instance ID"
     ),
-    cluster_id: Optional[int] = Query(
-        None, description="Filter by NiFi cluster ID"
-    ),
+    cluster_id: Optional[int] = Query(None, description="Filter by NiFi cluster ID"),
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """List all registry flows, optionally filtered by NiFi instance or cluster."""

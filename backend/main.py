@@ -79,6 +79,7 @@ async def lifespan(app: FastAPI):
 
     # Validate SECRET_KEY is not the insecure default value
     from config import settings as _settings
+
     if _settings.secret_key == "your-secret-key-change-in-production":
         raise RuntimeError(
             "FATAL: SECRET_KEY is set to the insecure default value. "
@@ -213,7 +214,9 @@ async def lifespan(app: FastAPI):
         logger.debug("Startup cache: settings loaded: %s", cache_cfg)
 
         if cache_service is None:
-            logger.warning("Startup cache: cache service unavailable; skipping prefetch")
+            logger.warning(
+                "Startup cache: cache service unavailable; skipping prefetch"
+            )
         elif cache_cfg.get("enabled", True):
 
             async def prefetch_commits_once():
@@ -336,6 +339,7 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
 # Security headers middleware
 @app.middleware("http")
 async def security_headers(request, call_next):
@@ -451,7 +455,6 @@ async def health_check():
         "timestamp": datetime.now().isoformat(),
         "version": "2.0.0",
     }
-
 
 
 if __name__ == "__main__":

@@ -63,7 +63,7 @@ class AgentService:
         try:
             agents = []
             for key in self.redis_client.keys(f"{_AGENT_REGISTRY_PREFIX}*"):
-                agent_id = key[len(_AGENT_REGISTRY_PREFIX):]
+                agent_id = key[len(_AGENT_REGISTRY_PREFIX) :]
                 status = self.get_agent_status(agent_id)
                 if status:
                     agents.append(status)
@@ -81,7 +81,9 @@ class AgentService:
 
     # ── Commands ─────────────────────────────────────────────────────────────
 
-    def send_command(self, agent_id: str, command: str, params: dict, sent_by: str) -> str:
+    def send_command(
+        self, agent_id: str, command: str, params: dict, sent_by: str
+    ) -> str:
         """Publish a command to the agent channel. Returns the command_id."""
         command_id = str(uuid.uuid4())
         message = {
@@ -104,7 +106,9 @@ class AgentService:
             self.redis_client.publish(
                 f"{_COMMAND_CHANNEL_PREFIX}{agent_id}", json.dumps(message)
             )
-            logger.info("Command sent to agent %s: %s (id=%s)", agent_id, command, command_id)
+            logger.info(
+                "Command sent to agent %s: %s (id=%s)", agent_id, command, command_id
+            )
         except redis.RedisError as exc:
             logger.error("Failed to publish command to Redis: %s", exc)
             self.repository.update_command_result(
@@ -114,7 +118,9 @@ class AgentService:
 
         return command_id
 
-    def wait_for_response(self, agent_id: str, command_id: str, timeout: int = 30) -> dict:
+    def wait_for_response(
+        self, agent_id: str, command_id: str, timeout: int = 30
+    ) -> dict:
         """Block until the agent responds or timeout elapses."""
         response_channel = f"{_RESPONSE_CHANNEL_PREFIX}{agent_id}"
         try:
@@ -156,7 +162,11 @@ class AgentService:
                 status="timeout",
                 error=f"No response after {timeout}s",
             )
-            return {"command_id": command_id, "status": "timeout", "error": f"No response after {timeout}s"}
+            return {
+                "command_id": command_id,
+                "status": "timeout",
+                "error": f"No response after {timeout}s",
+            }
 
         except redis.RedisError as exc:
             logger.error("Redis error waiting for response: %s", exc)
@@ -169,13 +179,25 @@ class AgentService:
 
     def send_git_pull(self, agent_id: str, sent_by: str, timeout: int = 30) -> dict:
         if not self.check_agent_online(agent_id):
-            return {"command_id": "", "status": "error", "error": "Agent is offline", "execution_time_ms": 0}
+            return {
+                "command_id": "",
+                "status": "error",
+                "error": "Agent is offline",
+                "execution_time_ms": 0,
+            }
         command_id = self.send_command(agent_id, "git_pull", {}, sent_by)
         return self.wait_for_response(agent_id, command_id, timeout)
 
-    def send_docker_restart(self, agent_id: str, sent_by: str, timeout: int = 60) -> dict:
+    def send_docker_restart(
+        self, agent_id: str, sent_by: str, timeout: int = 60
+    ) -> dict:
         if not self.check_agent_online(agent_id):
-            return {"command_id": "", "status": "error", "error": "Agent is offline", "execution_time_ms": 0}
+            return {
+                "command_id": "",
+                "status": "error",
+                "error": "Agent is offline",
+                "execution_time_ms": 0,
+            }
         command_id = self.send_command(agent_id, "docker_restart", {}, sent_by)
         return self.wait_for_response(agent_id, command_id, timeout)
 

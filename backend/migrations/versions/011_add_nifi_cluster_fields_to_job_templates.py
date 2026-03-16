@@ -40,9 +40,7 @@ class Migration(BaseMigration):
             for col in ("nifi_instance_ids", "check_progress_group_nifi_instance_id"):
                 if col in existing:
                     conn.execute(
-                        self._text(
-                            "ALTER TABLE job_templates DROP COLUMN %s" % col
-                        )
+                        self._text("ALTER TABLE job_templates DROP COLUMN %s" % col)
                     )
                     conn.commit()
                     results["dropped"].append("job_templates.%s" % col)
@@ -55,9 +53,11 @@ class Migration(BaseMigration):
     def _get_existing_columns(self, conn, table: str):
         """Return set of column names for the given table."""
         from sqlalchemy import inspect
+
         inspector = inspect(conn)
         return {c["name"] for c in inspector.get_columns(table)}
 
     def _text(self, sql: str):
         from sqlalchemy import text
+
         return text(sql)

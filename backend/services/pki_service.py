@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import ipaddress
 import logging
-import os
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, List, Optional
 
@@ -72,7 +71,12 @@ class PKIService:
 
     # ------------------------------------------------------------------ CA --
 
-    def create_ca(self, request, encryption_service: "EncryptionService", created_by: Optional[str] = None):
+    def create_ca(
+        self,
+        request,
+        encryption_service: "EncryptionService",
+        created_by: Optional[str] = None,
+    ):
         """Create the single root CA. Raises 400 if a CA already exists."""
         if self.ca_repo.count() > 0:
             raise HTTPException(
@@ -104,7 +108,9 @@ class PKIService:
             .serial_number(serial)
             .not_valid_before(now)
             .not_valid_after(not_after)
-            .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+            .add_extension(
+                x509.BasicConstraints(ca=True, path_length=None), critical=True
+            )
             .add_extension(
                 x509.KeyUsage(
                     key_cert_sign=True,
@@ -210,7 +216,8 @@ class PKIService:
                         san_entries.append(x509.IPAddress(ipaddress.ip_address(addr)))
                     except ValueError:
                         raise HTTPException(
-                            status_code=400, detail=f"Invalid IP address in san_ip: {addr}"
+                            status_code=400,
+                            detail=f"Invalid IP address in san_ip: {addr}",
                         )
 
         # Extended Key Usage by cert type
@@ -241,7 +248,9 @@ class PKIService:
             .add_extension(
                 x509.KeyUsage(
                     digital_signature=True,
-                    key_encipherment=(request.cert_type in ("server", "client", "server+client")),
+                    key_encipherment=(
+                        request.cert_type in ("server", "client", "server+client")
+                    ),
                     content_commitment=False,
                     key_cert_sign=False,
                     crl_sign=False,
@@ -314,27 +323,37 @@ class PKIService:
             encryption_algorithm=serialization.NoEncryption(),
         )
 
-    def export_ca_pkcs12_with_key(self, ca, encryption_service: "EncryptionService", password: str) -> bytes:
+    def export_ca_pkcs12_with_key(
+        self, ca, encryption_service: "EncryptionService", password: str
+    ) -> bytes:
         """Export CA certificate and private key as PKCS#12."""
         key_pem = encryption_service.decrypt(ca.private_key_encrypted)
-        private_key = serialization.load_pem_private_key(key_pem.encode(), password=None)
+        private_key = serialization.load_pem_private_key(
+            key_pem.encode(), password=None
+        )
         ca_cert_obj = x509.load_pem_x509_certificate(ca.cert_pem.encode())
         return pkcs12.serialize_key_and_certificates(
             name=ca.common_name.encode(),
             key=private_key,
             cert=ca_cert_obj,
             cas=None,
-            encryption_algorithm=serialization.BestAvailableEncryption(password.encode()),
+            encryption_algorithm=serialization.BestAvailableEncryption(
+                password.encode()
+            ),
         )
 
     def export_pem_bundle(self, cert, ca) -> bytes:
         """Return cert PEM + CA cert PEM concatenated."""
         return (cert.cert_pem + ca.cert_pem).encode()
 
-    def export_pkcs12(self, cert, ca, encryption_service: "EncryptionService", password: str) -> bytes:
+    def export_pkcs12(
+        self, cert, ca, encryption_service: "EncryptionService", password: str
+    ) -> bytes:
         """Export cert + key as PKCS#12."""
         key_pem = encryption_service.decrypt(cert.private_key_encrypted)
-        private_key = serialization.load_pem_private_key(key_pem.encode(), password=None)
+        private_key = serialization.load_pem_private_key(
+            key_pem.encode(), password=None
+        )
         cert_obj = x509.load_pem_x509_certificate(cert.cert_pem.encode())
         ca_cert_obj = x509.load_pem_x509_certificate(ca.cert_pem.encode())
 
@@ -343,15 +362,22 @@ class PKIService:
             key=private_key,
             cert=cert_obj,
             cas=[ca_cert_obj],
-            encryption_algorithm=serialization.BestAvailableEncryption(password.encode()),
+            encryption_algorithm=serialization.BestAvailableEncryption(
+                password.encode()
+            ),
         )
 
     def export_private_key(
-        self, cert, encryption_service: "EncryptionService", passphrase: Optional[str] = None
+        self,
+        cert,
+        encryption_service: "EncryptionService",
+        passphrase: Optional[str] = None,
     ) -> bytes:
         """Export the private key as PEM, optionally encrypted."""
         key_pem = encryption_service.decrypt(cert.private_key_encrypted)
-        private_key = serialization.load_pem_private_key(key_pem.encode(), password=None)
+        private_key = serialization.load_pem_private_key(
+            key_pem.encode(), password=None
+        )
 
         algo = (
             serialization.BestAvailableEncryption(passphrase.encode())

@@ -62,8 +62,11 @@ async def create_job_template(
             check_progress_group_nifi_cluster_id=template_data.check_progress_group_nifi_cluster_id,
             check_progress_group_process_group_id=template_data.check_progress_group_process_group_id,
             check_progress_group_process_group_path=template_data.check_progress_group_process_group_path,
-            check_progress_group_check_children=template_data.check_progress_group_check_children if template_data.check_progress_group_check_children is not None else True,
-            check_progress_group_expected_status=template_data.check_progress_group_expected_status or "Running",
+            check_progress_group_check_children=template_data.check_progress_group_check_children
+            if template_data.check_progress_group_check_children is not None
+            else True,
+            check_progress_group_expected_status=template_data.check_progress_group_expected_status
+            or "Running",
         )
 
         return JobTemplateResponse(**template)

@@ -21,9 +21,7 @@ class PKICARepository(BaseRepository[PKIAuthority]):
         db = get_db_session()
         try:
             return (
-                db.query(PKIAuthority)
-                .order_by(PKIAuthority.created_at.desc())
-                .first()
+                db.query(PKIAuthority).order_by(PKIAuthority.created_at.desc()).first()
             )
         finally:
             db.close()

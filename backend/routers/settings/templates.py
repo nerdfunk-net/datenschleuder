@@ -57,7 +57,8 @@ async def list_templates(
             )
         else:
             logger.info(
-                "DEBUG: API list_templates - calling list_templates with username=%s", username
+                "DEBUG: API list_templates - calling list_templates with username=%s",
+                username,
             )
             templates = template_manager.list_templates(
                 category=category,
@@ -68,17 +69,22 @@ async def list_templates(
 
         # Convert to response models
         logger.info(
-            "DEBUG: API list_templates - received %s templates from manager", len(templates)
+            "DEBUG: API list_templates - received %s templates from manager",
+            len(templates),
         )
         template_responses = []
         for template in templates:
             logger.info(
-                "DEBUG: API list_templates - converting template id=%s, name=%s, scope=%s", template['id'], template['name'], template.get('scope')
+                "DEBUG: API list_templates - converting template id=%s, name=%s, scope=%s",
+                template["id"],
+                template["name"],
+                template.get("scope"),
             )
             template_responses.append(TemplateResponse(**template))
 
         logger.info(
-            "DEBUG: API list_templates - returning %s templates to frontend", len(template_responses)
+            "DEBUG: API list_templates - returning %s templates to frontend",
+            len(template_responses),
         )
         return TemplateListResponse(
             templates=template_responses, total=len(template_responses)
@@ -315,10 +321,14 @@ async def update_template(
 
         template_data = template_request.dict(exclude_unset=True)
         logger.info(
-            "DEBUG: API update_template(%s) - received data: %s", template_id, template_data
+            "DEBUG: API update_template(%s) - received data: %s",
+            template_id,
+            template_data,
         )
         logger.info(
-            "DEBUG: API update_template(%s) - scope in data: %s", template_id, template_data.get('scope')
+            "DEBUG: API update_template(%s) - scope in data: %s",
+            template_id,
+            template_data.get("scope"),
         )
         success = template_manager.update_template(template_id, template_data)
 
@@ -833,7 +843,9 @@ async def advanced_render_template(
                         )
 
                     logger.info(
-                        "Pre-run command executed. Raw length: %s, Parsed records: %s", len(pre_run_output), len(pre_run_parsed)
+                        "Pre-run command executed. Raw length: %s, Parsed records: %s",
+                        len(pre_run_output),
+                        len(pre_run_parsed),
                     )
                 except Exception as e:
                     error_msg = f"Failed to execute pre-run command: {str(e)}"

@@ -109,11 +109,15 @@ def deploy_flow(instance_id: int, deployment_data: dict) -> dict:
                 "✅ Using provided parent process group ID: %s", resolved_parent_pg_id
             )
         else:
-            logger.info("🔍 Resolving parent process group by path: '%s'", parent_pg_path)
+            logger.info(
+                "🔍 Resolving parent process group by path: '%s'", parent_pg_path
+            )
             resolved_parent_pg_id = find_or_create_process_group_by_path(
                 parent_pg_path or ""
             )
-            logger.info("✅ Resolved parent process group ID: %s", resolved_parent_pg_id)
+            logger.info(
+                "✅ Resolved parent process group ID: %s", resolved_parent_pg_id
+            )
 
         logger.info("=" * 60)
         logger.info("STEP 3: Get Bucket and Flow Identifiers")
@@ -130,7 +134,8 @@ def deploy_flow(instance_id: int, deployment_data: dict) -> dict:
 
         requested_version = deployment_data.get("version")
         logger.info(
-            "Requested version: %s", requested_version if requested_version else "latest"
+            "Requested version: %s",
+            requested_version if requested_version else "latest",
         )
         deploy_version = service.get_deploy_version(
             requested_version, registry_client_id, bucket_identifier, flow_identifier
@@ -159,11 +164,15 @@ def deploy_flow(instance_id: int, deployment_data: dict) -> dict:
                 "Aligning existing process groups in parent PG %s into grid",
                 resolved_parent_pg_id,
             )
-            moves = nipyapi.layout.align_pg_grid(resolved_parent_pg_id, sort_by_name=True)
+            moves = nipyapi.layout.align_pg_grid(
+                resolved_parent_pg_id, sort_by_name=True
+            )
             logger.info("Grid alignment moved %d process groups", len(moves))
             pos = nipyapi.layout.suggest_pg_position(resolved_parent_pg_id)
             x_position, y_position = pos
-            logger.info("Suggested position for new PG: x=%s, y=%s", x_position, y_position)
+            logger.info(
+                "Suggested position for new PG: x=%s, y=%s", x_position, y_position
+            )
         except (ImportError, AttributeError):
             logger.info(
                 "nipyapi.layout not available, using manual position: x=%s, y=%s",
@@ -196,7 +205,9 @@ def deploy_flow(instance_id: int, deployment_data: dict) -> dict:
         logger.info("STEP 7: Rename Process Group")
         logger.info("=" * 60)
         original_name = (
-            deployed_pg.component.name if hasattr(deployed_pg, "component") else "unknown"
+            deployed_pg.component.name
+            if hasattr(deployed_pg, "component")
+            else "unknown"
         )
         logger.info("Renaming from '%s' to '%s'", original_name, process_group_name)
         _, pg_name = service.rename_process_group(deployed_pg, process_group_name)
@@ -212,7 +223,9 @@ def deploy_flow(instance_id: int, deployment_data: dict) -> dict:
         parameter_context_id = deployment_data.get("parameter_context_id")
 
         if pg_id and parameter_context_name:
-            logger.info("Assigning parameter context by name: %s", parameter_context_name)
+            logger.info(
+                "Assigning parameter context by name: %s", parameter_context_name
+            )
             try:
                 service.assign_parameter_context(pg_id, parameter_context_name)
                 logger.info(
@@ -258,7 +271,9 @@ def deploy_flow(instance_id: int, deployment_data: dict) -> dict:
         logger.info("=" * 60)
         if pg_id and resolved_parent_pg_id:
             logger.info(
-                "Auto-connecting ports for PG %s in parent %s", pg_id, resolved_parent_pg_id
+                "Auto-connecting ports for PG %s in parent %s",
+                pg_id,
+                resolved_parent_pg_id,
             )
             try:
                 service.auto_connect_ports(pg_id, resolved_parent_pg_id)

@@ -13,7 +13,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
 from fastapi.responses import Response
 
-from core.auth import require_permission, verify_token
+from core.auth import require_permission
 from models.cert_manager import (
     CertFileListResponse,
     FileCertificatesResponse,
@@ -28,7 +28,10 @@ from models.cert_manager import (
     AddCertificateRequest,
     CertModifyResponse,
 )
-from services.cert_manager.file_service import list_cert_files, get_nifi_passwords as _get_nifi_passwords
+from services.cert_manager.file_service import (
+    list_cert_files,
+    get_nifi_passwords as _get_nifi_passwords,
+)
 from services.cert_manager.cert_parser import parse_cert_file
 from services.cert_manager.cert_operations import (
     convert_cert_file,
@@ -64,8 +67,12 @@ async def get_cert_files(instance_id: int) -> CertFileListResponse:
 )
 async def get_certificates(
     instance_id: int,
-    file_path: str = Query(..., description="Relative path to the cert file within the repo"),
-    password: Optional[str] = Query(None, description="Password for encrypted P12 files"),
+    file_path: str = Query(
+        ..., description="Relative path to the cert file within the repo"
+    ),
+    password: Optional[str] = Query(
+        None, description="Password for encrypted P12 files"
+    ),
 ) -> FileCertificatesResponse:
     """Parse and return certificate details from a specific file."""
     abs_path = resolve_cert_file_path(instance_id, file_path)

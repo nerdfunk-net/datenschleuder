@@ -66,7 +66,9 @@ def cache_demo_task(self) -> Dict[str, Any]:
         cached = cache_service.get(cache_key)
 
         logger.info(
-            "Cache demo task %s completed. Cached: %s", self.request.id, cached is not None
+            "Cache demo task %s completed. Cached: %s",
+            self.request.id,
+            cached is not None,
         )
 
         return {

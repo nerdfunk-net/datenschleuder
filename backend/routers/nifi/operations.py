@@ -85,7 +85,9 @@ async def _execute_with_retry(
 
     for attempt in range(1, _NIFI_MAX_RETRIES + 1):
         try:
-            return await with_nifi_instance(instance, operation, normalize_url=normalized_url)
+            return await with_nifi_instance(
+                instance, operation, normalize_url=normalized_url
+            )
 
         except (ValueError, HTTPException):
             # Logical errors – do not retry.
@@ -790,7 +792,8 @@ async def list_components_by_kind(
             instance_id,
             lambda: canvas.list_all_by_kind(
                 kind=kind, pg_id=pg_id, descendants=descendants
-            ) or [],
+            )
+            or [],
         )
     except HTTPException:
         raise

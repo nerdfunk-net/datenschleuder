@@ -42,7 +42,9 @@ def create_job_template(
     if repo.check_name_exists(name, user_id if not is_global else None):
         raise ValueError(f"A job template with name '{name}' already exists")
 
-    nifi_cluster_ids_json = json.dumps(nifi_cluster_ids) if nifi_cluster_ids is not None else None
+    nifi_cluster_ids_json = (
+        json.dumps(nifi_cluster_ids) if nifi_cluster_ids is not None else None
+    )
 
     template = repo.create(
         name=name,
@@ -152,15 +154,25 @@ def update_job_template(
     if check_queues_bytes_red is not None:
         update_data["check_queues_bytes_red"] = check_queues_bytes_red
     if check_progress_group_nifi_cluster_id is not None:
-        update_data["check_progress_group_nifi_cluster_id"] = check_progress_group_nifi_cluster_id
+        update_data["check_progress_group_nifi_cluster_id"] = (
+            check_progress_group_nifi_cluster_id
+        )
     if check_progress_group_process_group_id is not None:
-        update_data["check_progress_group_process_group_id"] = check_progress_group_process_group_id
+        update_data["check_progress_group_process_group_id"] = (
+            check_progress_group_process_group_id
+        )
     if check_progress_group_process_group_path is not None:
-        update_data["check_progress_group_process_group_path"] = check_progress_group_process_group_path
+        update_data["check_progress_group_process_group_path"] = (
+            check_progress_group_process_group_path
+        )
     if check_progress_group_check_children is not None:
-        update_data["check_progress_group_check_children"] = check_progress_group_check_children
+        update_data["check_progress_group_check_children"] = (
+            check_progress_group_check_children
+        )
     if check_progress_group_expected_status is not None:
-        update_data["check_progress_group_expected_status"] = check_progress_group_expected_status
+        update_data["check_progress_group_expected_status"] = (
+            check_progress_group_expected_status
+        )
     if is_global is not None:
         update_data["is_global"] = is_global
         if is_global:

@@ -69,7 +69,15 @@ def export_certificates(
         elif src_suffix == ".p12":
             # Convert all certs from P12 to temp PEM first
             tmp_pem = tmp_path / "all.pem"
-            cmd = ["pkcs12", "-in", str(src_abs), "-nokeys", "-nodes", "-out", str(tmp_pem)]
+            cmd = [
+                "pkcs12",
+                "-in",
+                str(src_abs),
+                "-nokeys",
+                "-nodes",
+                "-out",
+                str(tmp_pem),
+            ]
             if password:
                 cmd += ["-passin", f"pass:{password}"]
             else:
@@ -116,10 +124,13 @@ def export_certificates(
         elif fmt == "p12":
             tmp_out = tmp_path / "out.p12"
             cmd = [
-                "pkcs12", "-export",
-                "-in", str(tmp_input),
+                "pkcs12",
+                "-export",
+                "-in",
+                str(tmp_input),
                 "-nokeys",
-                "-out", str(tmp_out),
+                "-out",
+                str(tmp_out),
             ]
             if password:
                 cmd += ["-passout", f"pass:{password}"]
@@ -188,8 +199,15 @@ def remove_certificates(
 
             # Extract certs
             result = _run_openssl_check(
-                "pkcs12", "-in", str(abs_path), "-nokeys", "-nodes",
-                "-out", str(tmp_certs), "-passin", passin,
+                "pkcs12",
+                "-in",
+                str(abs_path),
+                "-nokeys",
+                "-nodes",
+                "-out",
+                str(tmp_certs),
+                "-passin",
+                passin,
             )
             if result.returncode != 0:
                 raise HTTPException(
@@ -199,10 +217,21 @@ def remove_certificates(
 
             # Extract private key (may not exist — ignore failure)
             key_result = _run_openssl_check(
-                "pkcs12", "-in", str(abs_path), "-nocerts", "-nodes",
-                "-out", str(tmp_key), "-passin", passin,
+                "pkcs12",
+                "-in",
+                str(abs_path),
+                "-nocerts",
+                "-nodes",
+                "-out",
+                str(tmp_key),
+                "-passin",
+                passin,
             )
-            has_key = key_result.returncode == 0 and tmp_key.exists() and tmp_key.stat().st_size > 0
+            has_key = (
+                key_result.returncode == 0
+                and tmp_key.exists()
+                and tmp_key.stat().st_size > 0
+            )
 
             blocks = _extract_pem_blocks(tmp_certs.read_text())
             if not blocks:
@@ -219,7 +248,16 @@ def remove_certificates(
             tmp_certs.write_text("\n".join(remaining) + "\n")
 
             # Rebuild P12
-            cmd = ["pkcs12", "-export", "-in", str(tmp_certs), "-out", str(abs_path), "-passout", passout]
+            cmd = [
+                "pkcs12",
+                "-export",
+                "-in",
+                str(tmp_certs),
+                "-out",
+                str(abs_path),
+                "-passout",
+                passout,
+            ]
             if has_key:
                 cmd += ["-inkey", str(tmp_key)]
             result = _run_openssl_check(*cmd)
@@ -287,8 +325,15 @@ def add_certificate(
 
             # Extract existing certs
             result = _run_openssl_check(
-                "pkcs12", "-in", str(abs_path), "-nokeys", "-nodes",
-                "-out", str(tmp_certs), "-passin", passin,
+                "pkcs12",
+                "-in",
+                str(abs_path),
+                "-nokeys",
+                "-nodes",
+                "-out",
+                str(tmp_certs),
+                "-passin",
+                passin,
             )
             if result.returncode != 0:
                 raise HTTPException(
@@ -298,10 +343,21 @@ def add_certificate(
 
             # Extract private key (may not exist — ignore failure)
             key_result = _run_openssl_check(
-                "pkcs12", "-in", str(abs_path), "-nocerts", "-nodes",
-                "-out", str(tmp_key), "-passin", passin,
+                "pkcs12",
+                "-in",
+                str(abs_path),
+                "-nocerts",
+                "-nodes",
+                "-out",
+                str(tmp_key),
+                "-passin",
+                passin,
             )
-            has_key = key_result.returncode == 0 and tmp_key.exists() and tmp_key.stat().st_size > 0
+            has_key = (
+                key_result.returncode == 0
+                and tmp_key.exists()
+                and tmp_key.stat().st_size > 0
+            )
 
             # Append new cert
             existing = tmp_certs.read_text()
@@ -309,7 +365,16 @@ def add_certificate(
             tmp_certs.write_text(existing + separator + cert_pem.strip() + "\n")
 
             # Rebuild P12
-            cmd = ["pkcs12", "-export", "-in", str(tmp_certs), "-out", str(abs_path), "-passout", passout]
+            cmd = [
+                "pkcs12",
+                "-export",
+                "-in",
+                str(tmp_certs),
+                "-out",
+                str(abs_path),
+                "-passout",
+                passout,
+            ]
             if has_key:
                 cmd += ["-inkey", str(tmp_key)]
             result = _run_openssl_check(*cmd)

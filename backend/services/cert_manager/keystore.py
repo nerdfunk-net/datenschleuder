@@ -71,9 +71,7 @@ def create_new_keystore(
         tmp_cert = tmp_path / "cert.pem"
 
         # Generate RSA key
-        result = _run_openssl_check(
-            "genrsa", "-out", str(tmp_key), str(key_size)
-        )
+        result = _run_openssl_check("genrsa", "-out", str(tmp_key), str(key_size))
         if result.returncode != 0:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -82,11 +80,17 @@ def create_new_keystore(
 
         # Generate self-signed certificate
         result = _run_openssl_check(
-            "req", "-new", "-x509",
-            "-key", str(tmp_key),
-            "-out", str(tmp_cert),
-            "-days", str(validity_days),
-            "-subj", subject_dn,
+            "req",
+            "-new",
+            "-x509",
+            "-key",
+            str(tmp_key),
+            "-out",
+            str(tmp_cert),
+            "-days",
+            str(validity_days),
+            "-subj",
+            subject_dn,
         )
         if result.returncode != 0:
             raise HTTPException(
@@ -96,11 +100,16 @@ def create_new_keystore(
 
         # Package as PKCS12
         result = _run_openssl_check(
-            "pkcs12", "-export",
-            "-in", str(tmp_cert),
-            "-inkey", str(tmp_key),
-            "-out", str(out_abs),
-            "-passout", f"pass:{password}",
+            "pkcs12",
+            "-export",
+            "-in",
+            str(tmp_cert),
+            "-inkey",
+            str(tmp_key),
+            "-out",
+            str(out_abs),
+            "-passout",
+            f"pass:{password}",
         )
         if result.returncode != 0:
             raise HTTPException(
@@ -177,11 +186,17 @@ def create_new_truststore(
 
         # Generate self-signed certificate directly to output path
         result = _run_openssl_check(
-            "req", "-new", "-x509",
-            "-key", str(tmp_key),
-            "-out", str(out_abs),
-            "-days", str(validity_days),
-            "-subj", subject_dn,
+            "req",
+            "-new",
+            "-x509",
+            "-key",
+            str(tmp_key),
+            "-out",
+            str(out_abs),
+            "-days",
+            str(validity_days),
+            "-subj",
+            subject_dn,
         )
         if result.returncode != 0:
             raise HTTPException(

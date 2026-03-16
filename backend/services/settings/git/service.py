@@ -130,6 +130,7 @@ class GitService:
     def __init__(self, auth_service=None):
         if auth_service is None:
             from services.settings.git.auth import GitAuthenticationService
+
             auth_service = GitAuthenticationService()
         self._auth = auth_service
 
@@ -305,7 +306,9 @@ class GitService:
                         commits_pulled = len(pull_info) if pull_info else 0
 
                         logger.info(
-                            "Pulled %s commits from %s", commits_pulled, repository.get('name')
+                            "Pulled %s commits from %s",
+                            commits_pulled,
+                            repository.get("name"),
                         )
 
                         return PullResult(
@@ -437,7 +440,9 @@ class GitService:
                                     )
 
                         logger.info(
-                            "Successfully pushed to %s branch %s", repository.get('name'), push_branch
+                            "Successfully pushed to %s branch %s",
+                            repository.get("name"),
+                            push_branch,
                         )
 
                         return PushResult(
@@ -785,5 +790,3 @@ class GitService:
         with set_ssl_env(repository):
             with self._auth.setup_auth_environment(repository) as auth_info:
                 yield auth_info
-
-

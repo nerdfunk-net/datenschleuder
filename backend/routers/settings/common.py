@@ -353,5 +353,3 @@ async def update_template_settings(
         "legacy": True,
         "note": "Please use the new template management interface",
     }
-
-

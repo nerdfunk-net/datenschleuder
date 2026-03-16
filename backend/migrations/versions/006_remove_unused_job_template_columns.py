@@ -99,7 +99,8 @@ class Migration(BaseMigration):
                 if col_name in existing_columns:
                     conn.execute(
                         text(
-                            "ALTER TABLE job_templates DROP COLUMN IF EXISTS %s" % col_name
+                            "ALTER TABLE job_templates DROP COLUMN IF EXISTS %s"
+                            % col_name
                         )
                     )
                     conn.commit()
@@ -124,7 +125,8 @@ class Migration(BaseMigration):
                 conn.commit()
                 stats["constraints_updated"] += 1
                 self.log_info(
-                    "Updated ck_job_templates_job_type constraint to: %s" % ACTIVE_JOB_TYPES
+                    "Updated ck_job_templates_job_type constraint to: %s"
+                    % ACTIVE_JOB_TYPES
                 )
             except Exception as exc:
                 self.log_info("Failed to update constraint: %s" % exc)

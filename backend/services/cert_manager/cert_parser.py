@@ -20,7 +20,9 @@ from models.cert_manager import CertificateInfo, FileCertificatesResponse
 logger = logging.getLogger(__name__)
 
 
-def _run_openssl(*args: str, input_data: Optional[bytes] = None, timeout: int = 30) -> str:
+def _run_openssl(
+    *args: str, input_data: Optional[bytes] = None, timeout: int = 30
+) -> str:
     """Run openssl with given arguments and return stdout as string."""
     try:
         result = subprocess.run(
@@ -44,24 +46,26 @@ def _run_openssl(*args: str, input_data: Optional[bytes] = None, timeout: int = 
 # Maps OID dotted strings to the standard abbreviations used by OpenSSL.
 # Keyed by ObjectIdentifier.dotted_string for reliability across cryptography versions.
 _OID_ABBR: dict[str, str] = {
-    "2.5.4.3": "CN",           # commonName
-    "2.5.4.6": "C",            # countryName
-    "2.5.4.7": "L",            # localityName
-    "2.5.4.8": "ST",           # stateOrProvinceName
-    "2.5.4.9": "STREET",       # streetAddress
-    "2.5.4.10": "O",           # organizationName
-    "2.5.4.11": "OU",          # organizationalUnitName
-    "2.5.4.5": "serialNumber", # serialNumber
-    "2.5.4.12": "title",       # title
-    "2.5.4.42": "GN",          # givenName
-    "2.5.4.4": "SN",           # surname
+    "2.5.4.3": "CN",  # commonName
+    "2.5.4.6": "C",  # countryName
+    "2.5.4.7": "L",  # localityName
+    "2.5.4.8": "ST",  # stateOrProvinceName
+    "2.5.4.9": "STREET",  # streetAddress
+    "2.5.4.10": "O",  # organizationName
+    "2.5.4.11": "OU",  # organizationalUnitName
+    "2.5.4.5": "serialNumber",  # serialNumber
+    "2.5.4.12": "title",  # title
+    "2.5.4.42": "GN",  # givenName
+    "2.5.4.4": "SN",  # surname
     "1.2.840.113549.1.9.1": "emailAddress",
     "0.9.2342.19200300.100.1.25": "DC",  # domainComponent
     "0.9.2342.19200300.100.1.1": "UID",  # userId
 }
 
 
-def _parse_crypto_cert(cert, index: int, raw_text: str, has_private_key: bool = False) -> CertificateInfo:
+def _parse_crypto_cert(
+    cert, index: int, raw_text: str, has_private_key: bool = False
+) -> CertificateInfo:
     """Convert a `cryptography` x509.Certificate to CertificateInfo."""
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes
@@ -78,8 +82,16 @@ def _parse_crypto_cert(cert, index: int, raw_text: str, has_private_key: bool = 
     issuer = dn_string(cert.issuer)
 
     # Validity
-    not_before_dt = cert.not_valid_before_utc if hasattr(cert, "not_valid_before_utc") else cert.not_valid_before.replace(tzinfo=timezone.utc)
-    not_after_dt = cert.not_valid_after_utc if hasattr(cert, "not_valid_after_utc") else cert.not_valid_after.replace(tzinfo=timezone.utc)
+    not_before_dt = (
+        cert.not_valid_before_utc
+        if hasattr(cert, "not_valid_before_utc")
+        else cert.not_valid_before.replace(tzinfo=timezone.utc)
+    )
+    not_after_dt = (
+        cert.not_valid_after_utc
+        if hasattr(cert, "not_valid_after_utc")
+        else cert.not_valid_after.replace(tzinfo=timezone.utc)
+    )
     now = datetime.now(timezone.utc)
     is_expired = now > not_after_dt
 
@@ -97,9 +109,15 @@ def _parse_crypto_cert(cert, index: int, raw_text: str, has_private_key: bool = 
     try:
         ku = cert.extensions.get_extension_for_class(x509.KeyUsage).value
         for usage_name in [
-            "digital_signature", "content_commitment", "key_encipherment",
-            "data_encipherment", "key_agreement", "key_cert_sign",
-            "crl_sign", "encipher_only", "decipher_only",
+            "digital_signature",
+            "content_commitment",
+            "key_encipherment",
+            "data_encipherment",
+            "key_agreement",
+            "key_cert_sign",
+            "crl_sign",
+            "encipher_only",
+            "decipher_only",
         ]:
             if getattr(ku, usage_name, False):
                 key_usage.append(usage_name.replace("_", " ").title())
@@ -186,22 +204,30 @@ def parse_pem_file(file_path: Path) -> List[CertificateInfo]:
             certs.append(_parse_crypto_cert(cert_obj, idx, raw_text))
             idx += 1
         except Exception as exc:
-            logger.warning("Failed to parse PEM cert block %d in %s: %s", idx, file_path, exc)
+            logger.warning(
+                "Failed to parse PEM cert block %d in %s: %s", idx, file_path, exc
+            )
 
         start = end
 
     return certs
 
 
-def parse_p12_file(file_path: Path, password: Optional[str] = None) -> List[CertificateInfo]:
+def parse_p12_file(
+    file_path: Path, password: Optional[str] = None
+) -> List[CertificateInfo]:
     """Parse certificates from a PKCS12 (.p12) file."""
-    from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
+    from cryptography.hazmat.primitives.serialization.pkcs12 import (
+        load_key_and_certificates,
+    )
 
     p12_data = file_path.read_bytes()
     pwd_bytes = password.encode() if password else None
 
     try:
-        private_key, cert, additional_certs = load_key_and_certificates(p12_data, pwd_bytes)
+        private_key, cert, additional_certs = load_key_and_certificates(
+            p12_data, pwd_bytes
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -222,13 +248,22 @@ def parse_p12_file(file_path: Path, password: Optional[str] = None) -> List[Cert
     if cert is not None:
         # Get per-cert raw text
         from cryptography.hazmat.primitives.serialization import Encoding
+
         pem_bytes = cert.public_bytes(Encoding.PEM)
         raw_text = _run_openssl("x509", "-text", "-noout", input_data=pem_bytes)
-        certs.append(_parse_crypto_cert(cert, idx, raw_text or raw_p12_text, has_private_key=private_key is not None))
+        certs.append(
+            _parse_crypto_cert(
+                cert,
+                idx,
+                raw_text or raw_p12_text,
+                has_private_key=private_key is not None,
+            )
+        )
         idx += 1
 
-    for extra_cert in (additional_certs or []):
+    for extra_cert in additional_certs or []:
         from cryptography.hazmat.primitives.serialization import Encoding
+
         pem_bytes = extra_cert.public_bytes(Encoding.PEM)
         raw_text = _run_openssl("x509", "-text", "-noout", input_data=pem_bytes)
         certs.append(_parse_crypto_cert(extra_cert, idx, raw_text))

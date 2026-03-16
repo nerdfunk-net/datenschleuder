@@ -97,7 +97,11 @@ def execute_check_process_group(
     # -------------------------------------------------------------------------
     task_context.update_state(
         state="PROGRESS",
-        meta={"current": 10, "total": 100, "status": "Resolving NiFi cluster primary instance…"},
+        meta={
+            "current": 10,
+            "total": 100,
+            "status": "Resolving NiFi cluster primary instance…",
+        },
     )
 
     cluster_repo = NifiClusterRepository()
@@ -119,7 +123,8 @@ def execute_check_process_group(
             meta={
                 "current": 30,
                 "total": 100,
-                "status": "Fetching status for process group '%s'…" % (pg_path or pg_id),
+                "status": "Fetching status for process group '%s'…"
+                % (pg_path or pg_id),
             },
         )
 
@@ -172,7 +177,9 @@ def execute_check_process_group(
                 child_name: str = child.get("name", child_id)
                 try:
                     child_status = get_process_group_status_canvas(child_id)
-                    child_eval = evaluate_process_group_status(child_status, expected_status)
+                    child_eval = evaluate_process_group_status(
+                        child_status, expected_status
+                    )
                     if not child_eval["passed"]:
                         overall_passed = False
                     children_results.append(
@@ -208,7 +215,8 @@ def execute_check_process_group(
             meta={
                 "current": 100,
                 "total": 100,
-                "status": "Done – check %s" % ("passed" if overall_passed else "FAILED"),
+                "status": "Done – check %s"
+                % ("passed" if overall_passed else "FAILED"),
             },
         )
 

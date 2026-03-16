@@ -30,4 +30,3 @@ def get_target_devices(
         )
 
     return None
-

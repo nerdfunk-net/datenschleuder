@@ -1,4 +1,5 @@
 """Provenance operations — wraps nipyapi ProvenanceApi."""
+
 import time
 
 import nipyapi.nifi
@@ -126,9 +127,7 @@ def get_flow_lineage_by_filename(
             pass
 
     if not uuids:
-        raise ValueError(
-            "No provenance events found for filename '%s'" % filename
-        )
+        raise ValueError("No provenance events found for filename '%s'" % filename)
 
     return [get_flow_lineage(uuid) for uuid in uuids]
 
@@ -170,9 +169,7 @@ def get_flow_lineage(
             if result.lineage.finished:
                 break
             if time.monotonic() > deadline:
-                raise TimeoutError(
-                    "Lineage query timed out after %ds" % _POLL_TIMEOUT
-                )
+                raise TimeoutError("Lineage query timed out after %ds" % _POLL_TIMEOUT)
             time.sleep(_POLL_INTERVAL)
 
         nodes = result.lineage.results.nodes or []
@@ -183,12 +180,6 @@ def get_flow_lineage(
         events_api = nipyapi.nifi.ProvenanceEventsApi()
 
         # Virtual source/sink nodes use the FlowFile UUID as their id — skip them.
-        event_ids = [
-            node.id
-            for node in nodes
-            if node.id != flow_file_uuid
-        ]
-
         def _fetch_event(event_id: str) -> dict:
             detail = events_api.get_provenance_event(id=int(event_id))
             e = detail.provenance_event
@@ -216,10 +207,12 @@ def get_flow_lineage(
         raw_links = []
         for lnk in links:
             d = lnk.to_dict() if hasattr(lnk, "to_dict") else {}
-            raw_links.append({
-                "source_id": d.get("source_id") or getattr(lnk, "source_id", None),
-                "target_id": d.get("target_id") or getattr(lnk, "target_id", None),
-            })
+            raw_links.append(
+                {
+                    "source_id": d.get("source_id") or getattr(lnk, "source_id", None),
+                    "target_id": d.get("target_id") or getattr(lnk, "target_id", None),
+                }
+            )
 
         return {
             "flow_file_uuid": flow_file_uuid,

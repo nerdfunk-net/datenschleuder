@@ -30,6 +30,7 @@ def invalidate_flow_table_cache() -> None:
     """
     _repo._invalidate_table_cache()
 
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -306,16 +307,30 @@ def get_flow_process_groups(flow_id: int) -> dict:
     if not hierarchy:
         raise ValueError("No hierarchy configuration found")
 
-    logger.debug("get_flow_process_groups: flow_id=%d hierarchy_values=%s", flow_id, flow.get("hierarchy_values"))
+    logger.debug(
+        "get_flow_process_groups: flow_id=%d hierarchy_values=%s",
+        flow_id,
+        flow.get("hierarchy_values"),
+    )
 
     # First hierarchy attribute + values → cluster lookup
     first_attr = hierarchy[0]["name"] if hierarchy else None
-    first_src_val = flow.get("hierarchy_values", {}).get(first_attr, {}).get("source", "") if first_attr else ""
-    first_dest_val = flow.get("hierarchy_values", {}).get(first_attr, {}).get("destination", "") if first_attr else ""
+    first_src_val = (
+        flow.get("hierarchy_values", {}).get(first_attr, {}).get("source", "")
+        if first_attr
+        else ""
+    )
+    first_dest_val = (
+        flow.get("hierarchy_values", {}).get(first_attr, {}).get("destination", "")
+        if first_attr
+        else ""
+    )
 
     logger.debug(
         "get_flow_process_groups: cluster lookup — first_attr=%r  first_src_val=%r  first_dest_val=%r",
-        first_attr, first_src_val, first_dest_val,
+        first_attr,
+        first_src_val,
+        first_dest_val,
     )
 
     cluster_repo = NifiClusterRepository()
@@ -333,8 +348,16 @@ def get_flow_process_groups(flow_id: int) -> dict:
                 return c
         return None
 
-    src_cluster = _find_cluster(first_attr, first_src_val) if first_attr and first_src_val else None
-    dest_cluster = _find_cluster(first_attr, first_dest_val) if first_attr and first_dest_val else None
+    src_cluster = (
+        _find_cluster(first_attr, first_src_val)
+        if first_attr and first_src_val
+        else None
+    )
+    dest_cluster = (
+        _find_cluster(first_attr, first_dest_val)
+        if first_attr and first_dest_val
+        else None
+    )
 
     logger.debug(
         "get_flow_process_groups: src_cluster=%s  dest_cluster=%s",
@@ -382,28 +405,41 @@ def get_flow_process_groups(flow_id: int) -> dict:
         if not path_config:
             logger.debug(
                 "get_flow_process_groups: no %s_path configured for cluster %d (instance %d)",
-                path_type, cluster.id, instance.id,
+                path_type,
+                cluster.id,
+                instance.id,
             )
             return None
 
         # Prefer resolving via stored PG id for accuracy
         stored_pg_id = path_config.get("id") if isinstance(path_config, dict) else None
         if stored_pg_id:
-            pg_by_id = {pg["id"]: pg for pg in all_paths_result.get("process_groups", [])}
+            pg_by_id = {
+                pg["id"]: pg for pg in all_paths_result.get("process_groups", [])
+            }
             pg = pg_by_id.get(stored_pg_id)
             if pg:
                 logger.debug(
                     "get_flow_process_groups: resolved %s_path via id %s → %s",
-                    path_type, stored_pg_id, pg["path"],
+                    path_type,
+                    stored_pg_id,
+                    pg["path"],
                 )
                 return pg["path"]
 
         # Fall back to stored path string (may use "→" display format, normalize it)
-        raw = path_config.get("path", "") if isinstance(path_config, dict) else path_config
-        normalized = "/".join(p.strip() for p in str(raw).replace("→", "/").split("/") if p.strip())
+        raw = (
+            path_config.get("path", "")
+            if isinstance(path_config, dict)
+            else path_config
+        )
+        normalized = "/".join(
+            p.strip() for p in str(raw).replace("→", "/").split("/") if p.strip()
+        )
         logger.debug(
             "get_flow_process_groups: using stored %s_path string (normalized): %s",
-            path_type, normalized,
+            path_type,
+            normalized,
         )
         return normalized
 
@@ -436,24 +472,33 @@ def get_flow_process_groups(flow_id: int) -> dict:
         else:
             dest_paths = _get_all_paths(dest_instance)
 
-    src_configured = _resolve_configured_path(src_cluster, src_instance, "source", src_paths or {})
-    dest_configured = _resolve_configured_path(dest_cluster, dest_instance, "dest", dest_paths or {})
+    src_configured = _resolve_configured_path(
+        src_cluster, src_instance, "source", src_paths or {}
+    )
+    dest_configured = _resolve_configured_path(
+        dest_cluster, dest_instance, "dest", dest_paths or {}
+    )
 
     src_full_path = _build_full_path(src_configured, flow_vals, "source")
     dest_full_path = _build_full_path(dest_configured, flow_vals, "dest")
 
     logger.debug(
         "get_flow_process_groups: src_full_path=%r  dest_full_path=%r",
-        src_full_path, dest_full_path,
+        src_full_path,
+        dest_full_path,
     )
 
     def _find_pg_by_path(all_paths_result, full_path):
         if not full_path or not all_paths_result:
             return None
-        all_paths = [pg.get("path", "") for pg in all_paths_result.get("process_groups", [])]
+        all_paths = [
+            pg.get("path", "") for pg in all_paths_result.get("process_groups", [])
+        ]
         logger.debug(
             "get_flow_process_groups: looking for exact path %r among %d paths: %s",
-            full_path, len(all_paths), all_paths,
+            full_path,
+            len(all_paths),
+            all_paths,
         )
         full_path_lower = full_path.lower()
         for pg in all_paths_result.get("process_groups", []):
@@ -471,7 +516,9 @@ def get_flow_process_groups(flow_id: int) -> dict:
             return {"found": False}
         ui_url = _build_nifi_ui_url(instance)
         link = "%s/#/process-groups/%s" % (ui_url, pg["id"])
-        logger.debug("get_flow_process_groups: built link %s  (pg path=%s)", link, pg["path"])
+        logger.debug(
+            "get_flow_process_groups: built link %s  (pg path=%s)", link, pg["path"]
+        )
         return {
             "found": True,
             "process_group_id": pg["id"],
@@ -488,4 +535,3 @@ def get_flow_process_groups(flow_id: int) -> dict:
         "source": _build_link_info(src_pg, src_instance),
         "destination": _build_link_info(dest_pg, dest_instance),
     }
-

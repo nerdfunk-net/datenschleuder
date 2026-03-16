@@ -32,7 +32,9 @@ class Migration(BaseMigration):
 
             if "use_nautobot_context" in existing_columns:
                 conn.execute(
-                    text("ALTER TABLE templates DROP COLUMN IF EXISTS use_nautobot_context")
+                    text(
+                        "ALTER TABLE templates DROP COLUMN IF EXISTS use_nautobot_context"
+                    )
                 )
                 conn.commit()
                 stats["columns_dropped"] += 1
