@@ -73,10 +73,16 @@ async function handleRequest(
     console.log(`Frontend API: Proxying ${method} request to:`, url)
     
     // Get request body for methods that can have one
-    let body = undefined
+    // Use arrayBuffer to preserve binary data (e.g. multipart file uploads)
+    let body: BodyInit | undefined = undefined
     if (['POST', 'PUT', 'PATCH'].includes(method)) {
       try {
-        body = await request.text()
+        const contentType = request.headers.get('content-type') ?? ''
+        if (contentType.includes('multipart/form-data') || contentType.includes('application/octet-stream')) {
+          body = await request.arrayBuffer()
+        } else {
+          body = await request.text()
+        }
       } catch {
         // No body or invalid body
       }

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { useWizardStore } from '../wizard-store'
 import { useApi } from '@/hooks/use-api'
+import { UploadStoreDialog } from './upload-store-dialog'
 
 interface ReadStoreResponse {
   subject: string
@@ -50,6 +51,12 @@ export function CertificatesTab() {
   const [dialog, setDialog] = useState<SubjectDialogState | null>(null)
   const [loading, setLoading] = useState(false)
   const [readResult, setReadResult] = useState<ReadResult | null>(null)
+
+  const [uploadDialog, setUploadDialog] = useState<{
+    instanceTempId: string
+    instanceName: string
+    gitRepoId: number
+  } | null>(null)
 
   const openDialog = useCallback(
     (instanceTempId: string) => {
@@ -124,6 +131,42 @@ export function CertificatesTab() {
     setReadResult(null)
   }, [])
 
+  const openUploadDialog = useCallback(
+    (instanceTempId: string) => {
+      const inst = instances.find((i) => i.tempId === instanceTempId)
+      if (!inst) return
+      setUploadDialog({
+        instanceTempId,
+        instanceName: inst.name,
+        gitRepoId: inst.git_config_repo_id,
+      })
+    },
+    [instances]
+  )
+
+  const handleUploaded = useCallback(
+    (
+      storeType: 'keystore' | 'truststore',
+      result: { subject: string },
+      password: string
+    ) => {
+      if (!uploadDialog) return
+      if (storeType === 'keystore') {
+        updateCertificate(uploadDialog.instanceTempId, {
+          keystoreExists: true,
+          keystorePassword: password,
+          certSubject: result.subject,
+        })
+      } else {
+        updateCertificate(uploadDialog.instanceTempId, {
+          truststoreExists: true,
+          truststorePassword: password,
+        })
+      }
+    },
+    [uploadDialog, updateCertificate]
+  )
+
   return (
     <div className="space-y-6">
       <div>
@@ -165,13 +208,22 @@ export function CertificatesTab() {
                     {cert.instanceName || inst?.name}
                   </span>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openDialog(cert.instanceTempId)}
-                >
-                  Get Subject
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openUploadDialog(cert.instanceTempId)}
+                  >
+                    Upload Store
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openDialog(cert.instanceTempId)}
+                  >
+                    Get Subject
+                  </Button>
+                </div>
               </div>
 
               <div>
@@ -215,6 +267,17 @@ export function CertificatesTab() {
         <p className="text-sm text-muted-foreground text-center py-4">
           No instances configured. Go back to Step 2 to add instances.
         </p>
+      )}
+
+      {/* Upload store dialog */}
+      {uploadDialog && (
+        <UploadStoreDialog
+          open={uploadDialog !== null}
+          instanceName={uploadDialog.instanceName}
+          gitRepoId={uploadDialog.gitRepoId}
+          onClose={() => setUploadDialog(null)}
+          onUploaded={handleUploaded}
+        />
       )}
 
       {/* Password dialog */}
