@@ -30,13 +30,20 @@ class AgentConfig:
         # Agent identity - used to connect to Redis and must match Datenschleuder configuration
         self.agent_id = os.getenv("AGENT_ID") or socket.gethostname()
 
+        # Agent mode: "docker" (default) or "bare"
+        self.mode = os.getenv("MODE", "docker").lower()
+
         # Git repositories loaded from repos.yaml
         # Format: {"nifi-docker-1": {"path": "...", "container": "..."}, ...}
         self.git_repos: Dict[str, dict] = self._load_repos_yaml()
 
-        # Docker containers loaded from containers.yaml
+        # Docker containers loaded from containers.yaml (docker mode only)
         # Format: {"nifi-docker-1": {"container": "nifi-nifi-docker-1-1", "type": "nifi"}, ...}
         self.docker_containers: Dict[str, dict] = self._load_containers_yaml()
+
+        # Bare services loaded from bare.yaml (bare mode only)
+        # Format: {"nifi-docker-1": {"restart": "/path/nifi.sh restart", "stop": "...", "start": "...", "type": "nifi"}, ...}
+        self.bare_services: Dict[str, dict] = self._load_bare_yaml() if self.mode == "bare" else {}
 
         # Operational settings
         self.heartbeat_interval = int(os.getenv("HEARTBEAT_INTERVAL", "30"))
@@ -80,6 +87,21 @@ class AgentConfig:
             logging.getLogger(__name__).error("Failed to load containers.yaml: %s", e)
             return {}
 
+    def _load_bare_yaml(self) -> Dict[str, dict]:
+        """Load bare service definitions from bare.yaml"""
+        bare_file = Path(__file__).parent / "bare.yaml"
+        if not bare_file.exists():
+            return {}
+        try:
+            with open(bare_file, "r") as f:
+                data = yaml.safe_load(f)
+            if not isinstance(data, dict):
+                return {}
+            return {k: v for k, v in data.items() if isinstance(v, dict)}
+        except Exception as e:
+            logging.getLogger(__name__).error("Failed to load bare.yaml: %s", e)
+            return {}
+
     @property
     def git_repo_paths(self) -> List[str]:
         """Computed list of all configured git repo paths (for backward compat)."""
@@ -102,7 +124,13 @@ class AgentConfig:
         if not self.redis_host:
             return False, "REDIS_HOST is required"
 
-        if not self.git_repos:
+        if self.mode not in ("docker", "bare"):
+            return False, f"Invalid MODE '{self.mode}'. Must be 'docker' or 'bare'"
+
+        if self.mode == "bare" and not self.bare_services:
+            return False, "bare.yaml must exist and contain at least one service entry when MODE=bare"
+
+        if self.mode == "docker" and not self.git_repos:
             return False, "repos.yaml must exist and contain at least one repository entry"
 
         return True, None

@@ -29,10 +29,16 @@ class CommandExecutor:
         self.register("git_push", self._execute_git_push)
         self.register("git_status", self._execute_git_status)
         self.register("list_repositories", self._execute_list_repositories)
-        self.register("docker_restart", self._execute_docker_restart)
-        self.register("list_containers", self._execute_list_containers)
-        self.register("docker_stats", self._execute_docker_stats)
-        self.register("docker_ps", self._execute_docker_ps)
+
+        if config.mode == "bare":
+            self.register("nifi_restart", self._execute_nifi_restart)
+            self.register("nifi_stop", self._execute_nifi_stop)
+            self.register("nifi_start", self._execute_nifi_start)
+        else:
+            self.register("docker_restart", self._execute_docker_restart)
+            self.register("list_containers", self._execute_list_containers)
+            self.register("docker_stats", self._execute_docker_stats)
+            self.register("docker_ps", self._execute_docker_ps)
 
     def register(self, command_name: str, handler: Callable):
         """Register a new command handler"""
@@ -617,6 +623,114 @@ class CommandExecutor:
         except Exception as e:
             logger.error(f"Docker ps exception: {e}", exc_info=True)
             return {"status": "error", "error": str(e), "output": None}
+
+
+    async def _run_bare_service_action(self, service_id: str, service_info: dict, action: str) -> dict:
+        """Run a bare service action (restart/stop/start) using the command from bare.yaml."""
+        cmd_string = service_info.get(action)
+        if not cmd_string:
+            return {
+                "status": "error",
+                "error": f"No '{action}' command defined for service '{service_id}'",
+                "output": None,
+            }
+
+        cmd_parts = cmd_string.split()
+        logger.info("Executing bare service %s for %s: %s (timeout: %ss)", action, service_id, cmd_string, config.command_timeout)
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd_parts,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(), timeout=config.command_timeout
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            return {
+                "status": "error",
+                "error": f"Command timed out after {config.command_timeout}s: {cmd_string}",
+                "output": None,
+            }
+
+        stdout_text = stdout.decode("utf-8").strip()
+        stderr_text = stderr.decode("utf-8").strip()
+
+        if process.returncode == 0:
+            logger.info("Bare service %s %s successful", action, service_id)
+            return {"status": "success", "output": stdout_text or f"{service_id} {action} completed", "error": None}
+        else:
+            error_msg = stderr_text or stdout_text or f"{service_id} {action} failed"
+            logger.error("Bare service %s %s failed (rc=%s): %s", action, service_id, process.returncode, error_msg)
+            return {"status": "error", "error": error_msg, "output": stdout_text or None}
+
+    async def _execute_bare_action_by_type(self, action: str, service_type: str, params: dict) -> dict:
+        """
+        Execute an action on all bare services of a given type (e.g. 'nifi').
+        Accepts optional 'service_ids' list to target specific services.
+        """
+        service_ids: Optional[List[str]] = params.get("service_ids") or None
+
+        if not config.bare_services:
+            error_msg = "No bare services configured (bare.yaml missing or empty)"
+            logger.error(error_msg)
+            return {"status": "error", "error": error_msg, "output": None}
+
+        # Filter by type
+        typed_services = {k: v for k, v in config.bare_services.items() if v.get("type") == service_type}
+        if not typed_services:
+            error_msg = f"No services of type '{service_type}' found in bare.yaml"
+            logger.error(error_msg)
+            return {"status": "error", "error": error_msg, "output": None}
+
+        if service_ids:
+            unknown = [sid for sid in service_ids if sid not in typed_services]
+            if unknown:
+                error_msg = f"Unknown {service_type} service IDs: {', '.join(unknown)}. Configured: {', '.join(typed_services.keys())}"
+                logger.error(error_msg)
+                return {"status": "error", "error": error_msg, "output": None}
+            target_services = {sid: typed_services[sid] for sid in service_ids}
+        else:
+            target_services = typed_services
+
+        outputs = []
+        errors = []
+
+        for service_id, service_info in target_services.items():
+            result = await self._run_bare_service_action(service_id, service_info, action)
+            line = f"[{service_id}] {result.get('output') or result.get('error') or ''}"
+            if result["status"] == "success":
+                outputs.append(line)
+            else:
+                errors.append(line)
+
+        combined_output = "\n".join(outputs + errors) or None
+
+        if errors and not outputs:
+            return {"status": "error", "error": "\n".join(errors), "output": None}
+        if errors:
+            return {"status": "error", "error": "\n".join(errors), "output": "\n".join(outputs)}
+
+        return {"status": "success", "output": combined_output or f"All {service_type} services {action} completed", "error": None}
+
+    async def _execute_nifi_restart(self, params: dict) -> dict:
+        """Restart all NiFi services defined in bare.yaml"""
+        logger.info("NiFi restart request - params: %s", params)
+        return await self._execute_bare_action_by_type("restart", "nifi", params)
+
+    async def _execute_nifi_stop(self, params: dict) -> dict:
+        """Stop all NiFi services defined in bare.yaml"""
+        logger.info("NiFi stop request - params: %s", params)
+        return await self._execute_bare_action_by_type("stop", "nifi", params)
+
+    async def _execute_nifi_start(self, params: dict) -> dict:
+        """Start all NiFi services defined in bare.yaml"""
+        logger.info("NiFi start request - params: %s", params)
+        return await self._execute_bare_action_by_type("start", "nifi", params)
 
 
 # Example of how to add custom commands:

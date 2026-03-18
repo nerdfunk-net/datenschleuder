@@ -1,10 +1,15 @@
+export interface Capability {
+  id: string
+  name: string
+}
+
 export interface CockpitAgent {
   agent_id: string
   status: string // 'online' | 'offline'
   last_heartbeat: number // unix timestamp
   version: string
   hostname: string
-  capabilities: string // comma-separated
+  capabilities: string // JSON array of Capability objects
   started_at: number // unix timestamp
   commands_executed: number
 }

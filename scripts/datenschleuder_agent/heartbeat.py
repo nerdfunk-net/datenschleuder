@@ -6,6 +6,7 @@ import json
 import logging
 import threading
 import time
+from typing import List
 
 import redis
 
@@ -17,9 +18,10 @@ logger = logging.getLogger(__name__)
 class HeartbeatThread(threading.Thread):
     """Background thread that updates agent status in Redis"""
 
-    def __init__(self, redis_client: redis.Redis):
+    def __init__(self, redis_client: redis.Redis, capabilities: List[dict]):
         super().__init__(daemon=True)
         self.redis_client = redis_client
+        self.capabilities = capabilities
         self._stop_event = threading.Event()
         self.commands_executed = 0
         self.started_at = int(time.time())
@@ -46,14 +48,20 @@ class HeartbeatThread(threading.Thread):
         agent_key = config.get_agent_key()
         now = int(time.time())
 
+        if config.mode == "bare":
+            containers = json.dumps([{"id": k, "type": v.get("type", "")} for k, v in config.bare_services.items()])
+        else:
+            containers = json.dumps([{"id": k, "type": v.get("type", "")} for k, v in config.docker_containers.items()])
+
         status_data = {
             "status": "online",
             "last_heartbeat": now,
             "version": config.agent_version,
             "agent_id": config.agent_id,
-            "capabilities": "echo,git_pull,git_push,git_status,list_repositories,docker_restart,list_containers,docker_stats,docker_ps",
+            "mode": config.mode,
+            "capabilities": json.dumps(self.capabilities),
             "repositories": json.dumps([{"id": k} for k in config.git_repos.keys()]),
-            "containers": json.dumps([{"id": k, "type": v.get("type", "")} for k, v in config.docker_containers.items()]),
+            "containers": containers,
             "started_at": self.started_at,
             "commands_executed": self.commands_executed,
         }

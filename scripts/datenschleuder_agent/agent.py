@@ -28,6 +28,29 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+CAPABILITIES = [
+    {"id": "echo", "name": "echo"},
+    {"id": "git_pull", "name": "Pull Git Repo"},
+    {"id": "git_push", "name": "Push Config to Git"},
+    {"id": "git_status", "name": "Get Git Status"},
+    {"id": "list_repositories", "name": "Get List of Repos"},
+    {"id": "docker_restart", "name": "Restart Docker Container"},
+    {"id": "list_containers", "name": "Get List of Containers"},
+    {"id": "docker_stats", "name": "Get Docker Stats"},
+    {"id": "docker_ps", "name": "Get running Containers"},
+]
+
+CAPABILITIES_BARE = [
+    {"id": "echo", "name": "echo"},
+    {"id": "git_pull", "name": "Pull Git Repo"},
+    {"id": "git_push", "name": "Push Config to Git"},
+    {"id": "git_status", "name": "Get Git Status"},
+    {"id": "list_repositories", "name": "Get List of Repos"},
+    {"id": "nifi_restart", "name": "Restart NiFi"},
+    {"id": "nifi_stop", "name": "Stop NiFi"},
+    {"id": "nifi_start", "name": "Start NiFi"},
+]
+
 class DatenschleuderAgent:
     """Main agent class"""
 
@@ -87,21 +110,35 @@ class DatenschleuderAgent:
             agent_key = config.get_agent_key()
             now = int(time.time())
 
+            capabilities = CAPABILITIES_BARE if config.mode == "bare" else CAPABILITIES
+
+            if config.mode == "bare":
+                containers = json.dumps([{"id": k, "type": v.get("type", "")} for k, v in config.bare_services.items()])
+            else:
+                containers = json.dumps([{"id": k, "type": v.get("type", "")} for k, v in config.docker_containers.items()])
+
+            capabilities_json = json.dumps(capabilities)
+
+            logger.debug("DEBUG _register_agent: mode=%s", config.mode)
+            logger.debug("DEBUG _register_agent: capabilities=%s", capabilities_json)
+            logger.debug("DEBUG _register_agent: containers=%s", containers)
+
             status_data = {
                 "status": "online",
                 "last_heartbeat": now,
                 "version": config.agent_version,
                 "agent_id": config.agent_id,
-                "capabilities": "echo,git_pull,git_push,git_status,list_repositories,docker_restart,list_containers,docker_stats,docker_ps",
+                "mode": config.mode,
+                "capabilities": capabilities_json,
                 "repositories": json.dumps([{"id": k} for k in config.git_repos.keys()]),
-                "containers": json.dumps([{"id": k, "type": v.get("type", "")} for k, v in config.docker_containers.items()]),
+                "containers": containers,
                 "started_at": now,
                 "commands_executed": 0,
             }
 
             self.redis_client.hset(agent_key, mapping=status_data)
             self.redis_client.expire(agent_key, config.heartbeat_interval * 3)
-            logger.info(f"Agent registered: {agent_key}")
+            logger.info("Agent registered: %s (mode=%s, %d capabilities)", agent_key, config.mode, len(capabilities))
 
         except Exception as e:
             logger.error(f"Failed to register agent: {e}")
@@ -112,7 +149,8 @@ class DatenschleuderAgent:
             return
 
         try:
-            self.heartbeat_thread = HeartbeatThread(self.redis_client)
+            capabilities = CAPABILITIES_BARE if config.mode == "bare" else CAPABILITIES
+            self.heartbeat_thread = HeartbeatThread(self.redis_client, capabilities)
             self.heartbeat_thread.start()
             logger.info("Heartbeat thread started")
         except Exception as e:
@@ -230,6 +268,7 @@ class DatenschleuderAgent:
         """Main agent run loop with reconnection logic"""
         logger.info(f"Starting Datenschleuder Agent v{config.agent_version}")
         logger.info(f"Agent ID: {config.agent_id}")
+        logger.info(f"Mode: {config.mode}")
 
         # Validate configuration
         valid, error = config.validate()

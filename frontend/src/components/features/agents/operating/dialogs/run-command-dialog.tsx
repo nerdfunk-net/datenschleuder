@@ -223,8 +223,8 @@ export function RunCommandDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {commands.map((cmd) => (
-                      <SelectItem key={cmd} value={cmd}>
-                        <span className="font-mono text-sm">{cmd}</span>
+                      <SelectItem key={cmd.id} value={cmd.id}>
+                        {cmd.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

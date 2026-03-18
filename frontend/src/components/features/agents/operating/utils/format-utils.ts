@@ -34,14 +34,42 @@ export function formatUptime(startedAt: number): string {
 }
 
 /**
- * Parse comma-separated capabilities string into array
+ * Parse JSON capabilities string into array of {id, name} objects.
+ * Handles:
+ *   - JSON array of objects: [{"id": "echo", "name": "Echo"}, ...]
+ *   - JSON array of strings: ["echo", "git_pull", ...]
+ *   - Comma-separated string: "echo,git_pull,..." (legacy fallback)
  */
-export function parseCapabilities(capabilities: string): string[] {
+export function parseCapabilities(capabilities: string): { id: string; name: string }[] {
+  console.debug('[parseCapabilities] raw input:', capabilities)
   if (!capabilities) return []
-  return capabilities
-    .split(',')
-    .map((c) => c.trim())
-    .filter(Boolean)
+  try {
+    const parsed = JSON.parse(capabilities)
+    console.debug('[parseCapabilities] parsed JSON:', parsed)
+    if (Array.isArray(parsed)) {
+      const result = parsed.map((item) => {
+        if (typeof item === 'string') return { id: item, name: item }
+        if (item && typeof item === 'object') {
+          const id = String(item.id ?? '')
+          const name = String(item.name ?? item.id ?? id)
+          return { id, name }
+        }
+        return { id: String(item), name: String(item) }
+      })
+      console.debug('[parseCapabilities] result:', result)
+      return result
+    }
+    console.warn('[parseCapabilities] parsed JSON is not an array:', parsed)
+  } catch (e) {
+    console.warn('[parseCapabilities] JSON.parse failed, using comma-split fallback. Error:', e)
+    // fallback: treat as comma-separated ids (backward compat)
+    return capabilities
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean)
+      .map((id) => ({ id, name: id }))
+  }
+  return []
 }
 
 /**
