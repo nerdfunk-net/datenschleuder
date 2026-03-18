@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api/git-repositories", tags=["git-repositories"])
 
 
 @router.get("/", response_model=GitRepositoryListResponse)
-async def get_repositories(
+def get_repositories(
     category: Optional[str] = None,
     active_only: bool = False,
     current_user: dict = Depends(require_permission("git.repositories", "read")),
@@ -51,7 +51,7 @@ async def get_repositories(
 
 
 @router.get("/{repo_id}", response_model=GitRepositoryResponse)
-async def get_repository(
+def get_repository(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.repositories", "read")),
     git_repo_manager=Depends(get_git_repo_manager),
@@ -74,7 +74,7 @@ async def get_repository(
 
 
 @router.get("/{repo_id}/edit")
-async def get_repository_for_edit(
+def get_repository_for_edit(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.repositories", "write")),
     git_repo_manager=Depends(get_git_repo_manager),
@@ -95,7 +95,7 @@ async def get_repository_for_edit(
 
 
 @router.post("/", response_model=GitRepositoryResponse)
-async def create_repository(
+def create_repository(
     repository: GitRepositoryRequest,
     current_user: dict = Depends(require_permission("git.repositories", "write")),
     git_repo_manager=Depends(get_git_repo_manager),
@@ -127,7 +127,7 @@ async def create_repository(
 
 
 @router.put("/{repo_id}", response_model=GitRepositoryResponse)
-async def update_repository(
+def update_repository(
     repo_id: int,
     repository: GitRepositoryUpdateRequest,
     current_user: dict = Depends(require_permission("git.repositories", "write")),
@@ -174,7 +174,7 @@ async def update_repository(
 
 
 @router.delete("/{repo_id}")
-async def delete_repository(
+def delete_repository(
     repo_id: int,
     hard_delete: bool = True,
     current_user: dict = Depends(require_permission("git.repositories", "delete")),
@@ -201,7 +201,7 @@ async def delete_repository(
 
 
 @router.post("/test-connection", response_model=GitConnectionTestResponse)
-async def test_git_connection(
+def test_git_connection(
     test_request: GitConnectionTestRequest,
     current_user: dict = Depends(require_permission("git.repositories", "write")),
     git_connection_service=Depends(get_git_connection_service),
@@ -237,7 +237,7 @@ async def test_git_connection(
 
 
 @router.get("/health")
-async def health_check(
+def health_check(
     current_user: dict = Depends(require_permission("git.repositories", "read")),
     git_repo_manager=Depends(get_git_repo_manager),
 ):

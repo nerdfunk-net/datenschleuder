@@ -42,7 +42,7 @@ def _get_cert_or_404(cert_id: int):
 
 
 @router.get("/ca", response_model=CAResponse)
-async def get_ca(user: dict = Depends(verify_token)):
+def get_ca(user: dict = Depends(verify_token)):
     return _get_ca_or_404()
 
 
@@ -52,7 +52,7 @@ async def get_ca(user: dict = Depends(verify_token)):
     status_code=201,
     dependencies=[Depends(require_permission("pki", "write"))],
 )
-async def create_ca(
+def create_ca(
     request: CreateCARequest,
     user: dict = Depends(verify_token),
     encryption_service=Depends(get_encryption_service),
@@ -63,7 +63,7 @@ async def create_ca(
 
 
 @router.get("/ca/cert")
-async def get_ca_cert():
+def get_ca_cert():
     ca = _get_ca_or_404()
     filename = f"{ca.common_name.replace(' ', '_')}.ca.pem"
     return Response(
@@ -74,7 +74,7 @@ async def get_ca_cert():
 
 
 @router.get("/ca/export/pkcs12")
-async def export_ca_pkcs12():
+def export_ca_pkcs12():
     ca = _get_ca_or_404()
     p12_bytes = _pki_service.export_ca_pkcs12(ca)
     filename = f"{ca.common_name.replace(' ', '_')}.ca.p12"
@@ -86,7 +86,7 @@ async def export_ca_pkcs12():
 
 
 @router.post("/ca/export/pkcs12/withkey")
-async def export_ca_pkcs12_with_key(
+def export_ca_pkcs12_with_key(
     request: ExportCAPKCS12WithKeyRequest,
     user: dict = Depends(verify_admin_token),
     encryption_service=Depends(get_encryption_service),
@@ -104,7 +104,7 @@ async def export_ca_pkcs12_with_key(
 
 
 @router.delete("/ca", status_code=204)
-async def delete_ca(user: dict = Depends(verify_admin_token)):
+def delete_ca(user: dict = Depends(verify_admin_token)):
     deleted = _pki_service.delete_ca()
     if not deleted:
         raise HTTPException(status_code=404, detail="No Certificate Authority found")
@@ -115,7 +115,7 @@ async def delete_ca(user: dict = Depends(verify_admin_token)):
 
 
 @router.get("/certificates", response_model=CertificateListResponse)
-async def list_certificates(user: dict = Depends(verify_token)):
+def list_certificates(user: dict = Depends(verify_token)):
     ca = _get_ca_or_404()
     certs = _pki_service.cert_repo.get_all_for_ca(ca.id)
     return CertificateListResponse(certificates=certs, total=len(certs))
@@ -127,7 +127,7 @@ async def list_certificates(user: dict = Depends(verify_token)):
     status_code=201,
     dependencies=[Depends(require_permission("pki", "write"))],
 )
-async def create_certificate(
+def create_certificate(
     request: CreateCertificateRequest,
     user: dict = Depends(verify_token),
     encryption_service=Depends(get_encryption_service),
@@ -139,7 +139,7 @@ async def create_certificate(
 
 
 @router.get("/certificates/{cert_id}", response_model=CertificateResponse)
-async def get_certificate(cert_id: int, user: dict = Depends(verify_token)):
+def get_certificate(cert_id: int, user: dict = Depends(verify_token)):
     return _get_cert_or_404(cert_id)
 
 
@@ -148,7 +148,7 @@ async def get_certificate(cert_id: int, user: dict = Depends(verify_token)):
     response_model=CertificateResponse,
     dependencies=[Depends(require_permission("pki", "write"))],
 )
-async def revoke_certificate(
+def revoke_certificate(
     cert_id: int,
     request: RevokeCertificateRequest,
     user: dict = Depends(verify_token),
@@ -163,7 +163,7 @@ async def revoke_certificate(
 
 
 @router.get("/certificates/{cert_id}/export/cert")
-async def export_cert(cert_id: int, user: dict = Depends(verify_token)):
+def export_cert(cert_id: int, user: dict = Depends(verify_token)):
     cert = _get_cert_or_404(cert_id)
     filename = f"{cert.common_name.replace(' ', '_')}.crt.pem"
     return Response(
@@ -174,7 +174,7 @@ async def export_cert(cert_id: int, user: dict = Depends(verify_token)):
 
 
 @router.get("/certificates/{cert_id}/export/pem")
-async def export_pem(cert_id: int, user: dict = Depends(verify_token)):
+def export_pem(cert_id: int, user: dict = Depends(verify_token)):
     cert = _get_cert_or_404(cert_id)
     ca = _get_ca_or_404()
     bundle = _pki_service.export_pem_bundle(cert, ca)
@@ -187,7 +187,7 @@ async def export_pem(cert_id: int, user: dict = Depends(verify_token)):
 
 
 @router.post("/certificates/{cert_id}/export/pkcs12")
-async def export_pkcs12(
+def export_pkcs12(
     cert_id: int,
     request: ExportPKCS12Request,
     user: dict = Depends(verify_token),
@@ -207,7 +207,7 @@ async def export_pkcs12(
 
 
 @router.post("/certificates/{cert_id}/export/key")
-async def export_private_key(
+def export_private_key(
     cert_id: int,
     request: ExportPrivateKeyRequest,
     user: dict = Depends(verify_token),
@@ -229,7 +229,7 @@ async def export_private_key(
 
 
 @router.get("/crl")
-async def get_crl(encryption_service=Depends(get_encryption_service)):
+def get_crl(encryption_service=Depends(get_encryption_service)):
     ca = _get_ca_or_404()
     crl_pem = _pki_service.generate_crl(ca, encryption_service)
     return Response(

@@ -27,7 +27,7 @@ router = APIRouter(prefix="/auth/oidc", tags=["oidc-authentication"])
 
 
 @router.get("/enabled")
-async def check_oidc_enabled(
+def check_oidc_enabled(
     settings_manager=Depends(get_settings_manager),
 ):
     """Check if OIDC authentication is enabled."""
@@ -35,7 +35,7 @@ async def check_oidc_enabled(
 
 
 @router.get("/providers", response_model=OIDCProvidersResponse)
-async def get_oidc_providers(
+def get_oidc_providers(
     settings_manager=Depends(get_settings_manager),
 ):
     """Get list of available OIDC providers for login selection."""

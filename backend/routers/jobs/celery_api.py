@@ -56,7 +56,7 @@ class TaskStatusResponse(BaseModel):
 
 @router.post("/test", response_model=TaskResponse)
 @handle_celery_errors("submit test task")
-async def submit_test_task(
+def submit_test_task(
     request: TestTaskRequest,
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
@@ -72,7 +72,7 @@ async def submit_test_task(
 
 @router.post("/test/progress", response_model=TaskResponse)
 @handle_celery_errors("submit progress test task")
-async def submit_progress_test_task(
+def submit_progress_test_task(
     request: ProgressTaskRequest,
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
@@ -90,7 +90,7 @@ async def submit_progress_test_task(
 
 @router.get("/tasks/{task_id}", response_model=TaskStatusResponse)
 @handle_celery_errors("get task status")
-async def get_task_status(
+def get_task_status(
     task_id: str,
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
@@ -104,7 +104,7 @@ async def get_task_status(
 
 @router.delete("/tasks/{task_id}")
 @handle_celery_errors("cancel task")
-async def cancel_task(
+def cancel_task(
     task_id: str,
     current_user: dict = Depends(require_permission("settings.celery", "write")),
 ):
@@ -114,7 +114,7 @@ async def cancel_task(
 
 @router.get("/workers")
 @handle_celery_errors("list workers")
-async def list_workers(
+def list_workers(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """List active Celery workers and their status, including queue assignments."""
@@ -123,7 +123,7 @@ async def list_workers(
 
 @router.get("/queues")
 @handle_celery_errors("list queues")
-async def list_queues(
+def list_queues(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """List all Celery queues with their metrics and worker assignments."""
@@ -132,7 +132,7 @@ async def list_queues(
 
 @router.delete("/queues/{queue_name}/purge")
 @handle_celery_errors("purge queue")
-async def purge_queue(
+def purge_queue(
     queue_name: str,
     current_user: dict = Depends(require_permission("settings.celery", "write")),
 ):
@@ -161,7 +161,7 @@ async def purge_queue(
 
 @router.delete("/queues/purge-all")
 @handle_celery_errors("purge all queues")
-async def purge_all_queues(
+def purge_all_queues(
     current_user: dict = Depends(require_permission("settings.celery", "write")),
 ):
     """Purge all pending tasks from all queues."""
@@ -187,7 +187,7 @@ async def purge_all_queues(
 
 @router.get("/schedules")
 @handle_celery_errors("list schedules")
-async def list_schedules(
+def list_schedules(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """List all periodic task schedules configured in Celery Beat."""
@@ -209,7 +209,7 @@ async def list_schedules(
 
 @router.get("/beat/status")
 @handle_celery_errors("get beat status")
-async def beat_status(
+def beat_status(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """Get Celery Beat scheduler status."""
@@ -219,7 +219,7 @@ async def beat_status(
 
 @router.get("/status")
 @handle_celery_errors("get celery status")
-async def celery_status(
+def celery_status(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """Get overall Celery system status."""
@@ -228,7 +228,7 @@ async def celery_status(
 
 @router.get("/config")
 @handle_celery_errors("get celery config")
-async def get_celery_config(
+def get_celery_config(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """
@@ -277,7 +277,7 @@ async def get_celery_config(
 
 @router.post("/tasks/cache-demo", response_model=TaskResponse)
 @handle_celery_errors("trigger cache demo task")
-async def trigger_cache_demo(
+def trigger_cache_demo(
     current_user: dict = Depends(require_permission("settings.cache", "write")),
 ):
     """
@@ -323,7 +323,7 @@ class CheckQueuesRequest(BaseModel):
 
 @router.post("/tasks/check-queues", response_model=TaskResponse)
 @handle_celery_errors("trigger NiFi check-queues task")
-async def trigger_check_queues(
+def trigger_check_queues(
     request: CheckQueuesRequest,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
@@ -412,7 +412,7 @@ class CheckProcessGroupRequest(BaseModel):
 
 @router.post("/tasks/check-process-group", response_model=TaskResponse)
 @handle_celery_errors("trigger NiFi check-process-group task")
-async def trigger_check_process_group(
+def trigger_check_process_group(
     request: CheckProcessGroupRequest,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
@@ -507,7 +507,7 @@ class CelerySettingsRequest(BaseModel):
 
 @router.get("/settings")
 @handle_celery_errors("get celery settings")
-async def get_celery_settings(
+def get_celery_settings(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """Get current Celery settings from database."""
@@ -516,7 +516,7 @@ async def get_celery_settings(
 
 @router.put("/settings")
 @handle_celery_errors("update celery settings")
-async def update_celery_settings(
+def update_celery_settings(
     request: CelerySettingsRequest,
     current_user: dict = Depends(require_permission("settings.celery", "write")),
 ):
@@ -541,7 +541,7 @@ async def update_celery_settings(
 
 @router.post("/cleanup", response_model=TaskResponse)
 @handle_celery_errors("trigger cleanup task")
-async def trigger_cleanup(
+def trigger_cleanup(
     current_user: dict = Depends(require_permission("settings.celery", "write")),
 ):
     """Manually trigger the Celery cleanup task."""
@@ -556,7 +556,7 @@ async def trigger_cleanup(
 
 @router.get("/cleanup/stats")
 @handle_celery_errors("get cleanup stats")
-async def get_cleanup_stats(
+def get_cleanup_stats(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """Get statistics about data that would be cleaned up."""

@@ -59,7 +59,7 @@ class AddCertificateResponse(BaseModel):
 
 
 @router.get("/scan", response_model=ScanResponse)
-async def scan_certificates(
+def scan_certificates(
     current_user: dict = Depends(verify_admin_token),
 ) -> ScanResponse:
     """
@@ -186,7 +186,7 @@ async def upload_certificate(
 
 
 @router.post("/add-to-system", response_model=AddCertificateResponse)
-async def add_certificate_to_system(
+def add_certificate_to_system(
     request: AddCertificateRequest,
     current_user: dict = Depends(verify_admin_token),
 ) -> AddCertificateResponse:
@@ -296,7 +296,7 @@ async def add_certificate_to_system(
 
 
 @router.delete("/{filename}")
-async def delete_certificate(
+def delete_certificate(
     filename: str,
     current_user: dict = Depends(verify_admin_token),
 ) -> dict:

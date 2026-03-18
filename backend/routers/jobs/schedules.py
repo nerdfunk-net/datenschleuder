@@ -26,7 +26,7 @@ _auth_service = JobScheduleAuthorizationService()
 
 
 @router.post("", response_model=JobScheduleResponse, status_code=status.HTTP_201_CREATED)
-async def create_job_schedule(
+def create_job_schedule(
     job_data: JobScheduleCreate,
     current_user: dict = Depends(verify_token),
 ):
@@ -64,7 +64,7 @@ async def create_job_schedule(
 
 
 @router.get("", response_model=List[JobScheduleResponse])
-async def list_job_schedules(
+def list_job_schedules(
     is_global: Optional[bool] = None,
     is_active: Optional[bool] = None,
     current_user: dict = Depends(verify_token),
@@ -86,7 +86,7 @@ async def list_job_schedules(
 
 
 @router.get("/{job_id}", response_model=JobScheduleResponse)
-async def get_job_schedule(
+def get_job_schedule(
     job_id: int,
     current_user: dict = Depends(verify_token),
 ):
@@ -108,7 +108,7 @@ async def get_job_schedule(
 
 
 @router.put("/{job_id}", response_model=JobScheduleResponse)
-async def update_job_schedule(
+def update_job_schedule(
     job_id: int,
     job_update: JobScheduleUpdate,
     current_user: dict = Depends(verify_token),
@@ -146,7 +146,7 @@ async def update_job_schedule(
 
 
 @router.delete("/{job_id}")
-async def delete_job_schedule(
+def delete_job_schedule(
     job_id: int,
     current_user: dict = Depends(verify_token),
 ):
@@ -176,7 +176,7 @@ async def delete_job_schedule(
 
 
 @router.post("/execute")
-async def execute_job(
+def execute_job(
     execution_request: JobExecutionRequest,
     current_user: dict = Depends(verify_token),
 ):
@@ -217,7 +217,7 @@ async def execute_job(
 
 
 @router.get("/debug/scheduler-status")
-async def get_scheduler_debug_status(current_user: dict = Depends(verify_token)):
+def get_scheduler_debug_status(current_user: dict = Depends(verify_token)):
     """Get detailed scheduler debug information."""
     try:
         return JobSchedulerDebugService().get_scheduler_status(jobs_manager)
@@ -230,7 +230,7 @@ async def get_scheduler_debug_status(current_user: dict = Depends(verify_token))
 
 
 @router.post("/debug/recalculate-next-runs")
-async def recalculate_all_next_runs(
+def recalculate_all_next_runs(
     current_user: dict = Depends(require_permission("jobs", "write")),
 ):
     """Recalculate next_run for all active schedules."""

@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/git/{repo_id}", tags=["git-version-control"])
 
 
 @router.get("/branches")
-async def get_branches(
+def get_branches(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.operations", "execute")),
 ):
@@ -49,7 +49,7 @@ async def get_branches(
 
 
 @router.get("/commits/{branch_name}")
-async def get_commits(
+def get_commits(
     repo_id: int,
     branch_name: str,
     current_user: dict = Depends(require_permission("git.repositories", "read")),
@@ -113,7 +113,7 @@ async def get_commits(
 
 
 @router.post("/diff")
-async def compare_commits(
+def compare_commits(
     repo_id: int,
     request: dict,
     current_user: dict = Depends(require_permission("git.operations", "execute")),

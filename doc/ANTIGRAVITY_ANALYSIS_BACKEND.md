@@ -18,12 +18,67 @@ Overall, the security posture is strong with clear attention paid to cryptograph
 ## 3. Best Practices & Areas for Improvement
 While the foundation is highly mature, there are distinct architectural enhancements required regarding concurrency mechanics in FastAPI.
 
-### 🔴 Blocking I/O inside `async def` endpoints (High Priority)
+### ~~🔴 Blocking I/O inside `async def` endpoints~~ ✅ Fixed (2026-03-18)
 **Issue:** The project uses the synchronous engine branch of SQLAlchemy (`Session` instead of `AsyncSession`) with synchronous PostgreSQL interactions natively executed inside `routers/*` endpoints that are defined as `async def` (e.g., `async def get_ca(...)` in `routers/pki.py`).
 **Why it matters:** When FastAPI runs an endpoint prefixed with `async def`, it executes it directly inside the main `asyncio` event loop. Because the internal database queries trigger synchronous network requests, it entirely blocks the event loop thread until the DB returns data. This drastically caps concurrent throughput.
-**Recommendation:** 
-1. **Quick Fix:** In your routers, drop the `async` keyword for routes orchestrating synchronous DB transactions (change `async def get_ca()` to standard `def get_ca()`). FastAPI automatically moves synchronous `def` endpoints to a separate system threadpool, preventing event loop blocking.
-2. **Long-term Fix:** Switch the DB engine driver from synchronous Postgres to async (e.g., `postgresql+asyncpg://`) and refactor repositories to use SQLAlchemy `AsyncSession` alongside `async / await` operations.
+
+**Quick Fix Applied:** Converted 243 route handlers across 29 router files from `async def` to plain `def`. FastAPI automatically moves `def` endpoints to a threadpool, preventing event loop blocking. Endpoints that genuinely use `await` (file uploads, OIDC flows, NiFi operations) were left untouched.
+
+---
+
+### Long-Term Fix: Full Async Stack (Not Yet Implemented)
+
+If higher concurrency becomes a requirement, the full async migration involves three layers:
+
+#### 1. Database driver — `core/database.py`
+Replace `psycopg2` with `asyncpg` and switch to an async engine:
+```python
+# pip install sqlalchemy[asyncio] asyncpg
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+
+DATABASE_URL = "postgresql+asyncpg://user:pass@host/db"  # note: asyncpg driver
+
+engine = create_async_engine(DATABASE_URL, pool_size=5, max_overflow=10, pool_pre_ping=True)
+AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
+        yield session
+```
+
+#### 2. Repositories — `repositories/*.py`
+All repository methods need `async/await` and `AsyncSession`:
+```python
+# Before
+class UserRepository(BaseRepository):
+    def get_by_id(self, db: Session, user_id: int) -> Optional[User]:
+        return db.query(User).filter(User.id == user_id).first()
+
+# After
+class UserRepository(BaseRepository):
+    async def get_by_id(self, db: AsyncSession, user_id: int) -> Optional[User]:
+        result = await db.execute(select(User).where(User.id == user_id))
+        return result.scalar_one_or_none()
+```
+Note: `db.query(...)` does not exist on `AsyncSession` — all queries must use `select()` + `await db.execute(...)`.
+
+#### 3. Routers — `routers/*.py`
+With async repos, routers become truly async:
+```python
+@router.get("/ca", response_model=CAResponse)
+async def get_ca(db: AsyncSession = Depends(get_db), user: dict = Depends(verify_token)):
+    ca = await ca_repo.get_active_ca(db)
+    if not ca:
+        raise HTTPException(status_code=404, detail="No Certificate Authority found")
+    return ca
+```
+
+#### Migration Strategy
+This is a significant refactor (40+ tables, all repositories, all services, all routers). Recommended approach:
+1. Start with one low-risk domain (e.g., `settings`) as a proof of concept.
+2. Migrate domain by domain, keeping the sync engine running in parallel until all repositories are ported.
+3. Switch `get_db()` to async only after all consumers are migrated.
+4. Remove `psycopg2` dependency once fully migrated.
 
 ### 🟡 Comprehensive Security Headers (Low Priority)
 **Issue:** While `main.py` adds a basic `security_headers` middleware implementing `nosniff` and `X-Frame-Options: DENY`, it lacks some expanded coverage.

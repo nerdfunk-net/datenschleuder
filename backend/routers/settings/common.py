@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
 @router.get("")
-async def get_all_settings(
+def get_all_settings(
     current_user: dict = Depends(require_permission("settings.common", "read")),
 ):
     """Get all application settings."""
@@ -51,7 +51,7 @@ async def get_all_settings(
 
 
 @router.get("/git")
-async def get_git_settings(
+def get_git_settings(
     current_user: dict = Depends(require_permission("settings.git", "read")),
 ):
     """Get Git settings."""
@@ -70,7 +70,7 @@ async def get_git_settings(
 
 
 @router.get("/cache")
-async def get_cache_settings(
+def get_cache_settings(
     current_user: dict = Depends(require_permission("settings.cache", "read")),
 ):
     """Get Cache settings."""
@@ -88,7 +88,7 @@ async def get_cache_settings(
 
 
 @router.put("/cache")
-async def update_cache_settings(
+def update_cache_settings(
     cache_request: CacheSettingsRequest,
     current_user: dict = Depends(require_permission("settings.cache", "write")),
 ):
@@ -119,7 +119,7 @@ async def update_cache_settings(
 
 
 @router.post("/cache")
-async def create_cache_settings(
+def create_cache_settings(
     cache_request: CacheSettingsRequest,
     current_user: dict = Depends(require_permission("settings.cache", "write")),
 ):
@@ -147,7 +147,7 @@ async def create_cache_settings(
 
 
 @router.put("")
-async def update_all_settings(
+def update_all_settings(
     settings_request: AllSettingsRequest,
     current_user: dict = Depends(require_permission("settings.common", "write")),
 ):
@@ -183,7 +183,7 @@ async def update_all_settings(
 
 
 @router.put("/git")
-async def update_git_settings(
+def update_git_settings(
     git_request: GitSettingsRequest,
     current_user: dict = Depends(require_permission("settings.git", "write")),
 ):
@@ -213,7 +213,7 @@ async def update_git_settings(
 
 
 @router.post("/git")
-async def create_git_settings(
+def create_git_settings(
     git_request: GitSettingsRequest,
     current_user: dict = Depends(require_permission("settings.git", "write")),
 ):
@@ -270,7 +270,7 @@ async def test_git_connection(
 
 
 @router.post("/reset")
-async def reset_settings_to_defaults(
+def reset_settings_to_defaults(
     current_user: dict = Depends(require_permission("settings.common", "write")),
 ):
     """Reset all settings to default values."""
@@ -299,7 +299,7 @@ async def reset_settings_to_defaults(
 
 
 @router.get("/health")
-async def check_settings_health(
+def check_settings_health(
     current_user: dict = Depends(require_permission("settings.common", "write")),
 ):
     """Check settings database health."""
@@ -330,7 +330,7 @@ async def check_settings_health(
 
 # Legacy template settings endpoints for backward compatibility
 @router.get("/templates")
-async def get_template_settings(
+def get_template_settings(
     current_user: dict = Depends(require_permission("settings.common", "write")),
 ):
     """Get template settings (legacy endpoint - redirects to new template management)."""
@@ -342,7 +342,7 @@ async def get_template_settings(
 
 
 @router.post("/templates")
-async def update_template_settings(
+def update_template_settings(
     template_data: dict,
     current_user: dict = Depends(require_permission("settings.common", "write")),
 ):

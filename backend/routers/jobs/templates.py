@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api/job-templates", tags=["job-templates"])
 @router.post(
     "", response_model=JobTemplateResponse, status_code=status.HTTP_201_CREATED
 )
-async def create_job_template(
+def create_job_template(
     template_data: JobTemplateCreate, current_user: dict = Depends(verify_token)
 ):
     """
@@ -84,7 +84,7 @@ async def create_job_template(
 
 
 @router.get("", response_model=JobTemplateListResponse)
-async def list_job_templates(
+def list_job_templates(
     job_type: Optional[str] = None, current_user: dict = Depends(verify_token)
 ):
     """
@@ -113,13 +113,13 @@ async def list_job_templates(
 
 
 @router.get("/types")
-async def get_job_types(current_user: dict = Depends(verify_token)):
+def get_job_types(current_user: dict = Depends(verify_token)):
     """Get available job types"""
     return job_template_manager.get_job_types()
 
 
 @router.get("/{template_id}", response_model=JobTemplateResponse)
-async def get_job_template(
+def get_job_template(
     template_id: int, current_user: dict = Depends(verify_token)
 ):
     """Get a specific job template by ID"""
@@ -154,7 +154,7 @@ async def get_job_template(
 
 
 @router.put("/{template_id}", response_model=JobTemplateResponse)
-async def update_job_template(
+def update_job_template(
     template_id: int,
     update_data: JobTemplateUpdate,
     current_user: dict = Depends(verify_token),
@@ -221,7 +221,7 @@ async def update_job_template(
 
 
 @router.delete("/{template_id}")
-async def delete_job_template(
+def delete_job_template(
     template_id: int, current_user: dict = Depends(verify_token)
 ):
     """Delete a job template"""

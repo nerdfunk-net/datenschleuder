@@ -45,7 +45,7 @@ def get_cached_commits(
 
 
 @router.get("/status")
-async def get_repository_status(
+def get_repository_status(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.operations", "execute")),
     git_repo_manager=Depends(get_git_repo_manager),
@@ -78,7 +78,7 @@ async def get_repository_status(
 
 
 @router.post("/sync")
-async def sync_repository(
+def sync_repository(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.operations", "execute")),
     git_repo_manager=Depends(get_git_repo_manager),
@@ -227,7 +227,7 @@ async def sync_repository(
 
 
 @router.post("/remove-and-sync")
-async def remove_and_sync_repository(
+def remove_and_sync_repository(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.operations", "execute")),
     git_repo_manager=Depends(get_git_repo_manager),
@@ -354,7 +354,7 @@ async def remove_and_sync_repository(
 
 
 @router.get("/info")
-async def get_repository_info(
+def get_repository_info(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.operations", "execute")),
     git_repo_manager=Depends(get_git_repo_manager),
@@ -419,7 +419,7 @@ async def get_repository_info(
 
 
 @router.get("/debug")
-async def debug_git(
+def debug_git(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.operations", "execute")),
 ):

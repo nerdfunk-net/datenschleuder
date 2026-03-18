@@ -54,7 +54,7 @@ router = APIRouter(prefix="/api/cert-manager", tags=["cert-manager"])
     response_model=CertFileListResponse,
     dependencies=[Depends(require_permission("nifi", "read"))],
 )
-async def get_cert_files(instance_id: int) -> CertFileListResponse:
+def get_cert_files(instance_id: int) -> CertFileListResponse:
     """List all *.pem and *.p12 files in the git repository of a NiFi instance."""
     files = list_cert_files(instance_id)
     return CertFileListResponse(instance_id=instance_id, files=files)
@@ -65,7 +65,7 @@ async def get_cert_files(instance_id: int) -> CertFileListResponse:
     response_model=FileCertificatesResponse,
     dependencies=[Depends(require_permission("nifi", "read"))],
 )
-async def get_certificates(
+def get_certificates(
     instance_id: int,
     file_path: str = Query(
         ..., description="Relative path to the cert file within the repo"
@@ -84,7 +84,7 @@ async def get_certificates(
     response_model=NifiPasswordsResponse,
     dependencies=[Depends(require_permission("nifi", "read"))],
 )
-async def get_nifi_passwords(
+def get_nifi_passwords(
     instance_id: int,
     file_path: str = Query(...),
 ) -> NifiPasswordsResponse:
@@ -102,7 +102,7 @@ async def get_nifi_passwords(
     response_model=ConvertResponse,
     dependencies=[Depends(require_permission("nifi", "write"))],
 )
-async def convert_certificate(request: ConvertRequest) -> ConvertResponse:
+def convert_certificate(request: ConvertRequest) -> ConvertResponse:
     """Convert a certificate file between PEM and PKCS12 formats."""
     result = convert_cert_file(
         instance_id=request.instance_id,
@@ -118,7 +118,7 @@ async def convert_certificate(request: ConvertRequest) -> ConvertResponse:
     "/export",
     dependencies=[Depends(require_permission("nifi", "read"))],
 )
-async def export_certs(request: ExportRequest) -> Response:
+def export_certs(request: ExportRequest) -> Response:
     """Export selected certificates from a file as a downloadable file."""
     content_map = {
         "pem": ("application/x-pem-file", "exported-certs.pem"),
@@ -180,7 +180,7 @@ async def import_cert(
     response_model=KeystoreCreateResponse,
     dependencies=[Depends(require_permission("nifi", "write"))],
 )
-async def create_keystore(request: CreateKeystoreRequest) -> KeystoreCreateResponse:
+def create_keystore(request: CreateKeystoreRequest) -> KeystoreCreateResponse:
     """Create a new PKCS12 keystore with a self-signed certificate."""
     result = create_new_keystore(
         instance_id=request.instance_id,
@@ -201,7 +201,7 @@ async def create_keystore(request: CreateKeystoreRequest) -> KeystoreCreateRespo
     response_model=KeystoreCreateResponse,
     dependencies=[Depends(require_permission("nifi", "write"))],
 )
-async def create_truststore(request: CreateTruststoreRequest) -> KeystoreCreateResponse:
+def create_truststore(request: CreateTruststoreRequest) -> KeystoreCreateResponse:
     """Create a new PEM truststore with a self-signed certificate."""
     result = create_new_truststore(
         instance_id=request.instance_id,
@@ -220,7 +220,7 @@ async def create_truststore(request: CreateTruststoreRequest) -> KeystoreCreateR
     response_model=CertModifyResponse,
     dependencies=[Depends(require_permission("nifi", "write"))],
 )
-async def remove_certs(request: RemoveCertificatesRequest) -> CertModifyResponse:
+def remove_certs(request: RemoveCertificatesRequest) -> CertModifyResponse:
     """Remove selected certificates from a PEM or PKCS12 file and commit the change."""
     result = remove_certificates(
         instance_id=request.instance_id,
@@ -236,7 +236,7 @@ async def remove_certs(request: RemoveCertificatesRequest) -> CertModifyResponse
     response_model=CertModifyResponse,
     dependencies=[Depends(require_permission("nifi", "write"))],
 )
-async def add_cert(request: AddCertificateRequest) -> CertModifyResponse:
+def add_cert(request: AddCertificateRequest) -> CertModifyResponse:
     """Add a PEM certificate to an existing store and commit the change."""
     result = add_certificate(
         instance_id=request.instance_id,

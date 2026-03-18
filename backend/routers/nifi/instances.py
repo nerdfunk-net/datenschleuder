@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/nifi/instances", tags=["nifi-instances"])
 
 
 @router.get("/oidc-providers")
-async def list_nifi_oidc_providers(
+def list_nifi_oidc_providers(
     current_user: dict = Depends(require_permission("nifi", "read")),
     settings_manager=Depends(get_settings_manager),
 ):
@@ -39,7 +39,7 @@ async def list_nifi_oidc_providers(
 
 
 @router.get("/", response_model=List[NifiInstanceResponse])
-async def list_nifi_instances(
+def list_nifi_instances(
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Get all NiFi instances."""
@@ -59,7 +59,7 @@ async def list_nifi_instances(
 
 
 @router.get("/{instance_id}", response_model=NifiInstanceResponse)
-async def get_nifi_instance(
+def get_nifi_instance(
     instance_id: int,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
@@ -76,7 +76,7 @@ async def get_nifi_instance(
 @router.post(
     "/", response_model=NifiInstanceResponse, status_code=status.HTTP_201_CREATED
 )
-async def create_nifi_instance(
+def create_nifi_instance(
     data: NifiInstanceCreate,
     current_user: dict = Depends(require_permission("nifi", "write")),
 ):
@@ -105,7 +105,7 @@ async def create_nifi_instance(
 
 
 @router.put("/{instance_id}", response_model=NifiInstanceResponse)
-async def update_nifi_instance(
+def update_nifi_instance(
     instance_id: int,
     data: NifiInstanceUpdate,
     current_user: dict = Depends(require_permission("nifi", "write")),
@@ -122,7 +122,7 @@ async def update_nifi_instance(
 
 
 @router.delete("/{instance_id}")
-async def delete_nifi_instance(
+def delete_nifi_instance(
     instance_id: int,
     current_user: dict = Depends(require_permission("nifi", "delete")),
 ):
@@ -136,7 +136,7 @@ async def delete_nifi_instance(
 
 
 @router.post("/test")
-async def test_nifi_connection(
+def test_nifi_connection(
     data: NifiInstanceTestConnection,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
@@ -176,7 +176,7 @@ async def test_nifi_connection(
 
 
 @router.post("/{instance_id}/test-connection")
-async def test_instance_connection(
+def test_instance_connection(
     instance_id: int,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):

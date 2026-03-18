@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/git-repositories", tags=["git-debug"])
 
 
 @router.post("/{repo_id}/debug/read")
-async def debug_read_test(
+def debug_read_test(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.repositories", "write")),
     git_repo_manager=Depends(get_git_repo_manager),
@@ -33,7 +33,7 @@ async def debug_read_test(
 
 
 @router.post("/{repo_id}/debug/write")
-async def debug_write_test(
+def debug_write_test(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.repositories", "write")),
     git_repo_manager=Depends(get_git_repo_manager),
@@ -50,7 +50,7 @@ async def debug_write_test(
 
 
 @router.post("/{repo_id}/debug/delete")
-async def debug_delete_test(
+def debug_delete_test(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.repositories", "write")),
     git_repo_manager=Depends(get_git_repo_manager),
@@ -67,7 +67,7 @@ async def debug_delete_test(
 
 
 @router.post("/{repo_id}/debug/push")
-async def debug_push_test(
+def debug_push_test(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.repositories", "write")),
     git_repo_manager=Depends(get_git_repo_manager),
@@ -85,7 +85,7 @@ async def debug_push_test(
 
 
 @router.get("/{repo_id}/debug/diagnostics")
-async def debug_diagnostics(
+def debug_diagnostics(
     repo_id: int,
     current_user: dict = Depends(require_permission("git.repositories", "read")),
     git_repo_manager=Depends(get_git_repo_manager),

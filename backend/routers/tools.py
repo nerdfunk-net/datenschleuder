@@ -45,7 +45,7 @@ router = APIRouter(
 
 
 @router.get("/schema/status", dependencies=[Depends(verify_admin_token)])
-async def get_schema_status() -> Dict[str, Any]:
+def get_schema_status() -> Dict[str, Any]:
     """
     Get the status of the database schema compared to the defined models.
     Also includes information about the versioned migration system.
@@ -55,7 +55,7 @@ async def get_schema_status() -> Dict[str, Any]:
 
 
 @router.get("/schema/migrations", dependencies=[Depends(verify_admin_token)])
-async def get_applied_migrations() -> Dict[str, Any]:
+def get_applied_migrations() -> Dict[str, Any]:
     """
     Get list of all applied versioned migrations from the migration system.
     Returns empty list if migration system hasn't been initialized.
@@ -69,7 +69,7 @@ async def get_applied_migrations() -> Dict[str, Any]:
 
 
 @router.post("/schema/migrate", dependencies=[Depends(verify_admin_token)])
-async def migrate_schema() -> Dict[str, Any]:
+def migrate_schema() -> Dict[str, Any]:
     """
     Perform database migration to match the defined models.
     Only adds missing tables and columns.
@@ -82,7 +82,7 @@ async def migrate_schema() -> Dict[str, Any]:
 
 
 @router.post("/rbac/seed", dependencies=[Depends(verify_admin_token)])
-async def seed_rbac(remove_existing: bool = False) -> Dict[str, Any]:
+def seed_rbac(remove_existing: bool = False) -> Dict[str, Any]:
     """
     Seed the RBAC system with default permissions and roles.
     This should be run after database migrations that add new tables.
@@ -132,7 +132,7 @@ async def seed_rbac(remove_existing: bool = False) -> Dict[str, Any]:
 
 
 @router.get("/certificates", dependencies=[Depends(verify_admin_token)])
-async def list_certificates() -> Dict[str, Any]:
+def list_certificates() -> Dict[str, Any]:
     """
     List all client certificates registered in certs/certificates.yaml,
     with the filesystem existence status of each associated PEM file.
@@ -175,7 +175,7 @@ async def list_certificates() -> Dict[str, Any]:
 
 
 @router.post("/certificates", dependencies=[Depends(verify_admin_token)])
-async def add_certificate(
+def add_certificate(
     entry: CertificateEntry, cert_mgr=Depends(get_certificate_manager)
 ) -> Dict[str, Any]:
     """
@@ -238,7 +238,7 @@ async def add_certificate(
 
 
 @router.delete("/certificates/{name}", dependencies=[Depends(verify_admin_token)])
-async def delete_certificate(
+def delete_certificate(
     name: str, delete_files: bool = False, cert_mgr=Depends(get_certificate_manager)
 ) -> Dict[str, Any]:
     """

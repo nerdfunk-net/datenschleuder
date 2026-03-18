@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/cache", tags=["cache"])
 
 
 @router.get("/stats")
-async def cache_stats(
+def cache_stats(
     current_user: dict = Depends(require_permission("settings.cache", "write")),
     cache_service=Depends(get_cache_service),
 ):
@@ -28,7 +28,7 @@ async def cache_stats(
 
 
 @router.get("/entries")
-async def cache_entries(
+def cache_entries(
     include_expired: bool = Query(
         False, description="Include expired entries in the response"
     ),
@@ -44,7 +44,7 @@ async def cache_entries(
 
 
 @router.get("/namespace/{namespace}")
-async def cache_namespace_info(
+def cache_namespace_info(
     namespace: str,
     current_user: dict = Depends(require_permission("settings.cache", "write")),
     cache_service=Depends(get_cache_service),
@@ -58,7 +58,7 @@ async def cache_namespace_info(
 
 
 @router.get("/performance")
-async def cache_performance(
+def cache_performance(
     current_user: dict = Depends(require_permission("settings.cache", "write")),
     cache_service=Depends(get_cache_service),
 ):
@@ -71,7 +71,7 @@ async def cache_performance(
 
 
 @router.post("/clear")
-async def clear_cache(
+def clear_cache(
     payload: dict = None,
     current_user: dict = Depends(require_permission("settings.cache", "write")),
     cache_service=Depends(get_cache_service),
@@ -105,7 +105,7 @@ async def clear_cache(
 
 
 @router.post("/cleanup")
-async def cleanup_expired(
+def cleanup_expired(
     current_user: dict = Depends(require_permission("settings.cache", "write")),
     cache_service=Depends(get_cache_service),
 ):

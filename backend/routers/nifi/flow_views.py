@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/nifi/flow-views", tags=["nifi-flow-views"])
 
 
 @router.get("/", response_model=List[FlowViewResponse])
-async def list_flow_views(
+def list_flow_views(
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """List all flow views."""
@@ -22,7 +22,7 @@ async def list_flow_views(
 
 
 @router.get("/{view_id}", response_model=FlowViewResponse)
-async def get_flow_view(
+def get_flow_view(
     view_id: int,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
@@ -37,7 +37,7 @@ async def get_flow_view(
 
 
 @router.post("/")
-async def create_flow_view(
+def create_flow_view(
     data: FlowViewCreate,
     current_user: dict = Depends(require_permission("nifi", "write")),
 ):
@@ -57,7 +57,7 @@ async def create_flow_view(
 
 
 @router.put("/{view_id}")
-async def update_flow_view(
+def update_flow_view(
     view_id: int,
     data: FlowViewUpdate,
     current_user: dict = Depends(require_permission("nifi", "write")),
@@ -77,7 +77,7 @@ async def update_flow_view(
 
 
 @router.delete("/{view_id}")
-async def delete_flow_view(
+def delete_flow_view(
     view_id: int,
     current_user: dict = Depends(require_permission("nifi", "delete")),
 ):
@@ -91,7 +91,7 @@ async def delete_flow_view(
 
 
 @router.post("/{view_id}/set-default")
-async def set_default_view(
+def set_default_view(
     view_id: int,
     current_user: dict = Depends(require_permission("nifi", "write")),
 ):

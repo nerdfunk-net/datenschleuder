@@ -57,7 +57,7 @@ class UploadStoreResponse(BaseModel):
 
 
 @router.get("/", response_model=CertificatesResponse)
-async def get_certificates(
+def get_certificates(
     current_user: dict = Depends(require_permission("nifi", "read")),
     certificate_manager=Depends(get_certificate_manager),
 ):
@@ -73,7 +73,7 @@ async def get_certificates(
     response_model=ReadStoreResponse,
     dependencies=[Depends(require_permission("nifi", "read"))],
 )
-async def read_store(request: ReadStoreRequest) -> ReadStoreResponse:
+def read_store(request: ReadStoreRequest) -> ReadStoreResponse:
     """Read a PKCS12 keystore or truststore from a git repository and return the certificate subject.
 
     Only PKCS12 (.p12) containers are supported.

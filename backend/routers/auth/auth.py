@@ -17,7 +17,7 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 @router.post("/login", response_model=LoginResponse)
 @limiter.limit("5/minute")
-async def login(request: Request, user_data: UserLogin):
+def login(request: Request, user_data: UserLogin):
     """
     Authenticate user against new user database.
     """
@@ -84,7 +84,7 @@ async def login(request: Request, user_data: UserLogin):
 
 
 @router.post("/refresh", response_model=LoginResponse)
-async def refresh_token(request: Request):
+def refresh_token(request: Request):
     """Issue a new access token for the currently authenticated user.
 
     Accept expired access tokens for the purpose of refreshing, but always
@@ -184,7 +184,7 @@ async def refresh_token(request: Request):
 
 
 @router.post("/api-key-login", response_model=LoginResponse)
-async def api_key_login(user_info: dict = Depends(get_api_key_user)):
+def api_key_login(user_info: dict = Depends(get_api_key_user)):
     """
     Authenticate using API key and return JWT token.
     This endpoint allows API key holders to get JWT tokens for accessing protected endpoints.
@@ -241,7 +241,7 @@ async def api_key_login(user_info: dict = Depends(get_api_key_user)):
 
 
 @router.post("/logout")
-async def logout(request: Request):
+def logout(request: Request):
     """
     Log user logout event.
 

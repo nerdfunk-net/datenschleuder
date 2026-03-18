@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/nifi/flows", tags=["nifi-flows"])
 
 
 @router.get("/columns")
-async def get_flow_columns(
+def get_flow_columns(
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Return the column list for the nifi_flows table with human-readable labels."""
@@ -22,7 +22,7 @@ async def get_flow_columns(
 
 
 @router.get("/", response_model=List[NifiFlowResponse])
-async def list_flows(
+def list_flows(
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """List all NiFi flows."""
@@ -30,7 +30,7 @@ async def list_flows(
 
 
 @router.post("/", response_model=NifiFlowResponse)
-async def create_flow(
+def create_flow(
     data: NifiFlowCreate,
     current_user: dict = Depends(require_permission("nifi", "write")),
 ):
@@ -53,7 +53,7 @@ async def create_flow(
 
 
 @router.put("/{flow_id}", response_model=NifiFlowResponse)
-async def update_flow(
+def update_flow(
     flow_id: int,
     data: NifiFlowUpdate,
     current_user: dict = Depends(require_permission("nifi", "write")),
@@ -73,7 +73,7 @@ async def update_flow(
 
 
 @router.post("/{flow_id}/copy", response_model=NifiFlowResponse)
-async def copy_flow(
+def copy_flow(
     flow_id: int,
     current_user: dict = Depends(require_permission("nifi", "write")),
 ):
@@ -88,7 +88,7 @@ async def copy_flow(
 
 
 @router.get("/{flow_id}/get-processgroups", response_model=FlowProcessGroupsResponse)
-async def get_flow_process_groups(
+def get_flow_process_groups(
     flow_id: int,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
@@ -107,7 +107,7 @@ async def get_flow_process_groups(
 
 
 @router.delete("/{flow_id}")
-async def delete_flow(
+def delete_flow(
     flow_id: int,
     current_user: dict = Depends(require_permission("nifi", "delete")),
 ):

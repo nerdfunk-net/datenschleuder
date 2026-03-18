@@ -38,7 +38,7 @@ router = APIRouter(prefix="/api/nifi", tags=["nifi-config"])
 
 
 @router.get("/servers/", response_model=List[NifiServerResponse])
-async def list_servers(
+def list_servers(
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """List all NiFi servers."""
@@ -50,7 +50,7 @@ async def list_servers(
     response_model=NifiServerResponse,
     status_code=201,
 )
-async def create_server(
+def create_server(
     data: NifiServerCreate,
     current_user: dict = Depends(require_permission("nifi", "write")),
 ):
@@ -59,7 +59,7 @@ async def create_server(
 
 
 @router.put("/servers/{server_id}", response_model=NifiServerResponse)
-async def update_server(
+def update_server(
     server_id: int,
     data: NifiServerUpdate,
     current_user: dict = Depends(require_permission("nifi", "write")),
@@ -69,7 +69,7 @@ async def update_server(
 
 
 @router.delete("/servers/{server_id}")
-async def delete_server(
+def delete_server(
     server_id: int,
     current_user: dict = Depends(require_permission("nifi", "delete")),
 ):
@@ -84,7 +84,7 @@ async def delete_server(
 
 
 @router.get("/clusters/", response_model=List[NifiClusterResponse])
-async def list_clusters(
+def list_clusters(
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """List all NiFi clusters with their members."""
@@ -96,7 +96,7 @@ async def list_clusters(
     response_model=NifiClusterResponse,
     status_code=201,
 )
-async def create_cluster(
+def create_cluster(
     data: NifiClusterCreate,
     current_user: dict = Depends(require_permission("nifi", "write")),
 ):
@@ -107,7 +107,7 @@ async def create_cluster(
 @router.get(
     "/clusters/{cluster_id}/get-primary", response_model=NifiClusterPrimaryResponse
 )
-async def get_cluster_primary_instance(
+def get_cluster_primary_instance(
     cluster_id: int,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
@@ -119,7 +119,7 @@ async def get_cluster_primary_instance(
 
 
 @router.put("/clusters/{cluster_id}", response_model=NifiClusterResponse)
-async def update_cluster(
+def update_cluster(
     cluster_id: int,
     data: NifiClusterUpdate,
     current_user: dict = Depends(require_permission("nifi", "write")),
@@ -129,7 +129,7 @@ async def update_cluster(
 
 
 @router.delete("/clusters/{cluster_id}")
-async def delete_cluster(
+def delete_cluster(
     cluster_id: int,
     current_user: dict = Depends(require_permission("nifi", "delete")),
 ):
@@ -198,7 +198,7 @@ _STATIC_FILES = [
 
 
 @router.post("/repos/{repo_id}/ensure-static-files")
-async def ensure_static_nifi_files(
+def ensure_static_nifi_files(
     repo_id: int,
     current_user: dict = Depends(require_permission("nifi", "write")),
     git_repo_manager=Depends(get_git_repo_manager),
@@ -293,7 +293,7 @@ _FRESH_PROPERTIES_PATH = os.path.join(
 
 
 @router.get("/get-fresh-properties", response_class=PlainTextResponse)
-async def get_fresh_nifi_properties(
+def get_fresh_nifi_properties(
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """Return the default nifi.properties template from contributing-data.

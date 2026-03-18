@@ -47,7 +47,7 @@ class ProfileUpdateRequest(BaseModel):
 
 
 @router.get("", response_model=ProfileResponse)
-async def get_profile(current_user: str = Depends(get_current_username)):
+def get_profile(current_user: str = Depends(get_current_username)):
     """Get current user's profile information."""
     try:
         from services.auth.user_management import get_user_by_username
@@ -116,7 +116,7 @@ async def get_profile(current_user: str = Depends(get_current_username)):
 
 
 @router.put("", response_model=ProfileResponse)
-async def update_profile(
+def update_profile(
     update_data: ProfileUpdateRequest, current_user: str = Depends(get_current_username)
 ):
     """Update current user's profile information."""

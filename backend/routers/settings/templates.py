@@ -40,7 +40,7 @@ def _get_template_manager():
 
 
 @router.get("", response_model=TemplateListResponse)
-async def list_templates(
+def list_templates(
     category: Optional[str] = None,
     source: Optional[str] = None,
     search: Optional[str] = None,
@@ -71,7 +71,7 @@ async def list_templates(
 
 
 @router.get("/categories")
-async def get_template_categories(
+def get_template_categories(
     current_user: dict = Depends(require_permission("settings.templates", "read")),
 ) -> List[str]:
     """Get all template categories."""
@@ -86,7 +86,7 @@ async def get_template_categories(
 
 
 @router.get("/scan-import")
-async def scan_import_directory(
+def scan_import_directory(
     current_user: dict = Depends(require_permission("settings.templates", "write")),
 ):
     """Scan the import directory for YAML template files."""
@@ -101,7 +101,7 @@ async def scan_import_directory(
 
 
 @router.post("", response_model=TemplateResponse)
-async def create_template(
+def create_template(
     template_request: TemplateRequest,
     current_user: dict = Depends(require_permission("settings.templates", "write")),
 ) -> TemplateResponse:
@@ -132,7 +132,7 @@ async def create_template(
 
 
 @router.get("/{template_id}", response_model=TemplateResponse)
-async def get_template(
+def get_template(
     template_id: int,
     current_user: dict = Depends(require_permission("settings.templates", "read")),
 ) -> TemplateResponse:
@@ -156,7 +156,7 @@ async def get_template(
 
 
 @router.get("/name/{template_name}", response_model=TemplateResponse)
-async def get_template_by_name(
+def get_template_by_name(
     template_name: str,
     current_user: dict = Depends(require_permission("settings.templates", "read")),
 ) -> TemplateResponse:
@@ -180,7 +180,7 @@ async def get_template_by_name(
 
 
 @router.put("/{template_id}", response_model=TemplateResponse)
-async def update_template(
+def update_template(
     template_id: int,
     template_request: TemplateUpdateRequest,
     current_user: dict = Depends(require_permission("settings.templates", "write")),
@@ -222,7 +222,7 @@ async def update_template(
 
 
 @router.delete("/{template_id}")
-async def delete_template(
+def delete_template(
     template_id: int,
     hard_delete: bool = True,
     current_user: dict = Depends(require_permission("settings.templates", "delete")),
@@ -246,7 +246,7 @@ async def delete_template(
 
 
 @router.get("/{template_id}/content")
-async def get_template_content(
+def get_template_content(
     template_id: int,
     current_user: dict = Depends(require_permission("settings.templates", "read")),
 ) -> Dict[str, str]:
@@ -270,7 +270,7 @@ async def get_template_content(
 
 
 @router.get("/{template_id}/versions")
-async def get_template_versions(
+def get_template_versions(
     template_id: int,
     current_user: dict = Depends(require_permission("settings.templates", "read")),
 ) -> List[Dict[str, Any]]:
@@ -334,7 +334,7 @@ async def upload_template_file(
 
 
 @router.post("/git/test")
-async def test_git_connection(
+def test_git_connection(
     git_test: TemplateGitTestRequest,
     current_user: dict = Depends(require_permission("settings.templates", "write")),
 ) -> Dict[str, Any]:
@@ -352,7 +352,7 @@ async def test_git_connection(
 
 
 @router.post("/sync", response_model=TemplateSyncResponse)
-async def sync_templates(
+def sync_templates(
     sync_request: TemplateSyncRequest,
     current_user: dict = Depends(require_permission("settings.templates", "write")),
 ) -> TemplateSyncResponse:
@@ -384,7 +384,7 @@ async def sync_templates(
 
 
 @router.post("/import", response_model=TemplateImportResponse)
-async def import_templates(
+def import_templates(
     import_request: TemplateImportRequest,
     current_user: dict = Depends(require_permission("settings.templates", "write")),
 ) -> TemplateImportResponse:
@@ -471,7 +471,7 @@ async def advanced_render_template(
 
 
 @router.get("/health")
-async def template_health_check(
+def template_health_check(
     current_user: dict = Depends(require_permission("settings.templates", "read")),
 ) -> Dict[str, Any]:
     """Check template system health."""

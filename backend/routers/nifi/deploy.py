@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/nifi/instances", tags=["nifi-deploy"])
 
 
 @router.post("/{instance_id}/deploy", response_model=DeploymentResponse)
-async def deploy_flow(
+def deploy_flow(
     instance_id: int,
     deployment: DeploymentRequest,
     current_user: dict = Depends(require_permission("nifi", "execute")),

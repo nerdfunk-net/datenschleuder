@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/nifi/registry-flows", tags=["nifi-registry-flows
 
 
 @router.get("/", response_model=List[RegistryFlowResponse])
-async def list_registry_flows(
+def list_registry_flows(
     nifi_instance: Optional[int] = Query(
         None, description="Filter by NiFi instance ID"
     ),
@@ -32,7 +32,7 @@ async def list_registry_flows(
 
 
 @router.get("/templates/list")
-async def list_flow_templates(
+def list_flow_templates(
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
     """List all flows formatted for template selection dropdown."""
@@ -40,7 +40,7 @@ async def list_flow_templates(
 
 
 @router.get("/{flow_id}", response_model=RegistryFlowResponse)
-async def get_registry_flow(
+def get_registry_flow(
     flow_id: int,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
@@ -55,7 +55,7 @@ async def get_registry_flow(
 
 
 @router.post("/")
-async def create_registry_flows(
+def create_registry_flows(
     flows: List[RegistryFlowCreate],
     current_user: dict = Depends(require_permission("nifi", "write")),
 ):
@@ -70,7 +70,7 @@ async def create_registry_flows(
 
 
 @router.delete("/{flow_id}")
-async def delete_registry_flow(
+def delete_registry_flow(
     flow_id: int,
     current_user: dict = Depends(require_permission("nifi", "delete")),
 ):
@@ -84,7 +84,7 @@ async def delete_registry_flow(
 
 
 @router.get("/{flow_id}/metadata", response_model=List[RegistryFlowMetadataResponse])
-async def get_flow_metadata(
+def get_flow_metadata(
     flow_id: int,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
@@ -93,7 +93,7 @@ async def get_flow_metadata(
 
 
 @router.put("/{flow_id}/metadata", response_model=List[RegistryFlowMetadataResponse])
-async def set_flow_metadata(
+def set_flow_metadata(
     flow_id: int,
     request: RegistryFlowMetadataSetRequest,
     current_user: dict = Depends(require_permission("nifi", "write")),

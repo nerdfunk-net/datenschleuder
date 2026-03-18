@@ -50,7 +50,7 @@ router = APIRouter(prefix="/api/rbac", tags=["rbac"])
 
 
 @router.get("/permissions", response_model=List[Permission])
-async def list_permissions(current_user: dict = Depends(verify_token)):
+def list_permissions(current_user: dict = Depends(verify_token)):
     """List all permissions in the system."""
     permissions = rbac.list_permissions()
     return permissions
@@ -59,7 +59,7 @@ async def list_permissions(current_user: dict = Depends(verify_token)):
 @router.post(
     "/permissions", response_model=Permission, status_code=status.HTTP_201_CREATED
 )
-async def create_permission(
+def create_permission(
     permission: PermissionCreate, current_user: dict = Depends(require_role("admin"))
 ):
     """Create a new permission (admin only)."""
@@ -75,7 +75,7 @@ async def create_permission(
 
 
 @router.get("/permissions/{permission_id}", response_model=Permission)
-async def get_permission(
+def get_permission(
     permission_id: int, current_user: dict = Depends(verify_token)
 ):
     """Get a specific permission by ID."""
@@ -88,7 +88,7 @@ async def get_permission(
 
 
 @router.delete("/permissions/{permission_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_permission(
+def delete_permission(
     permission_id: int, current_user: dict = Depends(require_role("admin"))
 ):
     """Delete a permission (admin only)."""
@@ -104,14 +104,14 @@ async def delete_permission(
 
 
 @router.get("/roles", response_model=List[Role])
-async def list_roles(current_user: dict = Depends(verify_token)):
+def list_roles(current_user: dict = Depends(verify_token)):
     """List all roles in the system."""
     roles = rbac.list_roles()
     return roles
 
 
 @router.post("/roles", response_model=Role, status_code=status.HTTP_201_CREATED)
-async def create_role(
+def create_role(
     role: RoleCreate, current_user: dict = Depends(require_role("admin"))
 ):
     """Create a new role (admin only)."""
@@ -125,7 +125,7 @@ async def create_role(
 
 
 @router.get("/roles/{role_id}", response_model=RoleWithPermissions)
-async def get_role(role_id: int, current_user: dict = Depends(verify_token)):
+def get_role(role_id: int, current_user: dict = Depends(verify_token)):
     """Get a specific role by ID with its permissions."""
     role = rbac.get_role(role_id)
     if not role:
@@ -144,7 +144,7 @@ async def get_role(role_id: int, current_user: dict = Depends(verify_token)):
 
 
 @router.put("/roles/{role_id}", response_model=Role)
-async def update_role(
+def update_role(
     role_id: int,
     role_update: RoleUpdate,
     current_user: dict = Depends(require_role("admin")),
@@ -160,7 +160,7 @@ async def update_role(
 
 
 @router.delete("/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_role(
+def delete_role(
     role_id: int, current_user: dict = Depends(require_role("admin"))
 ):
     """Delete a role (admin only, cannot delete system roles)."""
@@ -171,7 +171,7 @@ async def delete_role(
 
 
 @router.get("/roles/{role_id}/permissions", response_model=List[PermissionWithGrant])
-async def get_role_permissions(
+def get_role_permissions(
     role_id: int, current_user: dict = Depends(verify_token)
 ):
     """Get all permissions for a role."""
@@ -191,7 +191,7 @@ async def get_role_permissions(
 
 
 @router.post("/roles/{role_id}/permissions", status_code=status.HTTP_204_NO_CONTENT)
-async def assign_permission_to_role(
+def assign_permission_to_role(
     role_id: int,
     assignment: RolePermissionAssignment,
     current_user: dict = Depends(require_role("admin")),
@@ -219,7 +219,7 @@ async def assign_permission_to_role(
 @router.post(
     "/roles/{role_id}/permissions/bulk", status_code=status.HTTP_204_NO_CONTENT
 )
-async def assign_multiple_permissions_to_role(
+def assign_multiple_permissions_to_role(
     role_id: int,
     assignment: BulkPermissionAssignment,
     current_user: dict = Depends(require_role("admin")),
@@ -240,7 +240,7 @@ async def assign_multiple_permissions_to_role(
     "/roles/{role_id}/permissions/{permission_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def remove_permission_from_role(
+def remove_permission_from_role(
     role_id: int,
     permission_id: int,
     current_user: dict = Depends(require_role("admin")),
@@ -255,7 +255,7 @@ async def remove_permission_from_role(
 
 
 @router.get("/users/{user_id}/roles", response_model=List[Role])
-async def get_user_roles(user_id: int, current_user: dict = Depends(verify_token)):
+def get_user_roles(user_id: int, current_user: dict = Depends(verify_token)):
     """Get all roles assigned to a user."""
     verify_user_access(current_user, user_id, rbac, detail="Can only view your own roles")
     roles = rbac.get_user_roles(user_id)
@@ -263,7 +263,7 @@ async def get_user_roles(user_id: int, current_user: dict = Depends(verify_token
 
 
 @router.post("/users/{user_id}/roles", status_code=status.HTTP_204_NO_CONTENT)
-async def assign_role_to_user(
+def assign_role_to_user(
     user_id: int,
     assignment: UserRoleAssignment,
     current_user: dict = Depends(require_role("admin")),
@@ -280,7 +280,7 @@ async def assign_role_to_user(
 
 
 @router.post("/users/{user_id}/roles/bulk", status_code=status.HTTP_204_NO_CONTENT)
-async def assign_multiple_roles_to_user(
+def assign_multiple_roles_to_user(
     user_id: int,
     assignment: BulkRoleAssignment,
     current_user: dict = Depends(require_role("admin")),
@@ -293,7 +293,7 @@ async def assign_multiple_roles_to_user(
 @router.delete(
     "/users/{user_id}/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT
 )
-async def remove_role_from_user(
+def remove_role_from_user(
     user_id: int, role_id: int, current_user: dict = Depends(require_role("admin"))
 ):
     """Remove a role from a user (admin only)."""
@@ -306,7 +306,7 @@ async def remove_role_from_user(
 
 
 @router.get("/users/{user_id}/permissions", response_model=UserPermissions)
-async def get_user_permissions(
+def get_user_permissions(
     user_id: int, current_user: dict = Depends(verify_token)
 ):
     """Get all effective permissions for a user (from roles + overrides)."""
@@ -326,7 +326,7 @@ async def get_user_permissions(
 @router.get(
     "/users/{user_id}/permissions/overrides", response_model=List[PermissionWithGrant]
 )
-async def get_user_permission_overrides(
+def get_user_permission_overrides(
     user_id: int, current_user: dict = Depends(verify_token)
 ):
     """Get permission overrides for a user (direct assignments)."""
@@ -336,7 +336,7 @@ async def get_user_permission_overrides(
 
 
 @router.post("/users/{user_id}/permissions", status_code=status.HTTP_204_NO_CONTENT)
-async def assign_permission_to_user(
+def assign_permission_to_user(
     user_id: int,
     assignment: UserPermissionAssignment,
     current_user: dict = Depends(require_role("admin")),
@@ -365,7 +365,7 @@ async def assign_permission_to_user(
     "/users/{user_id}/permissions/{permission_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def remove_permission_from_user(
+def remove_permission_from_user(
     user_id: int,
     permission_id: int,
     current_user: dict = Depends(require_role("admin")),
@@ -380,7 +380,7 @@ async def remove_permission_from_user(
 
 
 @router.post("/users/{user_id}/check-permission", response_model=PermissionCheckResult)
-async def check_user_permission(
+def check_user_permission(
     user_id: int, check: PermissionCheck, current_user: dict = Depends(verify_token)
 ):
     """Check if a user has a specific permission."""
@@ -389,7 +389,7 @@ async def check_user_permission(
 
 
 @router.get("/users/me/permissions", response_model=UserPermissions)
-async def get_my_permissions(current_user: dict = Depends(verify_token)):
+def get_my_permissions(current_user: dict = Depends(verify_token)):
     """Get current user's permissions (convenience endpoint)."""
     user_id = current_user["user_id"]
 
@@ -406,7 +406,7 @@ async def get_my_permissions(current_user: dict = Depends(verify_token)):
 
 
 @router.post("/users/me/check-permission", response_model=PermissionCheckResult)
-async def check_my_permission(
+def check_my_permission(
     check: PermissionCheck, current_user: dict = Depends(verify_token)
 ):
     """Check if current user has a specific permission (convenience endpoint)."""
@@ -419,7 +419,7 @@ async def check_my_permission(
 
 
 @router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(
+def create_user(
     user_data: UserCreate, current_user: dict = Depends(require_role("admin"))
 ):
     """Create a new user with initial role assignments (admin only)."""
@@ -447,7 +447,7 @@ async def create_user(
 
 
 @router.get("/users", response_model=UserListResponse)
-async def list_users(
+def list_users(
     include_inactive: bool = True,
     current_user: dict = Depends(verify_token),
 ):
@@ -464,7 +464,7 @@ async def list_users(
 
 
 @router.get("/users/{user_id}", response_model=UserResponse)
-async def get_user(user_id: int, current_user: dict = Depends(verify_token)):
+def get_user(user_id: int, current_user: dict = Depends(verify_token)):
     """Get user details with roles and permissions."""
     try:
         user = rbac.get_user_with_rbac(user_id)
@@ -484,7 +484,7 @@ async def get_user(user_id: int, current_user: dict = Depends(verify_token)):
 
 
 @router.put("/users/{user_id}", response_model=UserResponse)
-async def update_user(
+def update_user(
     user_id: int,
     user_data: UserUpdate,
     current_user: dict = Depends(require_role("admin")),
@@ -525,7 +525,7 @@ async def update_user(
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(
+def delete_user(
     user_id: int, current_user: dict = Depends(require_role("admin"))
 ):
     """Delete a user and all RBAC associations (admin only)."""
@@ -546,7 +546,7 @@ async def delete_user(
 
 
 @router.patch("/users/{user_id}/activate", response_model=UserResponse)
-async def toggle_user_activation(
+def toggle_user_activation(
     user_id: int, current_user: dict = Depends(require_role("admin"))
 ):
     """Toggle user active status (admin only)."""
@@ -573,7 +573,7 @@ async def toggle_user_activation(
 
 
 @router.patch("/users/{user_id}/debug", response_model=UserResponse)
-async def toggle_user_debug(
+def toggle_user_debug(
     user_id: int, current_user: dict = Depends(require_role("admin"))
 ):
     """Toggle user debug mode (admin only)."""
@@ -600,7 +600,7 @@ async def toggle_user_debug(
 
 
 @router.post("/users/bulk-delete", status_code=status.HTTP_200_OK)
-async def bulk_delete_users(
+def bulk_delete_users(
     bulk_data: BulkUserDelete, current_user: dict = Depends(require_role("admin"))
 ):
     """Bulk delete users with RBAC cleanup (admin only)."""

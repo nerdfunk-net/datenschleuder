@@ -28,7 +28,7 @@ class CheckPathResponse(BaseModel):
 
 
 @router.get("/check-path", response_model=CheckPathResponse)
-async def check_path(
+def check_path(
     cluster_id: int = Query(..., description="NiFi cluster ID"),
     path_type: Literal["source", "destination"] = Query(
         ..., description="Path type to check (source or destination)"
