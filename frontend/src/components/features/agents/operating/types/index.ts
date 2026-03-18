@@ -65,11 +65,46 @@ export interface DockerStatsRow {
   pids: string
 }
 
+export interface GitRepoInfo {
+  id: string
+}
+
+export interface AgentRepositoriesResponse {
+  agent_id: string
+  repositories: GitRepoInfo[]
+}
+
+export interface ContainerInfo {
+  id: string
+  type: string
+}
+
+export interface AgentContainersResponse {
+  agent_id: string
+  containers: ContainerInfo[]
+}
+
+export interface ContainerListRow {
+  id: string
+  type: string
+}
+
+export interface RepositoryListRow {
+  id: string
+}
+
+export interface GitStatusRow {
+  repo: string
+  branch: string
+  file: string   // empty string when status === 'clean'
+  status: string // 'clean' | 'modified' | 'staged' | 'staged+modified' | 'untracked' | 'deleted' | 'staged deleted' | 'added' | 'added+modified' | 'renamed' | 'conflict'
+}
+
 export interface CommandResult {
   command_id: string
   status: string
   output: string | null
   error: string | null
   execution_time_ms: number
-  parsed_output?: DockerPsRow[] | DockerStatsRow[] | null
+  parsed_output?: DockerPsRow[] | DockerStatsRow[] | ContainerListRow[] | RepositoryListRow[] | GitStatusRow[] | null
 }

@@ -92,7 +92,9 @@ class DatenschleuderAgent:
                 "last_heartbeat": now,
                 "version": config.agent_version,
                 "agent_id": config.agent_id,
-                "capabilities": "echo,git_pull,git_status,nifi_restart,zookeeper_restart,docker_stats,docker_ps",
+                "capabilities": "echo,git_pull,git_push,git_status,list_repositories,docker_restart,list_containers,docker_stats,docker_ps",
+                "repositories": json.dumps([{"id": k} for k in config.git_repos.keys()]),
+                "containers": json.dumps([{"id": k, "type": v.get("type", "")} for k, v in config.docker_containers.items()]),
                 "started_at": now,
                 "commands_executed": 0,
             }

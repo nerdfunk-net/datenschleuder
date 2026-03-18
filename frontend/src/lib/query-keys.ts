@@ -238,6 +238,8 @@ export const queryKeys = {
     all: ['agents'] as const,
     list: () => [...queryKeys.agents.all, 'list'] as const,
     history: (agentId: string) => [...queryKeys.agents.all, 'history', agentId] as const,
+    repositories: (agentId: string) => [...queryKeys.agents.all, 'repositories', agentId] as const,
+    containers: (agentId: string) => [...queryKeys.agents.all, 'containers', agentId] as const,
   },
 
   // Templates

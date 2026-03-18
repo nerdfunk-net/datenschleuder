@@ -10,12 +10,16 @@ from sqlalchemy.orm import Session
 from core.auth import require_permission, verify_token
 from core.database import get_db
 from models.agent import (
+    AgentContainersResponse,
     AgentListResponse,
+    AgentRepositoriesResponse,
     AgentStatusResponse,
     CommandHistoryItem,
     CommandHistoryResponse,
     CommandRequest,
     CommandResponse,
+    ContainerInfo,
+    GitRepoInfo,
 )
 from services.agent_service import AgentService
 
@@ -60,6 +64,54 @@ def get_agent_status(agent_id: str, db: Session = Depends(get_db)):
         raise
     except Exception as exc:
         logger.error("Failed to get agent status: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get(
+    "/{agent_id}/repositories",
+    response_model=AgentRepositoriesResponse,
+    dependencies=[Depends(require_permission("agents", "read"))],
+)
+def get_agent_repositories(agent_id: str, db: Session = Depends(get_db)):
+    """Return the list of git repositories configured on the agent (read from Redis heartbeat)."""
+    try:
+        service = AgentService(db)
+        status = service.get_agent_status(agent_id)
+        if not status:
+            raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
+        repos = service.get_agent_repositories(agent_id)
+        return AgentRepositoriesResponse(
+            agent_id=agent_id,
+            repositories=[GitRepoInfo(id=r["id"]) for r in repos],
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Failed to get agent repositories: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get(
+    "/{agent_id}/containers",
+    response_model=AgentContainersResponse,
+    dependencies=[Depends(require_permission("agents", "read"))],
+)
+def get_agent_containers(agent_id: str, db: Session = Depends(get_db)):
+    """Return the list of docker containers configured on the agent (read from Redis heartbeat)."""
+    try:
+        service = AgentService(db)
+        status = service.get_agent_status(agent_id)
+        if not status:
+            raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
+        containers = service.get_agent_containers(agent_id)
+        return AgentContainersResponse(
+            agent_id=agent_id,
+            containers=[ContainerInfo(id=c["id"], type=c["type"]) for c in containers],
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Failed to get agent containers: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc))
 
 

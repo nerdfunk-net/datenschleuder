@@ -50,6 +50,25 @@ class CommandResponse(BaseModel):
     parsed_output: Optional[List[Dict[str, Any]]] = None
 
 
+class GitRepoInfo(BaseModel):
+    id: str
+
+
+class AgentRepositoriesResponse(BaseModel):
+    agent_id: str
+    repositories: List[GitRepoInfo]
+
+
+class ContainerInfo(BaseModel):
+    id: str
+    type: str
+
+
+class AgentContainersResponse(BaseModel):
+    agent_id: str
+    containers: List[ContainerInfo]
+
+
 class CommandHistoryItem(BaseModel):
     """Single command history record."""
 

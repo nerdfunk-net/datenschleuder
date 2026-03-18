@@ -4,10 +4,11 @@ Handles execution of git, docker, and other commands
 """
 
 import asyncio
+import json
 import logging
 import os
 import time
-from typing import Callable, Dict
+from typing import Callable, Dict, List, Optional
 
 from config import config
 
@@ -25,9 +26,11 @@ class CommandExecutor:
         """Register default command handlers"""
         self.register("echo", self._execute_echo)
         self.register("git_pull", self._execute_git_pull)
+        self.register("git_push", self._execute_git_push)
         self.register("git_status", self._execute_git_status)
-        self.register("nifi_restart", self._execute_nifi_restart)
-        self.register("zookeeper_restart", self._execute_zookeeper_restart)
+        self.register("list_repositories", self._execute_list_repositories)
+        self.register("docker_restart", self._execute_docker_restart)
+        self.register("list_containers", self._execute_list_containers)
         self.register("docker_stats", self._execute_docker_stats)
         self.register("docker_ps", self._execute_docker_ps)
 
@@ -77,250 +80,289 @@ class CommandExecutor:
         logger.info(f"Echo command: {message}")
         return {"status": "success", "output": message, "error": None}
 
-    async def _execute_git_pull(self, params: dict) -> dict:
-        """
-        Execute git pull command
-        Uses repository path from params or falls back to first configured path in GIT_REPO_PATH
-        """
-        repo_path = params.get("repository_path") or ""
-        branch = params.get("branch", "main")
-        logger.info(f"Git pull request - params: {params}")
+    async def _run_git(self, repo_path: str, *args: str) -> tuple[int, str, str]:
+        """Run a git command inside repo_path. Returns (returncode, stdout, stderr)."""
+        process = await asyncio.create_subprocess_exec(
+            "git", "-C", repo_path, *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(), timeout=config.command_timeout
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            return -1, "", f"timed out after {config.command_timeout}s"
+        return process.returncode, stdout.decode("utf-8").strip(), stderr.decode("utf-8").strip()
 
-        # If no path provided, use first configured path
-        if not repo_path:
-            if not config.git_repo_paths:
-                error_msg = "No git repositories configured (GIT_REPO_PATH not set)"
-                logger.error(error_msg)
-                return {
-                    "status": "error",
-                    "error": error_msg,
-                    "output": None,
-                }
-            repo_path = config.git_repo_paths[0]
-            logger.info(f"Using default git repo path from config: {repo_path}")
-        else:
-            logger.info(f"Using provided repository path: {repo_path}")
-
-        # Validate repository path is in allowed paths
-        allowed_paths = config.git_repo_paths
-        logger.debug(f"Allowed paths: {allowed_paths}")
-        if repo_path not in allowed_paths:
-            error_msg = f"Repository path not allowed. Configured paths: {', '.join(allowed_paths)}"
-            logger.error(error_msg)
-            return {
-                "status": "error",
-                "error": error_msg,
-                "output": None,
-            }
-
+    async def _git_pull_one(self, repo_id: str, repo_path: str, branch: str) -> dict:
+        """Execute git pull for a single repository path. Returns per-repo result dict."""
         # Check if path exists
         if not os.path.isdir(repo_path):
-            error_msg = f"Repository path does not exist: {repo_path}"
-            logger.error(error_msg)
-            return {
-                "status": "error",
-                "error": error_msg,
-                "output": None,
-            }
-        logger.info(f"Repository path exists: {repo_path}")
+            return {"status": "error", "error": f"Path does not exist: {repo_path}", "output": None}
 
-        # Check if it's a git repository
         git_dir = os.path.join(repo_path, ".git")
         if not os.path.isdir(git_dir):
-            error_msg = f"Not a git repository: {repo_path} (no .git directory)"
-            logger.error(error_msg)
-            return {
-                "status": "error",
-                "error": error_msg,
-                "output": None,
-            }
-        logger.info(f"Git repository validated: {repo_path}")
+            return {"status": "error", "error": f"Not a git repository: {repo_path}", "output": None}
+
+        logger.info("Executing: git -C %s pull origin %s (timeout: %ss)", repo_path, branch, config.command_timeout)
+
+        process = await asyncio.create_subprocess_exec(
+            "git", "-C", repo_path, "pull", "origin", branch,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
 
         try:
-            logger.info(
-                f"Executing: git -C {repo_path} pull origin {branch} (timeout: {config.command_timeout}s)"
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(), timeout=config.command_timeout
             )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            return {
+                "status": "error",
+                "error": f"Git pull timed out after {config.command_timeout}s",
+                "output": None,
+            }
 
-            # Execute git pull with timeout
-            process = await asyncio.create_subprocess_exec(
-                "git",
-                "-C",
-                repo_path,
-                "pull",
-                "origin",
-                branch,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            logger.debug(f"Subprocess started with PID: {process.pid}")
+        stdout_text = stdout.decode("utf-8").strip()
+        stderr_text = stderr.decode("utf-8").strip()
 
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=config.command_timeout
-                )
-                logger.debug(
-                    f"Process completed with return code: {process.returncode}"
-                )
-            except asyncio.TimeoutError:
-                logger.error(
-                    f"Git pull timed out after {config.command_timeout}s, killing process"
-                )
-                process.kill()
-                await process.wait()
-                return {
-                    "status": "error",
-                    "error": f"Git pull timed out after {config.command_timeout}s",
-                    "output": None,
-                }
+        if process.returncode == 0:
+            logger.info("Git pull successful for %s: %s", repo_id, stdout_text)
+            return {"status": "success", "output": stdout_text or "Git pull completed successfully", "error": None}
+        else:
+            error_msg = stderr_text or "Git pull failed (no error message)"
+            logger.error("Git pull failed for %s (rc=%s): %s", repo_id, process.returncode, error_msg)
+            return {"status": "error", "error": error_msg, "output": stdout_text}
 
-            stdout_text = stdout.decode("utf-8").strip()
-            stderr_text = stderr.decode("utf-8").strip()
+    async def _execute_git_pull(self, params: dict) -> dict:
+        """
+        Execute git pull on one or more repositories identified by ID.
+        Accepts optional 'repository_ids' list; if omitted, pulls all configured repos.
+        """
+        repository_ids: Optional[List[str]] = params.get("repository_ids") or None
+        branch = params.get("branch", "main")
+        logger.info("Git pull request - params: %s", params)
 
-            logger.debug(f"Git stdout: {stdout_text or '(empty)'}")
-            logger.debug(f"Git stderr: {stderr_text or '(empty)'}")
+        if not config.git_repos:
+            error_msg = "No git repositories configured (repos.yaml missing or empty)"
+            logger.error(error_msg)
+            return {"status": "error", "error": error_msg, "output": None}
 
-            if process.returncode == 0:
-                logger.info(f"Git pull successful in {repo_path}: {stdout_text}")
-                return {
-                    "status": "success",
-                    "output": stdout_text or "Git pull completed successfully",
-                    "error": None,
-                }
+        # Determine which repos to pull
+        if repository_ids:
+            unknown = [rid for rid in repository_ids if rid not in config.git_repos]
+            if unknown:
+                error_msg = f"Unknown repository IDs: {', '.join(unknown)}. Configured: {', '.join(config.git_repos.keys())}"
+                logger.error(error_msg)
+                return {"status": "error", "error": error_msg, "output": None}
+            target_repos = {rid: config.git_repos[rid] for rid in repository_ids}
+        else:
+            target_repos = config.git_repos
+
+        outputs = []
+        errors = []
+
+        for repo_id, repo_info in target_repos.items():
+            repo_path = repo_info.get("path", "")
+            result = await self._git_pull_one(repo_id, repo_path, branch)
+            line = f"[{repo_id}] {result.get('output') or result.get('error') or ''}"
+            if result["status"] == "success":
+                outputs.append(line)
             else:
-                error_msg = stderr_text or "Git pull failed (no error message)"
-                logger.error(
-                    f"Git pull failed (return code {process.returncode}): {error_msg}"
-                )
-                return {
-                    "status": "error",
-                    "error": error_msg,
-                    "output": stdout_text,
-                }
+                errors.append(line)
 
-        except Exception as e:
-            logger.error(f"Git pull exception: {e}", exc_info=True)
-            return {"status": "error", "error": str(e), "output": None}
+        combined_output = "\n".join(outputs + errors) or None
+
+        if errors and not outputs:
+            return {"status": "error", "error": "\n".join(errors), "output": None}
+        if errors:
+            return {"status": "error", "error": "\n".join(errors), "output": "\n".join(outputs)}
+
+        return {"status": "success", "output": combined_output or "Git pull completed successfully", "error": None}
+
+    async def _git_push_one(self, repo_id: str, repo_path: str, branch: str) -> dict:
+        """Stage all changes, commit with timestamp, and push for a single repository."""
+        if not os.path.isdir(repo_path):
+            return {"status": "error", "error": f"Path does not exist: {repo_path}", "output": None}
+        if not os.path.isdir(os.path.join(repo_path, ".git")):
+            return {"status": "error", "error": f"Not a git repository: {repo_path}", "output": None}
+
+        # 1. Stage all changes
+        logger.info("Executing: git -C %s add -A", repo_path)
+        rc, _, stderr = await self._run_git(repo_path, "add", "-A")
+        if rc == -1:
+            return {"status": "error", "error": f"git add timed out after {config.command_timeout}s", "output": None}
+        if rc != 0:
+            return {"status": "error", "error": stderr or "git add failed", "output": None}
+
+        # 2. Commit with timestamp
+        commit_msg = f"Auto-commit {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}"
+        logger.info("Executing: git -C %s commit -m '%s'", repo_path, commit_msg)
+        rc, stdout, stderr = await self._run_git(repo_path, "commit", "-m", commit_msg)
+        if rc == -1:
+            return {"status": "error", "error": f"git commit timed out after {config.command_timeout}s", "output": None}
+        if rc != 0:
+            combined = (stdout + "\n" + stderr).strip()
+            # nothing to commit is not a failure
+            if "nothing to commit" in combined:
+                logger.info("Nothing to commit for %s", repo_id)
+                return {"status": "success", "output": "Nothing to commit, working tree clean", "error": None}
+            return {"status": "error", "error": stderr or stdout or "git commit failed", "output": stdout or None}
+
+        # 3. Push
+        logger.info("Executing: git -C %s push origin %s", repo_path, branch)
+        rc, push_stdout, push_stderr = await self._run_git(repo_path, "push", "origin", branch)
+        if rc == -1:
+            return {"status": "error", "error": f"git push timed out after {config.command_timeout}s", "output": stdout}
+        if rc != 0:
+            error_msg = push_stderr or "git push failed"
+            logger.error("Git push failed for %s (rc=%s): %s", repo_id, rc, error_msg)
+            return {"status": "error", "error": error_msg, "output": stdout}
+
+        combined_output = "\n".join(filter(None, [stdout, push_stdout, push_stderr])) or "Committed and pushed successfully"
+        logger.info("Git push successful for %s", repo_id)
+        return {"status": "success", "output": combined_output, "error": None}
+
+    async def _execute_git_push(self, params: dict) -> dict:
+        """
+        Stage all changes, commit with timestamp, and push one or more repositories.
+        Accepts optional 'repository_ids' list; if omitted, pushes all configured repos.
+        Accepts optional 'branch' string (default: 'main').
+        """
+        repository_ids: Optional[List[str]] = params.get("repository_ids") or None
+        branch = params.get("branch", "main")
+        logger.info("Git push request - params: %s", params)
+
+        if not config.git_repos:
+            error_msg = "No git repositories configured (repos.yaml missing or empty)"
+            logger.error(error_msg)
+            return {"status": "error", "error": error_msg, "output": None}
+
+        if repository_ids:
+            unknown = [rid for rid in repository_ids if rid not in config.git_repos]
+            if unknown:
+                error_msg = f"Unknown repository IDs: {', '.join(unknown)}. Configured: {', '.join(config.git_repos.keys())}"
+                logger.error(error_msg)
+                return {"status": "error", "error": error_msg, "output": None}
+            target_repos = {rid: config.git_repos[rid] for rid in repository_ids}
+        else:
+            target_repos = config.git_repos
+
+        outputs = []
+        errors = []
+
+        for repo_id, repo_info in target_repos.items():
+            repo_path = repo_info.get("path", "")
+            result = await self._git_push_one(repo_id, repo_path, branch)
+            line = f"[{repo_id}] {result.get('output') or result.get('error') or ''}"
+            if result["status"] == "success":
+                outputs.append(line)
+            else:
+                errors.append(line)
+
+        combined_output = "\n".join(outputs + errors) or None
+
+        if errors and not outputs:
+            return {"status": "error", "error": "\n".join(errors), "output": None}
+        if errors:
+            return {"status": "error", "error": "\n".join(errors), "output": "\n".join(outputs)}
+
+        return {"status": "success", "output": combined_output or "Git push completed successfully", "error": None}
+
+    async def _git_status_one(self, repo_id: str, repo_path: str) -> dict:
+        """Execute git status for a single repository path."""
+        if not os.path.isdir(repo_path):
+            return {"status": "error", "error": f"Path does not exist: {repo_path}", "output": None}
+
+        git_dir = os.path.join(repo_path, ".git")
+        if not os.path.isdir(git_dir):
+            return {"status": "error", "error": f"Not a git repository: {repo_path}", "output": None}
+
+        logger.info("Executing: git -C %s status --short --branch (timeout: %ss)", repo_path, config.command_timeout)
+
+        process = await asyncio.create_subprocess_exec(
+            "git", "-C", repo_path, "status", "--short", "--branch",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(), timeout=config.command_timeout
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            return {
+                "status": "error",
+                "error": f"Git status timed out after {config.command_timeout}s",
+                "output": None,
+            }
+
+        stdout_text = stdout.decode("utf-8").strip()
+        stderr_text = stderr.decode("utf-8").strip()
+
+        if process.returncode == 0:
+            logger.info("Git status successful for %s", repo_id)
+            return {"status": "success", "output": stdout_text or "Git status: clean", "error": None}
+        else:
+            error_msg = stderr_text or "Git status failed (no error message)"
+            logger.error("Git status failed for %s (rc=%s): %s", repo_id, process.returncode, error_msg)
+            return {"status": "error", "error": error_msg, "output": stdout_text}
 
     async def _execute_git_status(self, params: dict) -> dict:
         """
-        Execute git status command
-        Uses repository path from params or falls back to first configured path in GIT_REPO_PATH
+        Execute git status on one or more repositories identified by ID.
+        Accepts optional 'repository_ids' list; if omitted, checks all configured repos.
         """
-        repo_path = params.get("repository_path") or ""
-        logger.info(f"Git status request - params: {params}")
+        repository_ids: Optional[List[str]] = params.get("repository_ids") or None
+        logger.info("Git status request - params: %s", params)
 
-        # If no path provided, use first configured path
-        if not repo_path:
-            if not config.git_repo_paths:
-                error_msg = "No git repositories configured (GIT_REPO_PATH not set)"
+        if not config.git_repos:
+            error_msg = "No git repositories configured (repos.yaml missing or empty)"
+            logger.error(error_msg)
+            return {"status": "error", "error": error_msg, "output": None}
+
+        if repository_ids:
+            unknown = [rid for rid in repository_ids if rid not in config.git_repos]
+            if unknown:
+                error_msg = f"Unknown repository IDs: {', '.join(unknown)}. Configured: {', '.join(config.git_repos.keys())}"
                 logger.error(error_msg)
-                return {
-                    "status": "error",
-                    "error": error_msg,
-                    "output": None,
-                }
-            repo_path = config.git_repo_paths[0]
-            logger.info(f"Using default git repo path from config: {repo_path}")
+                return {"status": "error", "error": error_msg, "output": None}
+            target_repos = {rid: config.git_repos[rid] for rid in repository_ids}
         else:
-            logger.info(f"Using provided repository path: {repo_path}")
+            target_repos = config.git_repos
 
-        # Validate repository path is in allowed paths
-        allowed_paths = config.git_repo_paths
-        logger.debug(f"Allowed paths: {allowed_paths}")
-        if repo_path not in allowed_paths:
-            error_msg = f"Repository path not allowed. Configured paths: {', '.join(allowed_paths)}"
-            logger.error(error_msg)
-            return {
-                "status": "error",
-                "error": error_msg,
-                "output": None,
-            }
+        outputs = []
+        errors = []
 
-        # Check if path exists
-        if not os.path.isdir(repo_path):
-            error_msg = f"Repository path does not exist: {repo_path}"
-            logger.error(error_msg)
-            return {
-                "status": "error",
-                "error": error_msg,
-                "output": None,
-            }
-        logger.info(f"Repository path exists: {repo_path}")
-
-        # Check if it's a git repository
-        git_dir = os.path.join(repo_path, ".git")
-        if not os.path.isdir(git_dir):
-            error_msg = f"Not a git repository: {repo_path} (no .git directory)"
-            logger.error(error_msg)
-            return {
-                "status": "error",
-                "error": error_msg,
-                "output": None,
-            }
-        logger.info(f"Git repository validated: {repo_path}")
-
-        try:
-            logger.info(
-                f"Executing: git -C {repo_path} status (timeout: {config.command_timeout}s)"
-            )
-
-            # Execute git status with timeout
-            process = await asyncio.create_subprocess_exec(
-                "git",
-                "-C",
-                repo_path,
-                "status",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            logger.debug(f"Subprocess started with PID: {process.pid}")
-
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=config.command_timeout
-                )
-                logger.debug(
-                    f"Process completed with return code: {process.returncode}"
-                )
-            except asyncio.TimeoutError:
-                logger.error(
-                    f"Git status timed out after {config.command_timeout}s, killing process"
-                )
-                process.kill()
-                await process.wait()
-                return {
-                    "status": "error",
-                    "error": f"Git status timed out after {config.command_timeout}s",
-                    "output": None,
-                }
-
-            stdout_text = stdout.decode("utf-8").strip()
-            stderr_text = stderr.decode("utf-8").strip()
-
-            logger.debug(f"Git stdout: {stdout_text or '(empty)'}")
-            logger.debug(f"Git stderr: {stderr_text or '(empty)'}")
-
-            if process.returncode == 0:
-                logger.info(f"Git status successful in {repo_path}")
-                return {
-                    "status": "success",
-                    "output": stdout_text or "Git status: clean",
-                    "error": None,
-                }
+        for repo_id, repo_info in target_repos.items():
+            repo_path = repo_info.get("path", "")
+            result = await self._git_status_one(repo_id, repo_path)
+            lines = f"[{repo_id}]\n{result.get('output') or result.get('error') or ''}"
+            if result["status"] == "success":
+                outputs.append(lines)
             else:
-                error_msg = stderr_text or "Git status failed (no error message)"
-                logger.error(
-                    f"Git status failed (return code {process.returncode}): {error_msg}"
-                )
-                return {
-                    "status": "error",
-                    "error": error_msg,
-                    "output": stdout_text,
-                }
+                errors.append(lines)
 
-        except Exception as e:
-            logger.error(f"Git status exception: {e}", exc_info=True)
-            return {"status": "error", "error": str(e), "output": None}
+        combined_output = "\n\n".join(outputs + errors) or None
+
+        if errors and not outputs:
+            return {"status": "error", "error": "\n".join(errors), "output": None}
+        if errors:
+            return {"status": "error", "error": "\n".join(errors), "output": "\n".join(outputs)}
+
+        return {"status": "success", "output": combined_output or "Git status: clean", "error": None}
+
+    async def _execute_list_repositories(self, params: dict) -> dict:
+        """Return the list of configured repository IDs."""
+        repos = [{"id": k} for k in config.git_repos.keys()]
+        return {"status": "success", "output": json.dumps(repos), "error": None}
 
     async def _restart_containers(self, container_names: list, label: str) -> dict:
         """
@@ -388,47 +430,57 @@ class CommandExecutor:
             "error": None,
         }
 
-    async def _execute_nifi_restart(self, params: dict) -> dict:
+    async def _execute_docker_restart(self, params: dict) -> dict:
         """
-        Restart all configured NiFi containers (NIFI_CONTAINERS).
+        Restart one or more containers identified by ID from containers.yaml.
+        Accepts optional 'container_ids' list; if omitted, restarts all configured containers.
         """
-        logger.info(f"NiFi restart request - params: {params}")
+        container_ids: Optional[List[str]] = params.get("container_ids") or None
+        logger.info("Docker restart request - params: %s", params)
 
-        if not config.nifi_container_names:
-            error_msg = "No NiFi containers configured (NIFI_CONTAINERS not set)"
+        if not config.docker_containers:
+            error_msg = "No docker containers configured (containers.yaml missing or empty)"
             logger.error(error_msg)
             return {"status": "error", "error": error_msg, "output": None}
 
-        logger.info(f"Restarting NiFi containers: {config.nifi_container_names}")
+        if container_ids:
+            unknown = [cid for cid in container_ids if cid not in config.docker_containers]
+            if unknown:
+                error_msg = f"Unknown container IDs: {', '.join(unknown)}. Configured: {', '.join(config.docker_containers.keys())}"
+                logger.error(error_msg)
+                return {"status": "error", "error": error_msg, "output": None}
+            target_containers = {cid: config.docker_containers[cid] for cid in container_ids}
+        else:
+            target_containers = config.docker_containers
 
-        try:
-            return await self._restart_containers(config.nifi_container_names, "NiFi")
-        except Exception as e:
-            logger.error(f"NiFi restart exception: {e}", exc_info=True)
-            return {"status": "error", "error": str(e), "output": None}
+        outputs = []
+        errors = []
 
-    async def _execute_zookeeper_restart(self, params: dict) -> dict:
-        """
-        Restart all configured ZooKeeper containers (ZOOKEEPER_CONTAINER).
-        """
-        logger.info(f"ZooKeeper restart request - params: {params}")
+        for container_id, container_info in target_containers.items():
+            container_name = container_info.get("container", "")
+            result = await self._restart_containers([container_name], container_id)
+            line = f"[{container_id}] {result.get('output') or result.get('error') or ''}"
+            if result["status"] == "success":
+                outputs.append(line)
+            else:
+                errors.append(line)
 
-        if not config.zookeeper_container_names:
-            error_msg = "No ZooKeeper containers configured (ZOOKEEPER_CONTAINER not set)"
-            logger.error(error_msg)
-            return {"status": "error", "error": error_msg, "output": None}
+        combined_output = "\n".join(outputs + errors) or None
 
-        logger.info(
-            f"Restarting ZooKeeper containers: {config.zookeeper_container_names}"
-        )
+        if errors and not outputs:
+            return {"status": "error", "error": "\n".join(errors), "output": None}
+        if errors:
+            return {"status": "error", "error": "\n".join(errors), "output": "\n".join(outputs)}
 
-        try:
-            return await self._restart_containers(
-                config.zookeeper_container_names, "ZooKeeper"
-            )
-        except Exception as e:
-            logger.error(f"ZooKeeper restart exception: {e}", exc_info=True)
-            return {"status": "error", "error": str(e), "output": None}
+        return {"status": "success", "output": combined_output or "All containers restarted", "error": None}
+
+    async def _execute_list_containers(self, params: dict) -> dict:
+        """Return the list of configured container IDs with their types."""
+        containers = [
+            {"id": k, "type": v.get("type", "")}
+            for k, v in config.docker_containers.items()
+        ]
+        return {"status": "success", "output": json.dumps(containers), "error": None}
 
 
     async def _execute_docker_stats(self, params: dict) -> dict:

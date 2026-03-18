@@ -20,7 +20,7 @@ export function AgentsOperatingPage() {
   const agents = data?.agents ?? EMPTY_AGENTS
 
   const [statsAgent, setStatsAgent] = useState<string | null>(null)
-  const [runCommandAgent, setRunCommandAgent] = useState<string | null>(null)
+  const [runCommandAgent, setRunCommandAgent] = useState<{ agentId: string; capabilities: string } | null>(null)
   const [historyAgent, setHistoryAgent] = useState<string | null>(null)
 
   const stats = useMemo(() => {
@@ -29,7 +29,13 @@ export function AgentsOperatingPage() {
   }, [agents])
 
   const handleGetStats = useCallback((agentId: string) => setStatsAgent(agentId), [])
-  const handleRunCommand = useCallback((agentId: string) => setRunCommandAgent(agentId), [])
+  const handleRunCommand = useCallback(
+    (agentId: string) => {
+      const agent = agents.find((a) => a.agent_id === agentId)
+      setRunCommandAgent({ agentId, capabilities: agent?.capabilities ?? '' })
+    },
+    [agents]
+  )
   const handleViewHistory = useCallback((agentId: string) => setHistoryAgent(agentId), [])
   const handleRefresh = useCallback(() => refetch(), [refetch])
 
@@ -136,7 +142,8 @@ export function AgentsOperatingPage() {
         <RunCommandDialog
           open={!!runCommandAgent}
           onOpenChange={(open) => !open && setRunCommandAgent(null)}
-          agentId={runCommandAgent}
+          agentId={runCommandAgent.agentId}
+          capabilities={runCommandAgent.capabilities}
           sendCommand={sendCommand}
         />
       )}

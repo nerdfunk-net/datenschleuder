@@ -19,6 +19,88 @@ from repositories.agent_repository import AgentRepository
 logger = logging.getLogger(__name__)
 
 
+_GIT_XY_LABELS: dict[str, str] = {
+    "??": "untracked",
+    " M": "modified",   "M ": "staged",       "MM": "staged+modified",
+    " D": "deleted",    "D ": "staged deleted","A ": "added",        "AM": "added+modified",
+    "R ": "renamed",    " R": "renamed",       "UU": "conflict",     "AA": "conflict",
+    " A": "added",
+}
+
+
+def parse_git_status(raw: str) -> list[dict]:
+    """Parse multi-repo git status --short --branch output into structured rows.
+
+    The agent prefixes each repo block with [repo-id].  For repos with no
+    changed files a synthetic {"status": "clean"} row is emitted so every
+    repo is always represented in the output.
+    """
+    rows: list[dict] = []
+    current_repo: str | None = None
+    current_branch = ""
+    repo_has_files = False
+
+    for raw_line in raw.splitlines():
+        line = raw_line.rstrip()
+        if not line:
+            continue
+
+        # ── Repo header ──────────────────────────────────────────────────────
+        if line.startswith("[") and line.endswith("]"):
+            if current_repo is not None and not repo_has_files:
+                rows.append({"repo": current_repo, "branch": current_branch, "file": "", "status": "clean"})
+            current_repo = line[1:-1]
+            current_branch = ""
+            repo_has_files = False
+            continue
+
+        if current_repo is None:
+            continue
+
+        # ── Branch info line: ## main...origin/main [ahead N] [behind N] ────
+        if line.startswith("## "):
+            info = line[3:]
+            # handles "main...origin/main", "HEAD (no branch)", "No commits yet on main"
+            current_branch = info.split("...")[0].split(" ")[0]
+            continue
+
+        # ── File status line: "XY filename" ──────────────────────────────────
+        if len(line) >= 4 and line[2] == " ":
+            xy = line[:2]
+            filename = line[3:]
+            status = _GIT_XY_LABELS.get(xy, xy.strip() or "modified")
+            rows.append({"repo": current_repo, "branch": current_branch, "file": filename, "status": status})
+            repo_has_files = True
+
+    # flush last repo
+    if current_repo is not None and not repo_has_files:
+        rows.append({"repo": current_repo, "branch": current_branch, "file": "", "status": "clean"})
+
+    return rows
+
+
+def parse_list_repositories(raw: str) -> list[dict]:
+    """Parse list_repositories JSON output into a list of row dicts."""
+    try:
+        parsed = json.loads(raw)
+        if not isinstance(parsed, list):
+            return []
+        return [{"id": item["id"]} for item in parsed if isinstance(item, dict) and "id" in item]
+    except (json.JSONDecodeError, KeyError):
+        return []
+
+
+def parse_list_containers(raw: str) -> list[dict]:
+    """Parse list_containers JSON output into a list of row dicts."""
+    try:
+        parsed = json.loads(raw)
+        if not isinstance(parsed, list):
+            return []
+        return [{"id": item["id"], "type": item.get("type", "")} for item in parsed if isinstance(item, dict) and "id" in item]
+    except (json.JSONDecodeError, KeyError):
+        return []
+
+
 def parse_docker_ps(raw: str) -> list[dict]:
     """Parse `docker ps` tabular output into a list of row dicts."""
     lines = raw.strip().splitlines()
@@ -126,6 +208,44 @@ class AgentService:
         if not status or status["status"] != "online":
             return False
         return (int(time.time()) - status["last_heartbeat"]) < max_age
+
+    def get_agent_containers(self, agent_id: str) -> List[Dict]:
+        """Return the list of container IDs and types from the agent's Redis heartbeat data."""
+        try:
+            data = self.redis_client.hgetall(f"{_AGENT_REGISTRY_PREFIX}{agent_id}")
+            if not data:
+                return []
+            raw = data.get("containers", "")
+            if not raw:
+                return []
+            parsed = json.loads(raw)
+            if not isinstance(parsed, list):
+                return []
+            return [
+                {"id": item["id"], "type": item.get("type", "")}
+                for item in parsed
+                if isinstance(item, dict) and "id" in item
+            ]
+        except (json.JSONDecodeError, redis.RedisError) as exc:
+            logger.warning("Could not read containers for agent %s: %s", agent_id, exc)
+            return []
+
+    def get_agent_repositories(self, agent_id: str) -> List[Dict]:
+        """Return the list of repository IDs from the agent's Redis heartbeat data."""
+        try:
+            data = self.redis_client.hgetall(f"{_AGENT_REGISTRY_PREFIX}{agent_id}")
+            if not data:
+                return []
+            raw = data.get("repositories", "")
+            if not raw:
+                return []
+            parsed = json.loads(raw)
+            if not isinstance(parsed, list):
+                return []
+            return [{"id": item["id"]} for item in parsed if isinstance(item, dict) and "id" in item]
+        except (json.JSONDecodeError, redis.RedisError) as exc:
+            logger.warning("Could not read repositories for agent %s: %s", agent_id, exc)
+            return []
 
     # ── Commands ─────────────────────────────────────────────────────────────
 
@@ -244,7 +364,7 @@ class AgentService:
         sent_by: str,
         timeout: int = 30,
     ) -> dict:
-        """Send a command and block until the agent responds or timeout elapses."""
+        """Subscribe first, then send — avoids missing fast responses via Pub/Sub race condition."""
         if not self.check_agent_online(agent_id):
             return {
                 "command_id": "",
@@ -252,8 +372,68 @@ class AgentService:
                 "error": "Agent is offline",
                 "execution_time_ms": 0,
             }
+
+        response_channel = f"{_RESPONSE_CHANNEL_PREFIX}{agent_id}"
+
+        # 1. Subscribe BEFORE publishing so we never miss a fast response.
+        sub_client = redis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_timeout=timeout + 2,  # socket outlives the logical timeout
+        )
+        pubsub = sub_client.pubsub()
+        pubsub.subscribe(response_channel)
+
+        # 2. Now send the command (channel is already listening).
         command_id = self.send_command(agent_id, command, params, sent_by)
-        result = self.wait_for_response(agent_id, command_id, timeout)
+
+        # 3. Wait for the matching response.
+        start = time.time()
+        result = None
+        try:
+            for message in pubsub.listen():
+                if message["type"] != "message":
+                    continue
+                try:
+                    data = json.loads(message["data"])
+                    if data.get("command_id") == command_id:
+                        self.repository.update_command_result(
+                            command_id=command_id,
+                            status=data.get("status"),
+                            output=data.get("output"),
+                            error=data.get("error"),
+                            execution_time_ms=data.get("execution_time_ms"),
+                        )
+                        result = data
+                        break
+                except json.JSONDecodeError as exc:
+                    logger.error("Invalid JSON in agent response: %s", exc)
+
+                if time.time() - start > timeout:
+                    break
+        except redis.TimeoutError:
+            logger.warning(
+                "Socket timeout waiting for response from agent %s (command %s)",
+                agent_id,
+                command_id,
+            )
+        finally:
+            pubsub.unsubscribe()
+            pubsub.close()
+            sub_client.close()
+
+        if result is None:
+            self.repository.update_command_result(
+                command_id=command_id,
+                status="timeout",
+                error=f"No response after {timeout}s",
+            )
+            return {
+                "command_id": command_id,
+                "status": "timeout",
+                "error": f"No response after {timeout}s",
+                "execution_time_ms": int((time.time() - start) * 1000),
+            }
 
         parsed: List[Dict[str, Any]] = []
         raw_output = result.get("output") or ""
@@ -261,6 +441,12 @@ class AgentService:
             parsed = parse_docker_ps(raw_output)
         elif command == "docker_stats":
             parsed = parse_docker_stats(raw_output)
+        elif command == "list_containers":
+            parsed = parse_list_containers(raw_output)
+        elif command == "list_repositories":
+            parsed = parse_list_repositories(raw_output)
+        elif command == "git_status":
+            parsed = parse_git_status(raw_output)
 
         result["parsed_output"] = parsed if parsed else None
         return result
