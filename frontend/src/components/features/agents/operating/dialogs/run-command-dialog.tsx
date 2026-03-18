@@ -113,12 +113,12 @@ export function RunCommandDialog({
   const { data: reposData, isLoading: reposLoading } = useAgentRepositoriesQuery(agentId, {
     enabled: isGitCommand,
   })
-  const repos = reposData?.repositories ?? []
+  const repos = useMemo(() => reposData?.repositories ?? [], [reposData?.repositories])
 
   const { data: containersData, isLoading: containersLoading } = useAgentContainersQuery(agentId, {
     enabled: isDockerRestart,
   })
-  const containers = containersData?.containers ?? []
+  const containers = useMemo(() => containersData?.containers ?? [], [containersData?.containers])
 
   const handleCommandChange = useCallback((cmd: string) => {
     setSelectedCommand(cmd)
@@ -395,7 +395,7 @@ export function RunCommandDialog({
                               const prevRow = (parsedRows as GitStatusRow[])[i - 1]
                               const isFirstInRepo = !prevRow || prevRow.repo !== row.repo
                               return (
-                                <TableRow key={`${row.repo}-${row.file || 'clean'}-${i}`} className={isFirstInRepo && i > 0 ? 'border-t-2 border-slate-200' : ''}>
+                                <TableRow key={`${row.repo}-${row.file || 'clean'}`} className={isFirstInRepo && i > 0 ? 'border-t-2 border-slate-200' : ''}>
                                   <TableCell className={`font-mono text-xs font-medium ${isFirstInRepo ? '' : 'text-transparent select-none'}`}>
                                     {isFirstInRepo ? row.repo : '↳'}
                                   </TableCell>

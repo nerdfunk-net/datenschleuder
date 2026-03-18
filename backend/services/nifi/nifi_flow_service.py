@@ -250,7 +250,7 @@ def update_flow(flow_id: int, **kwargs) -> Optional[dict]:
         "active",
         "description",
     ]:
-        if col in kwargs and kwargs[col] is not None:
+        if col in kwargs:
             update_values[col] = kwargs[col]
 
     updated = _repo.update(flow_id, update_values)

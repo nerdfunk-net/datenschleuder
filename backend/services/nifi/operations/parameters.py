@@ -124,8 +124,15 @@ def create_parameter_context(
     name: str,
     description: Optional[str] = None,
     parameters: Optional[List[Dict[str, Any]]] = None,
+    inherited_parameter_contexts: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
-    """Create a new parameter context."""
+    """Create a new parameter context.
+
+    NiFi's POST /parameter-contexts endpoint ignores inheritedParameterContexts
+    on creation (NiFi behaviour, not an API bug). The reliable strategy is to
+    create the context first, then apply inheritance via the async update API —
+    the same path that already works for edits.
+    """
     param_entities = []
     for param in parameters or []:
         param_dto = ParameterDTO(
@@ -140,6 +147,8 @@ def create_parameter_context(
         name=name,
         description=description,
         parameters=param_entities if param_entities else None,
+        # NiFi requires an explicit empty list, not None (NiFi JIRA 9470)
+        inherited_parameter_contexts=[],
     )
 
     param_context_entity = ParameterContextEntity(
@@ -149,11 +158,24 @@ def create_parameter_context(
 
     param_api = ParameterContextsApi()
     result = param_api.create_parameter_context(body=param_context_entity)
+    created_id = result.id if hasattr(result, "id") else None
+    created_name = result.component.name if hasattr(result, "component") else name
 
-    return {
-        "id": result.id if hasattr(result, "id") else None,
-        "name": result.component.name if hasattr(result, "component") else name,
-    }
+    # Step 2: apply inheritance via the async update API (create ignores it)
+    if created_id and inherited_parameter_contexts:
+        try:
+            update_parameter_context(
+                context_id=created_id,
+                inherited_parameter_contexts=inherited_parameter_contexts,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Created parameter context '%s' but failed to apply inheritance: %s",
+                created_id,
+                exc,
+            )
+
+    return {"id": created_id, "name": created_name}
 
 
 def update_parameter_context(

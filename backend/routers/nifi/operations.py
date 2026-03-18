@@ -315,7 +315,12 @@ async def create_parameter_context(
     params = [p.model_dump() for p in data.parameters] if data.parameters else []
     result = await _execute_with_retry(
         instance_id,
-        lambda: param_ops.create_parameter_context(data.name, data.description, params),
+        lambda: param_ops.create_parameter_context(
+            data.name,
+            data.description,
+            params,
+            data.inherited_parameter_contexts,
+        ),
     )
     return {
         "status": "success",

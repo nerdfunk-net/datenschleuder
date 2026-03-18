@@ -5,7 +5,6 @@ import { Settings2, Plus, Search, Pencil, Copy, Trash2, Loader2, AlertCircle } f
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useNifiInstancesQuery } from '@/components/features/settings/nifi/hooks/use-nifi-instances-query'
 import { useNifiClustersQuery } from '@/components/features/settings/nifi/hooks/use-nifi-clusters-query'
 import { useParameterContextsListQuery } from './hooks/use-parameter-contexts-query'
 import { useParameterContextMutations } from './hooks/use-parameter-contexts-mutations'
@@ -14,7 +13,7 @@ import { useToast } from '@/hooks/use-toast'
 import { ParameterContextDialog } from './components/parameter-context-dialog'
 import { BoundProcessGroupsDialog } from './components/bound-process-groups-dialog'
 import { DeleteErrorDialog } from './components/delete-error-dialog'
-import type { NifiInstance, NifiCluster } from '@/components/features/settings/nifi/types'
+import type { NifiCluster } from '@/components/features/settings/nifi/types'
 import type {
   ParameterContext,
   ParameterContextForm,
@@ -24,7 +23,6 @@ import type {
 } from './types'
 
 // Stable empty defaults
-const EMPTY_INSTANCES: NifiInstance[] = []
 const EMPTY_CLUSTERS: NifiCluster[] = []
 const EMPTY_CONTEXTS: ParameterContext[] = []
 
@@ -83,11 +81,11 @@ function buildCombinedParameters(
 }
 
 // ============================================================================
-// InstanceSection — loads and shows contexts for one NiFi instance
+// ClusterSection — loads and shows contexts for one NiFi cluster
 // ============================================================================
 
-interface InstanceSectionProps {
-  instance: NifiInstance
+interface ClusterSectionProps {
+  cluster: NifiCluster
   searchQuery: string
   onEdit: (instanceId: number, context: ParameterContext) => void
   onCopy: (instanceId: number, context: ParameterContext) => void
@@ -95,15 +93,18 @@ interface InstanceSectionProps {
   onViewBound: (context: ParameterContext) => void
 }
 
-function InstanceSection({
-  instance,
+function ClusterSection({
+  cluster,
   searchQuery,
   onEdit,
   onCopy,
   onDelete,
   onViewBound,
-}: InstanceSectionProps) {
-  const { data, isLoading } = useParameterContextsListQuery(instance.id)
+}: ClusterSectionProps) {
+  const primaryMember = cluster.members.find((m) => m.is_primary) ?? cluster.members[0]
+  const instanceId = primaryMember?.instance_id ?? null
+
+  const { data, isLoading } = useParameterContextsListQuery(instanceId)
   const contexts = data?.parameter_contexts ?? EMPTY_CONTEXTS
 
   const filtered = useMemo(() => {
@@ -119,10 +120,12 @@ function InstanceSection({
         <div className="flex items-center space-x-2">
           <Settings2 className="h-4 w-4" />
           <span className="text-sm font-medium">
-            {instance.hierarchy_attribute}={instance.hierarchy_value}
+            {cluster.cluster_id}
           </span>
         </div>
-        <span className="text-xs text-blue-100">{instance.nifi_url}</span>
+        <span className="text-xs text-blue-100">
+          {cluster.hierarchy_attribute}={cluster.hierarchy_value}
+        </span>
       </div>
 
       <div className="p-6 bg-gradient-to-b from-white to-gray-50">
@@ -180,7 +183,7 @@ function InstanceSection({
                     size="sm"
                     className="h-7 px-2"
                     title="Edit"
-                    onClick={() => onEdit(instance.id, ctx)}
+                    onClick={() => onEdit(instanceId!, ctx)}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -189,7 +192,7 @@ function InstanceSection({
                     size="sm"
                     className="h-7 px-2"
                     title="Copy"
-                    onClick={() => onCopy(instance.id, ctx)}
+                    onClick={() => onCopy(instanceId!, ctx)}
                   >
                     <Copy className="h-3.5 w-3.5" />
                   </Button>
@@ -198,7 +201,7 @@ function InstanceSection({
                     size="sm"
                     className="h-7 px-2 text-red-500 hover:text-red-700 hover:border-red-300"
                     title="Delete"
-                    onClick={() => onDelete(instance.id, ctx)}
+                    onClick={() => onDelete(instanceId!, ctx)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -219,9 +222,7 @@ function InstanceSection({
 export function NifiParametersPage() {
   const { apiCall } = useApi()
   const { toast } = useToast()
-  const { data: instancesData, isLoading: isLoadingInstances } = useNifiInstancesQuery()
-  const instances = instancesData ?? EMPTY_INSTANCES
-  const { data: clustersData } = useNifiClustersQuery()
+  const { data: clustersData, isLoading: isLoadingClusters } = useNifiClustersQuery()
   const clusters = clustersData ?? EMPTY_CLUSTERS
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -391,6 +392,9 @@ export function NifiParametersPage() {
           name: form.name,
           description: form.description || undefined,
           parameters: params,
+          inherited_parameter_contexts: form.inherited_parameter_contexts.length > 0
+            ? form.inherited_parameter_contexts
+            : undefined,
         })
       } else {
         await updateContext.mutateAsync({
@@ -417,7 +421,7 @@ export function NifiParametersPage() {
 
   // ---- Render loading state ----
 
-  if (isLoadingInstances) {
+  if (isLoadingClusters) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -468,21 +472,21 @@ export function NifiParametersPage() {
           </div>
         </div>
 
-        {/* No instances warning */}
-        {instances.length === 0 && (
+        {/* No clusters warning */}
+        {clusters.length === 0 && (
           <Alert className="bg-amber-50 border-amber-200">
             <AlertCircle className="h-4 w-4 text-amber-600" />
             <AlertDescription className="text-amber-800">
-              No NiFi instances configured. Please configure a NiFi instance first.
+              No NiFi clusters configured. Please configure a NiFi cluster first.
             </AlertDescription>
           </Alert>
         )}
 
-        {/* One section per NiFi instance */}
-        {instances.map((instance) => (
-          <InstanceSection
-            key={instance.id}
-            instance={instance}
+        {/* One section per NiFi cluster */}
+        {clusters.map((cluster) => (
+          <ClusterSection
+            key={cluster.id}
+            cluster={cluster}
             searchQuery={searchQuery}
             onEdit={openEdit}
             onCopy={openCopy}

@@ -650,6 +650,7 @@ class ParameterContextCreate(BaseModel):
     name: str
     description: Optional[str] = None
     parameters: List[ParameterInput] = []
+    inherited_parameter_contexts: Optional[List[str]] = None
 
 
 class ParameterContextUpdate(BaseModel):

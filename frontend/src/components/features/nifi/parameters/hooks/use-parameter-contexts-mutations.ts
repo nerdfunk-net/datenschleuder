@@ -15,6 +15,7 @@ export interface CreateContextInput {
   name: string
   description?: string
   parameters: ParameterInput[]
+  inherited_parameter_contexts?: string[]
 }
 
 export interface UpdateContextInput {
@@ -37,10 +38,10 @@ export function useParameterContextMutations() {
   const { toast } = useToast()
 
   const createContext = useMutation({
-    mutationFn: ({ instanceId, name, description, parameters }: CreateContextInput) =>
+    mutationFn: ({ instanceId, name, description, parameters, inherited_parameter_contexts }: CreateContextInput) =>
       apiCall(`nifi/instances/${instanceId}/ops/parameter-contexts`, {
         method: 'POST',
-        body: JSON.stringify({ name, description, parameters }),
+        body: JSON.stringify({ name, description, parameters, inherited_parameter_contexts }),
       }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

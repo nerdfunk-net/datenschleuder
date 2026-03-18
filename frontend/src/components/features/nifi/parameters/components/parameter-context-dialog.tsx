@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -60,6 +60,15 @@ export function ParameterContextDialog({
   const [colWidths, setColWidths] = useState<number[]>(INITIAL_COL_WIDTHS)
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null)
   const [isResolvingInstance, setIsResolvingInstance] = useState(false)
+  const [localAllContexts, setLocalAllContexts] = useState<ParameterContext[]>([])
+
+  // Reset cluster selection and fetched contexts each time the dialog opens for create
+  useEffect(() => {
+    if (open && mode === 'create') {
+      setSelectedClusterId(null)
+      setLocalAllContexts([])
+    }
+  }, [open, mode])
 
   // Ref holds mutable resize state to avoid stale closures in event listeners
   const resizeRef = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null)
@@ -111,6 +120,15 @@ export function ParameterContextDialog({
           `nifi/clusters/${cluster.id}/get-primary`,
         )
         onFormChange({ ...form, instance_id: primary.instance_id })
+        // Fetch available contexts so inheritance can be configured right away
+        try {
+          const listResponse = await apiCall<{ parameter_contexts: ParameterContext[] }>(
+            `nifi/instances/${primary.instance_id}/ops/parameters`,
+          )
+          setLocalAllContexts(listResponse?.parameter_contexts ?? [])
+        } catch {
+          // Non-critical — inheritance list just won't be populated
+        }
       } finally {
         setIsResolvingInstance(false)
       }
@@ -207,7 +225,7 @@ export function ParameterContextDialog({
                     onValueChange={handleClusterSelect}
                     disabled={isResolvingInstance}
                   >
-                    <SelectTrigger id="cluster" className="flex-1">
+                    <SelectTrigger id="cluster" className="flex-1 border-gray-400 bg-white">
                       <SelectValue placeholder="Select a cluster..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -236,31 +254,35 @@ export function ParameterContextDialog({
                   Context name and description
                 </div>
               </div>
-              <div className="p-6 bg-gradient-to-b from-white to-gray-50 space-y-4">
-                {/* Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="ctx-name">
-                    Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="ctx-name"
-                    value={form.name}
-                    onChange={(e) => setField('name', e.target.value)}
-                    placeholder="Enter parameter context name"
-                    required
-                  />
-                </div>
+              <div className="p-4 bg-gradient-to-b from-white to-gray-50">
+                <div className="flex items-start gap-4">
+                  {/* Name */}
+                  <div className="space-y-1.5 w-80 shrink-0">
+                    <Label htmlFor="ctx-name">
+                      Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="ctx-name"
+                      value={form.name}
+                      onChange={(e) => setField('name', e.target.value)}
+                      placeholder="Enter parameter context name"
+                      required
+                      className="border-gray-400 bg-white"
+                    />
+                  </div>
 
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label htmlFor="ctx-desc">Description</Label>
-                  <Textarea
-                    id="ctx-desc"
-                    value={form.description}
-                    onChange={(e) => setField('description', e.target.value)}
-                    rows={2}
-                    placeholder="Enter description (optional)"
-                  />
+                  {/* Description */}
+                  <div className="space-y-1.5 flex-1">
+                    <Label htmlFor="ctx-desc">Description</Label>
+                    <Textarea
+                      id="ctx-desc"
+                      value={form.description}
+                      onChange={(e) => setField('description', e.target.value)}
+                      rows={2}
+                      placeholder="Enter description (optional)"
+                      className="resize-y min-h-[38px] max-h-32 text-sm border-gray-400 bg-white"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -339,7 +361,7 @@ export function ParameterContextDialog({
                               onChange={(e) => updateParameter(index, { name: e.target.value })}
                               disabled={param.isExisting && !param.isLocal}
                               placeholder="Name"
-                              className="h-7 text-xs w-full"
+                              className="h-7 text-xs w-full border-gray-400 bg-white"
                             />
                           </td>
 
@@ -350,7 +372,7 @@ export function ParameterContextDialog({
                               value={param.value ?? ''}
                               onChange={(e) => updateParameter(index, { value: e.target.value })}
                               placeholder={param.sensitive ? 'Sensitive value' : 'Value'}
-                              className="h-7 text-xs w-full"
+                              className="h-7 text-xs w-full border-gray-400 bg-white"
                             />
                           </td>
 
@@ -362,7 +384,7 @@ export function ParameterContextDialog({
                                 updateParameter(index, { description: e.target.value })
                               }
                               placeholder="Description"
-                              className="h-7 text-xs w-full"
+                              className="h-7 text-xs w-full border-gray-400 bg-white"
                             />
                           </td>
 
@@ -423,22 +445,21 @@ export function ParameterContextDialog({
                     <Plus className="h-4 w-4 mr-1" />
                     Add Parameter
                   </Button>
-                  {mode === 'edit' && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowInheritance(true)}
-                    >
-                      <Link className="h-4 w-4 mr-1" />
-                      Edit Inheritance
-                      {form.inherited_parameter_contexts.length > 0 && (
-                        <Badge className="ml-1 bg-blue-100 text-blue-800 border-blue-300 text-xs">
-                          {form.inherited_parameter_contexts.length}
-                        </Badge>
-                      )}
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowInheritance(true)}
+                    disabled={mode === 'create' && !form.instance_id}
+                  >
+                    <Link className="h-4 w-4 mr-1" />
+                    {form.inherited_parameter_contexts.length > 0 ? 'Edit Inheritance' : 'Add Inheritance'}
+                    {form.inherited_parameter_contexts.length > 0 && (
+                      <Badge className="ml-1 bg-blue-100 text-blue-800 border-blue-300 text-xs">
+                        {form.inherited_parameter_contexts.length}
+                      </Badge>
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>
@@ -460,7 +481,7 @@ export function ParameterContextDialog({
       <InheritanceDialog
         open={showInheritance}
         onOpenChange={setShowInheritance}
-        allContexts={allContextsForInstance}
+        allContexts={allContextsForInstance.length > 0 ? allContextsForInstance : localAllContexts}
         inheritedIds={form.inherited_parameter_contexts}
         currentContextId={form.context_id}
         onSave={handleInheritanceSave}
