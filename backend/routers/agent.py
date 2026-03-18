@@ -41,10 +41,7 @@ def list_agents(db: Session = Depends(get_db)):
     """List all registered agents (reads from Redis heartbeat registry)."""
     try:
         service = AgentService(db)
-        agents = service.list_agents()
-        for a in agents:
-            logger.debug("DEBUG list_agents: agent='%s' capabilities=%s", a.get("agent_id"), a.get("capabilities"))
-        return {"agents": agents}
+        return {"agents": service.list_agents()}
     except Exception as exc:
         logger.error("Failed to list agents: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc))

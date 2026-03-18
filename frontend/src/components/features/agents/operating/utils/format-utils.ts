@@ -41,13 +41,11 @@ export function formatUptime(startedAt: number): string {
  *   - Comma-separated string: "echo,git_pull,..." (legacy fallback)
  */
 export function parseCapabilities(capabilities: string): { id: string; name: string }[] {
-  console.debug('[parseCapabilities] raw input:', capabilities)
   if (!capabilities) return []
   try {
     const parsed = JSON.parse(capabilities)
-    console.debug('[parseCapabilities] parsed JSON:', parsed)
     if (Array.isArray(parsed)) {
-      const result = parsed.map((item) => {
+      return parsed.map((item) => {
         if (typeof item === 'string') return { id: item, name: item }
         if (item && typeof item === 'object') {
           const id = String(item.id ?? '')
@@ -56,12 +54,8 @@ export function parseCapabilities(capabilities: string): { id: string; name: str
         }
         return { id: String(item), name: String(item) }
       })
-      console.debug('[parseCapabilities] result:', result)
-      return result
     }
-    console.warn('[parseCapabilities] parsed JSON is not an array:', parsed)
-  } catch (e) {
-    console.warn('[parseCapabilities] JSON.parse failed, using comma-split fallback. Error:', e)
+  } catch {
     // fallback: treat as comma-separated ids (backward compat)
     return capabilities
       .split(',')

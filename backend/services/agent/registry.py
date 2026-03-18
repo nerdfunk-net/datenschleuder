@@ -23,18 +23,15 @@ class AgentRegistry:
         try:
             data = self.redis_client.hgetall(f"{_AGENT_REGISTRY_PREFIX}{agent_id}")
             if not data:
-                logger.debug("DEBUG registry.get_agent_status: no data in Redis for agent '%s'", agent_id)
                 return None
             raw_capabilities = data.get("capabilities", "")
-            raw_mode = data.get("mode", "(not set)")
-            logger.debug("DEBUG registry.get_agent_status: agent='%s' mode='%s' capabilities=%s", agent_id, raw_mode, raw_capabilities)
             return {
                 "agent_id": agent_id,
                 "status": data.get("status", "offline"),
                 "last_heartbeat": int(data.get("last_heartbeat", 0)),
                 "version": data.get("version", ""),
                 "hostname": data.get("agent_id", data.get("hostname", agent_id)),
-                "capabilities": raw_capabilities,
+                "capabilities": data.get("capabilities", ""),
                 "started_at": int(data.get("started_at", 0)),
                 "commands_executed": int(data.get("commands_executed", 0)),
             }

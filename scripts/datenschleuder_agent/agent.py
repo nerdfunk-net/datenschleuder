@@ -119,10 +119,6 @@ class DatenschleuderAgent:
 
             capabilities_json = json.dumps(capabilities)
 
-            logger.debug("DEBUG _register_agent: mode=%s", config.mode)
-            logger.debug("DEBUG _register_agent: capabilities=%s", capabilities_json)
-            logger.debug("DEBUG _register_agent: containers=%s", containers)
-
             status_data = {
                 "status": "online",
                 "last_heartbeat": now,
