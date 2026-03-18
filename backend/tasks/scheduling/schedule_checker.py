@@ -29,8 +29,10 @@ def check_job_schedules_task() -> Dict[str, Any]:
     try:
         logger.debug("Checking for due job schedules...")
 
-        import jobs_manager
-        import job_template_manager
+        from services.jobs.job_schedule_service import JobScheduleService as _JSS
+        from services.jobs.job_template_service import JobTemplateService as _JTS
+        jobs_manager = _JSS()
+        job_template_manager = _JTS()
         from .job_dispatcher import dispatch_job
 
         now = datetime.now(timezone.utc)

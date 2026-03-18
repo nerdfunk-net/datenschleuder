@@ -8,9 +8,11 @@ from repositories.nifi.nifi_server_repository import NifiServerRepository
 from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
 from repositories.nifi.nifi_instance_repository import NifiInstanceRepository
 from repositories.settings.credentials_repository import CredentialsRepository
-from models.nifi_server import NifiServerCreate, NifiServerUpdate, NifiServerResponse
-from models.nifi_instance import NifiInstanceResponse
-from models.nifi_cluster import (
+from models.nifi import (
+    NifiServerCreate,
+    NifiServerUpdate,
+    NifiServerResponse,
+    NifiInstanceResponse,
     NifiClusterCreate,
     NifiClusterUpdate,
     NifiClusterMemberResponse,

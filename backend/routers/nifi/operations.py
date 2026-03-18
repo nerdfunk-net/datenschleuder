@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile,
 from fastapi.responses import Response
 
 from core.auth import require_permission
-from models.nifi_deployment import (
+from models.nifi import (
     ParameterContextListResponse,
     ParameterContextCreate,
     ParameterContextUpdate,

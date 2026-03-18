@@ -4,18 +4,19 @@ All Celery-related endpoints are under /api/celery/*
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from celery.result import AsyncResult
-from kombu import Queue
 from core.auth import require_permission
 from core.celery_error_handler import handle_celery_errors
 from celery_app import celery_app
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import logging
-import redis
 import os
 
 from config import settings
+from services.celery.queue_metrics_service import CeleryQueueMetricsService
+from services.celery.queue_operations_service import CeleryQueueOperationsService
+from services.celery.settings_service import CelerySettingsService
+from services.celery.status_service import CeleryStatusService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/celery", tags=["celery"])
@@ -98,23 +99,7 @@ async def get_task_status(
 
     Status can be: PENDING, STARTED, PROGRESS, SUCCESS, FAILURE, RETRY, REVOKED
     """
-    result = AsyncResult(task_id, app=celery_app)
-
-    response = TaskStatusResponse(task_id=task_id, status=result.state)
-
-    if result.state == "PENDING":
-        response.progress = {"status": "Task is queued and waiting to start"}
-
-    elif result.state == "PROGRESS":
-        response.progress = result.info
-
-    elif result.state == "SUCCESS":
-        response.result = result.result
-
-    elif result.state == "FAILURE":
-        response.error = str(result.info)
-
-    return response
+    return CeleryStatusService().get_task_status(celery_app, task_id)
 
 
 @router.delete("/tasks/{task_id}")
@@ -124,10 +109,7 @@ async def cancel_task(
     current_user: dict = Depends(require_permission("settings.celery", "write")),
 ):
     """Cancel a running or queued task."""
-    result = AsyncResult(task_id, app=celery_app)
-    result.revoke(terminate=True)
-
-    return {"success": True, "message": f"Task {task_id} cancelled"}
+    return CeleryStatusService().cancel_task(celery_app, task_id)
 
 
 @router.get("/workers")
@@ -136,21 +118,7 @@ async def list_workers(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """List active Celery workers and their status, including queue assignments."""
-    inspect = celery_app.control.inspect()
-    active = inspect.active()
-    stats = inspect.stats()
-    registered = inspect.registered()
-    active_queues = inspect.active_queues()
-
-    return {
-        "success": True,
-        "workers": {
-            "active_tasks": active or {},
-            "stats": stats or {},
-            "registered_tasks": registered or {},
-            "active_queues": active_queues or {},
-        },
-    }
+    return CeleryStatusService().list_workers(celery_app)
 
 
 @router.get("/queues")
@@ -158,78 +126,8 @@ async def list_workers(
 async def list_queues(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
-    """
-    List all Celery queues with their metrics and worker assignments.
-
-    Returns information about:
-    - Queue names and configuration
-    - Pending tasks in each queue
-    - Active tasks per queue
-    - Which workers are consuming from each queue
-    - Task routing configuration
-    """
-    inspect = celery_app.control.inspect()
-    active_queues = inspect.active_queues()
-    active_tasks = inspect.active()
-
-    task_queues = celery_app.conf.task_queues or {}
-    task_routes = celery_app.conf.task_routes or {}
-
-    try:
-        redis_client = redis.Redis.from_url(settings.redis_url)
-
-        queues = []
-        for queue_name in task_queues.keys():
-            pending_count = redis_client.llen(queue_name)
-
-            active_count = 0
-            workers_consuming = []
-
-            if active_queues:
-                for worker_name, worker_queues in active_queues.items():
-                    for queue_info in worker_queues:
-                        if queue_info.get("name") == queue_name:
-                            workers_consuming.append(worker_name)
-
-            if active_tasks:
-                for worker_name, tasks in active_tasks.items():
-                    if worker_name in workers_consuming:
-                        active_count += len(tasks)
-
-            routed_tasks = []
-            for task_pattern, route_config in task_routes.items():
-                if route_config.get("queue") == queue_name:
-                    routed_tasks.append(task_pattern)
-
-            queues.append(
-                {
-                    "name": queue_name,
-                    "pending_tasks": pending_count,
-                    "active_tasks": active_count,
-                    "workers_consuming": workers_consuming,
-                    "worker_count": len(workers_consuming),
-                    "routed_tasks": routed_tasks,
-                    "exchange": task_queues[queue_name].get("exchange"),
-                    "routing_key": task_queues[queue_name].get("routing_key"),
-                }
-            )
-
-        redis_client.close()
-
-        return {
-            "success": True,
-            "queues": queues,
-            "total_queues": len(queues),
-        }
-
-    except Exception as e:
-        logger.error("Error fetching queue metrics: %s", e)
-        return {
-            "success": False,
-            "error": str(e),
-            "queues": [],
-            "total_queues": 0,
-        }
+    """List all Celery queues with their metrics and worker assignments."""
+    return CeleryQueueMetricsService().list_queue_metrics(celery_app)
 
 
 @router.delete("/queues/{queue_name}/purge")
@@ -238,43 +136,19 @@ async def purge_queue(
     queue_name: str,
     current_user: dict = Depends(require_permission("settings.celery", "write")),
 ):
-    """
-    Purge all pending tasks from a specific queue.
-
-    Args:
-        queue_name: Name of the queue to purge (e.g., 'default', 'backup', 'network', 'heavy')
-    """
+    """Purge all pending tasks from a specific queue."""
     try:
-        task_queues = celery_app.conf.task_queues or {}
-        if queue_name not in task_queues.keys():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Queue '{queue_name}' not found",
-            )
-
-        with celery_app.connection_or_acquire() as conn:
-            queue_config = task_queues[queue_name]
-            queue_obj = Queue(
-                name=queue_name,
-                exchange=queue_config.get("exchange", queue_name),
-                routing_key=queue_config.get("routing_key", queue_name),
-            )
-            purged_count = queue_obj(conn.channel()).purge()
-
+        purged_count = CeleryQueueOperationsService().purge_queue(celery_app, queue_name)
         logger.info(
             "Purged %s task(s) from queue '%s' by user %s",
-            purged_count,
-            queue_name,
-            current_user.get("username"),
+            purged_count, queue_name, current_user.get("username"),
         )
-
         return {
             "success": True,
             "queue": queue_name,
-            "purged_tasks": purged_count or 0,
-            "message": f"Purged {purged_count or 0} pending task(s) from queue '{queue_name}'",
+            "purged_tasks": purged_count,
+            "message": f"Purged {purged_count} pending task(s) from queue '{queue_name}'",
         }
-
     except HTTPException:
         raise
     except Exception as e:
@@ -292,49 +166,17 @@ async def purge_all_queues(
 ):
     """Purge all pending tasks from all queues."""
     try:
-        task_queues = celery_app.conf.task_queues or {}
-
-        purged_queues = []
-        total_purged = 0
-
-        with celery_app.connection_or_acquire() as conn:
-            for queue_name in task_queues.keys():
-                try:
-                    queue_config = task_queues[queue_name]
-                    queue_obj = Queue(
-                        name=queue_name,
-                        exchange=queue_config.get("exchange", queue_name),
-                        routing_key=queue_config.get("routing_key", queue_name),
-                    )
-                    purged_count = queue_obj(conn.channel()).purge()
-
-                    purged_queues.append(
-                        {"queue": queue_name, "purged_tasks": purged_count or 0}
-                    )
-                    total_purged += purged_count or 0
-
-                    logger.info(
-                        "Purged %s task(s) from queue '%s'", purged_count, queue_name
-                    )
-                except Exception as e:
-                    logger.error("Error purging queue %s: %s", queue_name, e)
-                    purged_queues.append(
-                        {"queue": queue_name, "purged_tasks": 0, "error": str(e)}
-                    )
-
+        result = CeleryQueueOperationsService().purge_all_queues(celery_app)
         logger.info(
             "Purged total of %s task(s) from all queues by user %s",
-            total_purged,
-            current_user.get("username"),
+            result["total_purged"], current_user.get("username"),
         )
-
         return {
             "success": True,
-            "total_purged": total_purged,
-            "queues": purged_queues,
-            "message": f"Purged {total_purged} pending task(s) from {len(purged_queues)} queue(s)",
+            "total_purged": result["total_purged"],
+            "queues": result["queues"],
+            "message": f"Purged {result['total_purged']} pending task(s) from {len(result['queues'])} queue(s)",
         }
-
     except Exception as e:
         logger.error("Error purging all queues: %s", e)
         raise HTTPException(
@@ -371,21 +213,8 @@ async def beat_status(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """Get Celery Beat scheduler status."""
-    r = redis.from_url(settings.redis_url)
-
-    beat_lock_key = "datenschleuder:beat::lock"
-    lock_exists = r.exists(beat_lock_key)
-
-    beat_schedule_key = "datenschleuder:beat::schedule"
-    schedule_exists = r.exists(beat_schedule_key)
-
-    beat_running = bool(lock_exists or schedule_exists)
-
-    return {
-        "success": True,
-        "beat_running": beat_running,
-        "message": "Beat is running" if beat_running else "Beat not detected",
-    }
+    result = CeleryStatusService().check_beat_running()
+    return {"success": True, **result}
 
 
 @router.get("/status")
@@ -394,40 +223,7 @@ async def celery_status(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """Get overall Celery system status."""
-    inspect = celery_app.control.inspect()
-    stats = inspect.stats()
-    active = inspect.active()
-
-    worker_count = len(stats) if stats else 0
-
-    task_count = 0
-    if active:
-        for worker_tasks in active.values():
-            task_count += len(worker_tasks)
-
-    try:
-        r = redis.from_url(settings.redis_url)
-        r.ping()
-        redis_connected = True
-    except Exception:
-        redis_connected = False
-
-    try:
-        r = redis.from_url(settings.redis_url)
-        beat_lock_key = "datenschleuder:beat::lock"
-        beat_running = bool(r.exists(beat_lock_key))
-    except Exception:
-        beat_running = False
-
-    return {
-        "success": True,
-        "status": {
-            "redis_connected": redis_connected,
-            "worker_count": worker_count,
-            "active_tasks": task_count,
-            "beat_running": beat_running,
-        },
-    }
+    return {"success": True, "status": CeleryStatusService().get_system_status(celery_app)}
 
 
 @router.get("/config")
@@ -715,11 +511,7 @@ async def get_celery_settings(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """Get current Celery settings from database."""
-    from settings_manager import settings_manager
-
-    celery_settings = settings_manager.get_celery_settings()
-
-    return {"success": True, "settings": celery_settings}
+    return {"success": True, "settings": CelerySettingsService().get_settings()}
 
 
 @router.put("/settings")
@@ -729,46 +521,22 @@ async def update_celery_settings(
     current_user: dict = Depends(require_permission("settings.celery", "write")),
 ):
     """Update Celery settings."""
-    from settings_manager import settings_manager
-
-    current = settings_manager.get_celery_settings()
-    updates = request.model_dump(exclude_unset=True)
-
-    if "queues" in updates:
-        built_in_queue_names = {"default", "backup", "network", "heavy"}
-        updated_queue_names = {q["name"] for q in updates["queues"]}
-
-        missing_built_ins = built_in_queue_names - updated_queue_names
-        if missing_built_ins:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot remove built-in queues: {', '.join(missing_built_ins)}. "
-                f"Built-in queues (default, backup, network, heavy) are required.",
-            )
-
-        for queue in updates["queues"]:
-            if queue["name"] in built_in_queue_names:
-                queue["built_in"] = True
-            elif "built_in" not in queue:
-                queue["built_in"] = False
-
-    merged = {**current, **updates}
-
-    success = settings_manager.update_celery_settings(merged)
-
-    if not success:
+    try:
+        updates = request.model_dump(exclude_unset=True)
+        updated = CelerySettingsService().update_settings(updates)
+        return {
+            "success": True,
+            "settings": updated,
+            "message": "Celery settings updated. Worker restart required for max_workers changes.",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error updating celery settings: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update Celery settings",
+            detail=f"Failed to update Celery settings: {str(e)}",
         )
-
-    updated = settings_manager.get_celery_settings()
-
-    return {
-        "success": True,
-        "settings": updated,
-        "message": "Celery settings updated. Worker restart required for max_workers changes.",
-    }
 
 
 @router.post("/cleanup", response_model=TaskResponse)
@@ -792,7 +560,8 @@ async def get_cleanup_stats(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """Get statistics about data that would be cleaned up."""
-    from settings_manager import settings_manager
+    from services.settings.settings_service import SettingsService
+    settings_manager = SettingsService()
     from datetime import datetime, timezone, timedelta
 
     celery_settings = settings_manager.get_celery_settings()

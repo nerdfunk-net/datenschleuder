@@ -8,8 +8,10 @@ This script initializes the RBAC system with:
 
 import argparse
 import sys
-import rbac_manager as rbac
-import user_db_manager as user_db
+from services.auth.rbac_service import RBACService as _RBACService
+from services.auth.user_service import UserService as _UserService
+rbac = _RBACService()
+user_db = _UserService()
 
 
 def remove_all_rbac_data(verbose: bool = True):
@@ -37,9 +39,7 @@ def remove_all_rbac_data(verbose: bool = True):
 
     # Get all users and remove their permission overrides
     try:
-        import user_db_manager
-
-        all_users = user_db_manager.get_all_users(include_inactive=True)
+        all_users = user_db.get_all_users(include_inactive=True)
         override_count = 0
 
         for user in all_users:

@@ -4,7 +4,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
-from models.nifi_deployment import DeploymentRequest, DeploymentResponse
+from models.nifi import DeploymentRequest, DeploymentResponse
 from services.nifi import deploy_service
 
 logger = logging.getLogger(__name__)

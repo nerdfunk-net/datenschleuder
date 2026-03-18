@@ -6,9 +6,11 @@ API endpoints for managing job templates
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Optional
 from core.auth import verify_token
-import rbac_manager
-import job_template_manager
-from models.job_templates import (
+from services.auth.rbac_service import RBACService as _RBACService
+from services.jobs.job_template_service import JobTemplateService as _JobTemplateService
+rbac_manager = _RBACService()
+job_template_manager = _JobTemplateService()
+from models.jobs import (
     JobTemplateCreate,
     JobTemplateUpdate,
     JobTemplateResponse,

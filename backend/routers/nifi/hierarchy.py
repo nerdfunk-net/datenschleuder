@@ -4,7 +4,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
-from models.nifi_hierarchy import HierarchyConfig, HierarchyValuesRequest
+from models.nifi import HierarchyConfig, HierarchyValuesRequest
 from services.nifi import hierarchy_service
 from services.nifi.nifi_flow_service import invalidate_flow_table_cache
 

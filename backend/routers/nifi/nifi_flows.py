@@ -5,8 +5,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
-from models.nifi_operations import NifiFlowCreate, NifiFlowUpdate, NifiFlowResponse
-from models.nifi_deployment import FlowProcessGroupsResponse
+from models.nifi import NifiFlowCreate, NifiFlowUpdate, NifiFlowResponse, FlowProcessGroupsResponse
 from services.nifi import nifi_flow_service
 
 logger = logging.getLogger(__name__)

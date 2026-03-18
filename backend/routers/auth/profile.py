@@ -8,8 +8,10 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 from typing import Optional, List
 from core.auth import get_current_username
-import profile_manager
-import credentials_manager
+from services.auth.profile_service import ProfileService as _ProfileService
+from services.settings.credentials_service import CredentialsService as _CredentialsService
+profile_manager = _ProfileService()
+credentials_manager = _CredentialsService()
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/profile", tags=["profile"])

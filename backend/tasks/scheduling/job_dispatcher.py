@@ -48,8 +48,10 @@ def dispatch_job(
     Returns:
         dict: Job execution results
     """
-    import job_run_manager
-    import job_template_manager
+    from services.jobs.job_run_service import JobRunService as _JRS
+    from services.jobs.job_template_service import JobTemplateService as _JTS
+    job_run_manager = _JRS()
+    job_template_manager = _JTS()
     from tasks.utils.device_helpers import get_target_devices
     from tasks.execution.base_executor import execute_job_type
 

@@ -11,8 +11,10 @@ from dependencies import get_git_repo_manager, get_git_service
 from services.settings.git.paths import repo_path as git_repo_path
 
 from core.auth import require_permission
-from models.nifi_server import NifiServerCreate, NifiServerUpdate, NifiServerResponse
-from models.nifi_cluster import (
+from models.nifi import (
+    NifiServerCreate,
+    NifiServerUpdate,
+    NifiServerResponse,
     NifiClusterCreate,
     NifiClusterUpdate,
     NifiClusterResponse,

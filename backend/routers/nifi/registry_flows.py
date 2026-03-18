@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 
 from core.auth import require_permission
-from models.nifi_operations import (
+from models.nifi import (
     RegistryFlowCreate,
     RegistryFlowResponse,
     RegistryFlowMetadataResponse,

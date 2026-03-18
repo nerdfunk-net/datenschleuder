@@ -5,7 +5,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
-from models.nifi_instance import (
+from models.nifi import (
     NifiInstanceCreate,
     NifiInstanceUpdate,
     NifiInstanceResponse,

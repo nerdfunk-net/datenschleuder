@@ -21,7 +21,7 @@ from models.agent import (
     ContainerInfo,
     GitRepoInfo,
 )
-from services.agent_service import AgentService
+from services.agent import AgentService
 
 logger = logging.getLogger(__name__)
 

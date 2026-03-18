@@ -114,7 +114,8 @@ def cleanup_celery_data_task() -> dict:
         # Remove old job runs from database
         removed_job_runs = 0
         try:
-            import job_run_manager
+            from services.jobs.job_run_service import JobRunService as _JRS
+            job_run_manager = _JRS()
 
             # Use the hours-based cleanup function
             removed_job_runs = job_run_manager.cleanup_old_runs_hours(cleanup_age_hours)
@@ -154,8 +155,10 @@ def check_stale_jobs_task() -> dict:
     Runs every 10 minutes.
     """
     try:
-        import job_run_manager
+        from services.jobs.job_run_service import JobRunService
         from celery_app import celery_app
+
+        job_run_manager = JobRunService()
 
         # Get all running/pending jobs
         running_jobs = job_run_manager.get_recent_runs(limit=500, status="running")

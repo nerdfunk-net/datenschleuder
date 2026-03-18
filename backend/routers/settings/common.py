@@ -25,7 +25,7 @@ async def get_all_settings(
 ):
     """Get all application settings."""
     try:
-        from settings_manager import settings_manager
+        from services.settings.settings_service import settings_service as settings_manager
 
         settings_data = settings_manager.get_all_settings()
 
@@ -56,7 +56,7 @@ async def get_git_settings(
 ):
     """Get Git settings."""
     try:
-        from settings_manager import settings_manager
+        from services.settings.settings_service import settings_service as settings_manager
 
         git_settings = settings_manager.get_git_settings()
         return {"success": True, "data": git_settings}
@@ -75,7 +75,7 @@ async def get_cache_settings(
 ):
     """Get Cache settings."""
     try:
-        from settings_manager import settings_manager
+        from services.settings.settings_service import settings_service as settings_manager
 
         cache_settings = settings_manager.get_cache_settings()
         return {"success": True, "data": cache_settings}
@@ -94,7 +94,7 @@ async def update_cache_settings(
 ):
     """Update Cache settings."""
     try:
-        from settings_manager import settings_manager
+        from services.settings.settings_service import settings_service as settings_manager
 
         success = settings_manager.update_cache_settings(cache_request.dict())
         if success:
@@ -125,7 +125,7 @@ async def create_cache_settings(
 ):
     """Create/Update Cache settings via POST."""
     try:
-        from settings_manager import settings_manager
+        from services.settings.settings_service import settings_service as settings_manager
 
         success = settings_manager.update_cache_settings(cache_request.dict())
         if success:
@@ -153,7 +153,7 @@ async def update_all_settings(
 ):
     """Update all application settings."""
     try:
-        from settings_manager import settings_manager
+        from services.settings.settings_service import settings_service as settings_manager
 
         settings_dict = {
             "git": settings_request.git.dict(),
@@ -189,7 +189,7 @@ async def update_git_settings(
 ):
     """Update Git settings."""
     try:
-        from settings_manager import settings_manager
+        from services.settings.settings_service import settings_service as settings_manager
 
         success = settings_manager.update_git_settings(git_request.dict())
 
@@ -219,7 +219,7 @@ async def create_git_settings(
 ):
     """Create/Update Git settings via POST."""
     try:
-        from settings_manager import settings_manager
+        from services.settings.settings_service import settings_service as settings_manager
 
         success = settings_manager.update_git_settings(git_request.dict())
 
@@ -275,7 +275,7 @@ async def reset_settings_to_defaults(
 ):
     """Reset all settings to default values."""
     try:
-        from settings_manager import settings_manager
+        from services.settings.settings_service import settings_service as settings_manager
 
         success = settings_manager.reset_to_defaults()
 
@@ -304,7 +304,7 @@ async def check_settings_health(
 ):
     """Check settings database health."""
     try:
-        from settings_manager import settings_manager
+        from services.settings.settings_service import settings_service as settings_manager
 
         health_info = settings_manager.health_check()
 

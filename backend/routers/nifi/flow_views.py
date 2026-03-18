@@ -5,7 +5,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
-from models.nifi_operations import FlowViewCreate, FlowViewUpdate, FlowViewResponse
+from models.nifi import FlowViewCreate, FlowViewUpdate, FlowViewResponse
 from services.nifi import flow_view_service
 
 logger = logging.getLogger(__name__)

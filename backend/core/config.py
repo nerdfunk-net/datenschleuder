@@ -14,6 +14,6 @@ def get_settings():
 
 def get_settings_manager():
     """Get settings manager instance."""
-    from settings_manager import settings_manager
+    from services.settings.settings_service import SettingsService
 
-    return settings_manager
+    return SettingsService()

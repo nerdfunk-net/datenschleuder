@@ -34,7 +34,8 @@ def get_user_with_rbac_safe(user: dict) -> dict:
     Falls back to empty roles/permissions when the RBAC lookup returns None,
     so callers never need to handle the None case themselves.
     """
-    import rbac_manager as rbac
+    from services.auth.rbac_service import RBACService as _RBACService
+    rbac = _RBACService()
 
     user_with_roles = rbac.get_user_with_rbac(user["id"])
     if not user_with_roles:

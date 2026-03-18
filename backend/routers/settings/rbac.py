@@ -11,8 +11,10 @@ This router provides endpoints for managing:
 import logging
 from typing import List
 
-import rbac_manager as rbac
+from services.auth.rbac_service import RBACService as _RBACService
+rbac = _RBACService()
 from core.auth import require_role, verify_token
+from services.auth.rbac_helpers import verify_user_access, check_permission_with_source
 from fastapi import APIRouter, Depends, HTTPException, status
 from models.rbac import (
     BulkPermissionAssignment,
@@ -255,16 +257,7 @@ async def remove_permission_from_role(
 @router.get("/users/{user_id}/roles", response_model=List[Role])
 async def get_user_roles(user_id: int, current_user: dict = Depends(verify_token)):
     """Get all roles assigned to a user."""
-    # Users can view their own roles, admins can view anyone's
-    if current_user["user_id"] != user_id:
-        # Check if current user is admin
-        user_roles = rbac.get_user_roles(current_user["user_id"])
-        if not any(role["name"] == "admin" for role in user_roles):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Can only view your own roles",
-            )
-
+    verify_user_access(current_user, user_id, rbac, detail="Can only view your own roles")
     roles = rbac.get_user_roles(user_id)
     return roles
 
@@ -317,15 +310,7 @@ async def get_user_permissions(
     user_id: int, current_user: dict = Depends(verify_token)
 ):
     """Get all effective permissions for a user (from roles + overrides)."""
-    # Users can view their own permissions, admins can view anyone's
-    if current_user["user_id"] != user_id:
-        user_roles = rbac.get_user_roles(current_user["user_id"])
-        if not any(role["name"] == "admin" for role in user_roles):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Can only view your own permissions",
-            )
-
+    verify_user_access(current_user, user_id, rbac, detail="Can only view your own permissions")
     roles = rbac.get_user_roles(user_id)
     permissions = rbac.get_user_permissions(user_id)
     overrides = rbac.get_user_permission_overrides(user_id)
@@ -345,15 +330,7 @@ async def get_user_permission_overrides(
     user_id: int, current_user: dict = Depends(verify_token)
 ):
     """Get permission overrides for a user (direct assignments)."""
-    # Users can view their own overrides, admins can view anyone's
-    if current_user["user_id"] != user_id:
-        user_roles = rbac.get_user_roles(current_user["user_id"])
-        if not any(role["name"] == "admin" for role in user_roles):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Can only view your own permission overrides",
-            )
-
+    verify_user_access(current_user, user_id, rbac, detail="Can only view your own permission overrides")
     overrides = rbac.get_user_permission_overrides(user_id)
     return overrides
 
@@ -407,38 +384,8 @@ async def check_user_permission(
     user_id: int, check: PermissionCheck, current_user: dict = Depends(verify_token)
 ):
     """Check if a user has a specific permission."""
-    # Users can check their own permissions, admins can check anyone's
-    if current_user["user_id"] != user_id:
-        user_roles = rbac.get_user_roles(current_user["user_id"])
-        if not any(role["name"] == "admin" for role in user_roles):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Can only check your own permissions",
-            )
-
-    has_perm = rbac.has_permission(user_id, check.resource, check.action)
-
-    # Determine source if granted
-    source = None
-    if has_perm:
-        # Check if it's from override
-        overrides = rbac.get_user_permission_overrides(user_id)
-        if any(
-            p["resource"] == check.resource
-            and p["action"] == check.action
-            and p["granted"]
-            for p in overrides
-        ):
-            source = "override"
-        else:
-            source = "role"
-
-    return {
-        "has_permission": has_perm,
-        "resource": check.resource,
-        "action": check.action,
-        "source": source,
-    }
+    verify_user_access(current_user, user_id, rbac, detail="Can only check your own permissions")
+    return check_permission_with_source(rbac, user_id, check.resource, check.action)
 
 
 @router.get("/users/me/permissions", response_model=UserPermissions)
@@ -463,29 +410,7 @@ async def check_my_permission(
     check: PermissionCheck, current_user: dict = Depends(verify_token)
 ):
     """Check if current user has a specific permission (convenience endpoint)."""
-    user_id = current_user["user_id"]
-    has_perm = rbac.has_permission(user_id, check.resource, check.action)
-
-    # Determine source if granted
-    source = None
-    if has_perm:
-        overrides = rbac.get_user_permission_overrides(user_id)
-        if any(
-            p["resource"] == check.resource
-            and p["action"] == check.action
-            and p["granted"]
-            for p in overrides
-        ):
-            source = "override"
-        else:
-            source = "role"
-
-    return {
-        "has_permission": has_perm,
-        "resource": check.resource,
-        "action": check.action,
-        "source": source,
-    }
+    return check_permission_with_source(rbac, current_user["user_id"], check.resource, check.action)
 
 
 # ============================================================================

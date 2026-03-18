@@ -23,7 +23,11 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from user_db_manager import get_user_by_username, update_user  # noqa: E402
+from services.auth.user_service import UserService as _UserService  # noqa: E402
+
+_user_service = _UserService()
+get_user_by_username = _user_service.get_user_by_username
+update_user = _user_service.update_user
 
 _MIN_PASSWORD_LENGTH = 8
 

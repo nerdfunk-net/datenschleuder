@@ -1,57 +1,42 @@
 """
 Job Schedule Management Router
-API endpoints for managing scheduled jobs via Celery Beat
+API endpoints for managing scheduled jobs via Celery Beat.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
-from datetime import datetime, timezone
 from core.auth import verify_token, require_permission
-import jobs_manager
 from models.jobs import (
     JobScheduleCreate,
     JobScheduleUpdate,
     JobScheduleResponse,
     JobExecutionRequest,
 )
+from services.jobs.execution_service import JobExecutionService
+from services.jobs.job_schedule_service import JobScheduleService as _JobScheduleService
+from services.jobs.schedule_authorization_service import JobScheduleAuthorizationService
+from services.jobs.scheduler_debug_service import JobSchedulerDebugService
 import logging
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/api/job-schedules", tags=["job-schedules"])
 
+jobs_manager = _JobScheduleService()
+_auth_service = JobScheduleAuthorizationService()
 
-@router.post(
-    "", response_model=JobScheduleResponse, status_code=status.HTTP_201_CREATED
-)
+
+@router.post("", response_model=JobScheduleResponse, status_code=status.HTTP_201_CREATED)
 async def create_job_schedule(
-    job_data: JobScheduleCreate, current_user: dict = Depends(verify_token)
+    job_data: JobScheduleCreate,
+    current_user: dict = Depends(verify_token),
 ):
-    """
-    Create a new job schedule
-
-    - Global jobs require 'jobs:write' permission
-    - Private jobs can be created by any authenticated user
-    """
+    """Create a new job schedule."""
     try:
-        # Check permissions
-        import rbac_manager
+        _auth_service.check_create_permission(current_user, job_data.is_global)
 
-        is_admin = current_user.get("role") == "admin"
-        has_write = rbac_manager.has_permission(
-            current_user["user_id"], "jobs.schedules", "write"
-        )
-        if job_data.is_global:
-            if not (is_admin or has_write):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Permission denied: jobs.schedules:write required for global schedules",
-                )
-        else:
-            # For private schedules, set the user_id to current user
+        if not job_data.is_global:
             job_data.user_id = current_user["user_id"]
 
-        # Create the job schedule
         job_schedule = jobs_manager.create_job_schedule(
             job_identifier=job_data.job_identifier,
             job_template_id=job_data.job_template_id,
@@ -66,9 +51,10 @@ async def create_job_schedule(
             credential_id=job_data.credential_id,
             job_parameters=job_data.job_parameters,
         )
-
         return JobScheduleResponse(**job_schedule)
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Error creating job schedule: %s", e)
         raise HTTPException(
@@ -83,26 +69,14 @@ async def list_job_schedules(
     is_active: Optional[bool] = None,
     current_user: dict = Depends(verify_token),
 ):
-    """
-    List all job schedules accessible to the current user
-
-    Returns:
-    - Global jobs (visible to all)
-    - User's private jobs
-    """
+    """List all job schedules accessible to the current user."""
     try:
-        # Get jobs accessible to this user
         jobs = jobs_manager.get_user_job_schedules(current_user["user_id"])
-
-        # Apply additional filters if provided
         if is_global is not None:
             jobs = [j for j in jobs if j.get("is_global") == is_global]
-
         if is_active is not None:
             jobs = [j for j in jobs if j.get("is_active") == is_active]
-
         return [JobScheduleResponse(**job) for job in jobs]
-
     except Exception as e:
         logger.error("Error listing job schedules: %s", e)
         raise HTTPException(
@@ -112,25 +86,17 @@ async def list_job_schedules(
 
 
 @router.get("/{job_id}", response_model=JobScheduleResponse)
-async def get_job_schedule(job_id: int, current_user: dict = Depends(verify_token)):
-    """Get a specific job schedule by ID"""
+async def get_job_schedule(
+    job_id: int,
+    current_user: dict = Depends(verify_token),
+):
+    """Get a specific job schedule by ID."""
     try:
         job = jobs_manager.get_job_schedule(job_id)
-
         if not job:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found"
-            )
-
-        # Check access permissions
-        if not job.get("is_global") and job.get("user_id") != current_user["user_id"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: This is a private job belonging to another user",
-            )
-
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found")
+        _auth_service.check_access_permission(current_user, job)
         return JobScheduleResponse(**job)
-
     except HTTPException:
         raise
     except Exception as e:
@@ -147,32 +113,14 @@ async def update_job_schedule(
     job_update: JobScheduleUpdate,
     current_user: dict = Depends(verify_token),
 ):
-    """Update a job schedule"""
+    """Update a job schedule."""
     try:
-        # Get existing job
         job = jobs_manager.get_job_schedule(job_id)
-
         if not job:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found")
 
-        # Check permissions
-        import rbac_manager
+        _auth_service.check_update_permission(current_user, job)
 
-        is_admin = current_user.get("role") == "admin"
-        has_write = rbac_manager.has_permission(
-            current_user["user_id"], "jobs.schedules", "write"
-        )
-        is_owner = job.get("user_id") == current_user["user_id"]
-
-        if not (is_admin or has_write or is_owner):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Permission denied: jobs.schedules:write required to edit this schedule",
-            )
-
-        # Update the job
         updated_job = jobs_manager.update_job_schedule(
             job_id=job_id,
             job_identifier=job_update.job_identifier,
@@ -185,7 +133,6 @@ async def update_job_schedule(
             credential_id=job_update.credential_id,
             job_parameters=job_update.job_parameters,
         )
-
         return JobScheduleResponse(**updated_job)
 
     except HTTPException:
@@ -199,41 +146,23 @@ async def update_job_schedule(
 
 
 @router.delete("/{job_id}")
-async def delete_job_schedule(job_id: int, current_user: dict = Depends(verify_token)):
-    """Delete a job schedule"""
+async def delete_job_schedule(
+    job_id: int,
+    current_user: dict = Depends(verify_token),
+):
+    """Delete a job schedule."""
     try:
-        # Get existing job
         job = jobs_manager.get_job_schedule(job_id)
-
         if not job:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found")
 
-        # Check permissions
-        import rbac_manager
+        _auth_service.check_delete_permission(current_user, job)
 
-        is_admin = current_user.get("role") == "admin"
-        has_delete = rbac_manager.has_permission(
-            current_user["user_id"], "jobs.schedules", "delete"
-        )
-        is_owner = job.get("user_id") == current_user["user_id"]
-
-        if not (is_admin or has_delete or is_owner):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Permission denied: jobs.schedules:delete required to delete this schedule",
-            )
-
-        # Delete the job
-        deleted = jobs_manager.delete_job_schedule(job_id)
-
-        if not deleted:
+        if not jobs_manager.delete_job_schedule(job_id):
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to delete job schedule",
             )
-
         return {"message": "Job schedule deleted successfully"}
 
     except HTTPException:
@@ -248,78 +177,32 @@ async def delete_job_schedule(job_id: int, current_user: dict = Depends(verify_t
 
 @router.post("/execute")
 async def execute_job(
-    execution_request: JobExecutionRequest, current_user: dict = Depends(verify_token)
+    execution_request: JobExecutionRequest,
+    current_user: dict = Depends(verify_token),
 ):
-    """
-    Execute a job immediately
-
-    This endpoint triggers an immediate execution of a scheduled job.
-    The actual Celery task execution will be implemented separately.
-    """
+    """Execute a job immediately."""
     try:
-        # Get the job schedule
         job = jobs_manager.get_job_schedule(execution_request.job_schedule_id)
-
         if not job:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found")
 
-        # Check permissions
-        if not job.get("is_global") and job.get("user_id") != current_user["user_id"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: You cannot execute this private job",
-            )
+        _auth_service.check_access_permission(current_user, job)
 
-        # Resolve the template — required to know the job_type
-        import job_template_manager
-        from tasks import dispatch_job
-
-        template_id = job.get("job_template_id")
-        if not template_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Schedule has no associated template. Please edit the schedule and select a job template.",
-            )
-
-        template = job_template_manager.get_job_template(template_id)
-        if not template:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Template {template_id} not found",
-            )
-
-        # Merge parameters: schedule base + optional request overrides
-        job_parameters = job.get("job_parameters") or {}
-        if execution_request.override_parameters:
-            job_parameters.update(execution_request.override_parameters)
-
-        celery_task = dispatch_job.delay(
+        result = JobExecutionService().execute_schedule(
             schedule_id=execution_request.job_schedule_id,
-            template_id=template_id,
-            job_name=job.get(
-                "job_identifier", f"manual-{execution_request.job_schedule_id}"
-            ),
-            job_type=template.get("job_type"),
-            credential_id=job.get("credential_id"),
-            job_parameters=job_parameters if job_parameters else None,
-            triggered_by="manual",
             executed_by=current_user.get("username", "unknown"),
+            override_parameters=execution_request.override_parameters,
         )
 
         logger.info(
-            "Job execution started: %s (Celery task ID: %s) by user %s",
-            job.get("job_identifier"),
-            celery_task.id,
-            current_user["username"],
+            "Job execution started: %s (task_id=%s) by user %s",
+            result["job_name"], result["celery_task_id"], current_user["username"],
         )
-
         return {
             "message": "Job execution started",
             "job_id": execution_request.job_schedule_id,
-            "job_name": job.get("job_identifier"),
-            "celery_task_id": celery_task.id,
+            "job_name": result["job_name"],
+            "celery_task_id": result["celery_task_id"],
             "status": "queued",
         }
 
@@ -335,105 +218,9 @@ async def execute_job(
 
 @router.get("/debug/scheduler-status")
 async def get_scheduler_debug_status(current_user: dict = Depends(verify_token)):
-    """
-    Get detailed scheduler debug information.
-
-    Returns:
-    - Current server time (UTC and local)
-    - All schedules with their next_run times
-    - Whether Celery Beat is running
-    - Recent schedule check results
-    """
+    """Get detailed scheduler debug information."""
     try:
-        now_utc = datetime.now(timezone.utc)
-        now_local = datetime.now()
-
-        # Get all schedules
-        all_schedules = jobs_manager.list_job_schedules()
-        active_schedules = [s for s in all_schedules if s.get("is_active")]
-
-        # Check which schedules are due
-        due_schedules = []
-        upcoming_schedules = []
-
-        for schedule in active_schedules:
-            next_run = schedule.get("next_run")
-            if next_run:
-                # Parse next_run if it's a string
-                if isinstance(next_run, str):
-                    next_run_dt = datetime.fromisoformat(
-                        next_run.replace("Z", "+00:00")
-                    )
-                else:
-                    next_run_dt = next_run
-
-                # Calculate time until next run
-                if next_run_dt.tzinfo is None:
-                    next_run_dt = next_run_dt.replace(tzinfo=timezone.utc)
-
-                time_diff = (next_run_dt - now_utc).total_seconds()
-
-                schedule_info = {
-                    "id": schedule["id"],
-                    "job_identifier": schedule["job_identifier"],
-                    "schedule_type": schedule["schedule_type"],
-                    "start_time": schedule.get("start_time"),
-                    "next_run": schedule.get("next_run"),
-                    "next_run_local": next_run_dt.astimezone().isoformat()
-                    if next_run_dt
-                    else None,
-                    "last_run": schedule.get("last_run"),
-                    "seconds_until_next_run": int(time_diff),
-                    "is_due": time_diff <= 0,
-                    "template_name": schedule.get("template_name"),
-                }
-
-                if time_diff <= 0:
-                    due_schedules.append(schedule_info)
-                else:
-                    upcoming_schedules.append(schedule_info)
-
-        # Sort upcoming by next_run
-        upcoming_schedules.sort(key=lambda x: x["seconds_until_next_run"])
-
-        # Check Celery Beat status
-        celery_beat_status = "unknown"
-        try:
-            from celery_app import celery_app
-
-            inspect = celery_app.control.inspect()
-
-            # Check if there are any active workers
-            active_workers = inspect.active()
-            if active_workers:
-                celery_beat_status = "workers_active"
-            else:
-                celery_beat_status = "no_workers_detected"
-        except Exception as e:
-            celery_beat_status = f"error: {str(e)}"
-
-        return {
-            "server_time": {
-                "utc": now_utc.isoformat(),
-                "local": now_local.isoformat(),
-                "timezone_offset_hours": (
-                    now_local.astimezone().utcoffset().total_seconds() / 3600
-                )
-                if now_local.astimezone().utcoffset()
-                else 0,
-            },
-            "schedule_summary": {
-                "total_schedules": len(all_schedules),
-                "active_schedules": len(active_schedules),
-                "due_now": len(due_schedules),
-                "upcoming": len(upcoming_schedules),
-            },
-            "due_schedules": due_schedules,
-            "upcoming_schedules": upcoming_schedules[:10],  # Next 10 upcoming
-            "celery_status": celery_beat_status,
-            "note": "Times are displayed in UTC. 'start_time' is interpreted as UTC, not local time. For European time (UTC+1), subtract 1 hour from start_time.",
-        }
-
+        return JobSchedulerDebugService().get_scheduler_status(jobs_manager)
     except Exception as e:
         logger.error("Error getting scheduler debug status: %s", e, exc_info=True)
         raise HTTPException(
@@ -446,19 +233,14 @@ async def get_scheduler_debug_status(current_user: dict = Depends(verify_token))
 async def recalculate_all_next_runs(
     current_user: dict = Depends(require_permission("jobs", "write")),
 ):
-    """
-    Recalculate next_run for all active schedules.
-    Useful when schedules seem stuck or out of sync.
-    """
+    """Recalculate next_run for all active schedules."""
     try:
         result = jobs_manager.initialize_schedule_next_runs()
-
         return {
             "success": True,
             "message": f"Recalculated next_run for {result['initialized_count']} schedules",
             "details": result,
         }
-
     except Exception as e:
         logger.error("Error recalculating next runs: %s", e, exc_info=True)
         raise HTTPException(

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from core.auth import require_permission
 from dependencies import get_certificate_manager, get_git_service
-from git_repositories_manager import GitRepositoryManager
+from services.settings.git_repository_service import GitRepositoryService as GitRepositoryManager
 from services.settings.git.paths import repo_path
 from services.cert_manager.cert_parser import parse_p12_file, parse_pem_file
 

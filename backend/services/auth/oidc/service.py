@@ -30,7 +30,7 @@ class OIDCService:
 
     def __init__(self, settings_manager=None) -> None:
         if settings_manager is None:
-            from settings_manager import settings_manager as _sm
+            from services.settings.settings_service import settings_service as _sm
 
             settings_manager = _sm
         self._settings_manager = settings_manager

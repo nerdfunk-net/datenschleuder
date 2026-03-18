@@ -76,7 +76,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) 
 
 def verify_admin_token(user_info: dict = Depends(verify_token)) -> dict:
     """Verify token and ensure user has admin permissions."""
-    from user_db_manager import PERMISSIONS_ADMIN
+    from services.auth.user_service import PERMISSIONS_ADMIN
 
     # Check if user has admin permissions (bitwise: all admin bits must be set)
     user_permissions = user_info["permissions"]
@@ -166,7 +166,8 @@ def require_permission(resource: str, action: str):
     """
 
     def permission_checker(user_info: dict = Depends(verify_token)) -> dict:
-        import rbac_manager as rbac
+        from services.auth.rbac_service import RBACService as _RBACService
+        rbac = _RBACService()
 
         user_id = user_info.get("user_id")
         if user_id is None:
@@ -196,7 +197,8 @@ def require_any_permission(resource: str, actions: list):
     """
 
     def permission_checker(user_info: dict = Depends(verify_token)) -> dict:
-        import rbac_manager as rbac
+        from services.auth.rbac_service import RBACService as _RBACService
+        rbac = _RBACService()
 
         user_id = user_info.get("user_id")
         if user_id is None:
@@ -226,7 +228,8 @@ def require_all_permissions(resource: str, actions: list):
     """
 
     def permission_checker(user_info: dict = Depends(verify_token)) -> dict:
-        import rbac_manager as rbac
+        from services.auth.rbac_service import RBACService as _RBACService
+        rbac = _RBACService()
 
         user_id = user_info.get("user_id")
         if user_id is None:
@@ -256,7 +259,8 @@ def require_role(role_name: str):
     """
 
     def role_checker(user_info: dict = Depends(verify_token)) -> dict:
-        import rbac_manager as rbac
+        from services.auth.rbac_service import RBACService as _RBACService
+        rbac = _RBACService()
 
         user_id = user_info.get("user_id")
         if user_id is None:
@@ -281,6 +285,7 @@ def require_role(role_name: str):
 
 def has_permission_check(user_id: int, resource: str, action: str) -> bool:
     """Helper function to check permission (non-dependency version)."""
-    import rbac_manager as rbac
+    from services.auth.rbac_service import RBACService as _RBACService
+    rbac = _RBACService()
 
     return rbac.has_permission(user_id, resource, action)

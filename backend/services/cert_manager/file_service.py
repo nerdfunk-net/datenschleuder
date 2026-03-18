@@ -13,7 +13,7 @@ from typing import List
 
 from fastapi import HTTPException, status
 
-from git_repositories_manager import GitRepositoryManager
+from services.settings.git_repository_service import GitRepositoryService as GitRepositoryManager
 from repositories.nifi.nifi_instance_repository import NifiInstanceRepository
 from services.settings.git.paths import repo_path
 from models.cert_manager import CertFileInfo, NifiPasswordEntry

@@ -126,22 +126,14 @@ def build_nifi_oidc_config():
 
 
 def build_settings_manager():
-    """Return the app-scoped SettingsManager singleton.
+    """Return the app-scoped SettingsService singleton."""
+    from services.settings.settings_service import settings_service
 
-    Returns the existing module-level singleton to maintain consistency with
-    inline imports still used elsewhere (e.g. in main.py lifespan hooks).
-    """
-    from settings_manager import settings_manager
-
-    return settings_manager
+    return settings_service
 
 
 def build_git_repo_manager():
-    """Build a new GitRepositoryManager instance.
+    """Build a new GitRepositoryService instance."""
+    from services.settings.git_repository_service import GitRepositoryService
 
-    GitRepositoryManager is stateless (no cached DB connections); a fresh
-    instance per request is safe and avoids sharing mutable state.
-    """
-    from git_repositories_manager import GitRepositoryManager
-
-    return GitRepositoryManager()
+    return GitRepositoryService()

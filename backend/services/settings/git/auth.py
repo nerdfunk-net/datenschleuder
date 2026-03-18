@@ -51,7 +51,8 @@ class GitAuthenticationService:
             return None, None, None
 
         try:
-            import credentials_manager as cred_mgr
+            from services.settings.credentials_service import CredentialsService as _CredSvc
+            cred_mgr = _CredSvc()
 
             creds = cred_mgr.list_credentials(include_expired=False)
             logger.debug(

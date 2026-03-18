@@ -161,7 +161,7 @@ async def lifespan(app: FastAPI):
 
     # Ensure built-in Celery queues exist
     try:
-        from settings_manager import settings_manager
+        from services.settings.settings_service import settings_service as settings_manager
 
         settings_manager.ensure_builtin_queues()
         logger.info("Built-in Celery queues verified")
@@ -171,9 +171,9 @@ async def lifespan(app: FastAPI):
 
     # Export SSH keys to filesystem
     try:
-        import credentials_manager
+        from services.settings.ssh_key_service import SSHKeyService as _SSHKeyService
 
-        exported_keys = credentials_manager.export_ssh_keys_to_filesystem()
+        exported_keys = _SSHKeyService().export_ssh_keys_to_filesystem()
         if exported_keys:
             logger.info("Exported %d SSH keys to ./data/ssh_keys/", len(exported_keys))
         else:
@@ -183,18 +183,18 @@ async def lifespan(app: FastAPI):
 
     # Ensure admin user has RBAC role assigned (must happen before other services)
     try:
-        import user_db_manager
+        from services.auth.user_service import UserService as _UserService
 
-        user_db_manager.ensure_admin_has_rbac_role()
+        _UserService().ensure_admin_has_rbac_role()
         logger.info("Admin RBAC role assignment completed")
     except Exception as e:
         logger.error("Failed to ensure admin RBAC role: %s", e)
 
     # Initialize next_run for job schedules that don't have one
     try:
-        import jobs_manager
+        from services.jobs.job_schedule_service import JobScheduleService as _JobScheduleService
 
-        result = jobs_manager.initialize_schedule_next_runs()
+        result = _JobScheduleService().initialize_schedule_next_runs()
         if result["initialized_count"] > 0:
             logger.info(
                 "Initialized next_run for %d job schedules", result["initialized_count"]
@@ -206,7 +206,7 @@ async def lifespan(app: FastAPI):
     try:
         logger.debug("Startup cache: hook invoked")
         # Local imports to avoid circular dependencies at import time
-        from settings_manager import settings_manager
+        from services.settings.settings_service import settings_service as settings_manager
         from services.settings.git.shared_utils import get_git_repo_by_id
 
         cache_service = app.state.cache_service

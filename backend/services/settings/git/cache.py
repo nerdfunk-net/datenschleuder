@@ -55,7 +55,7 @@ class GitCacheService:
             Dictionary with cache configuration
         """
         try:
-            from settings_manager import settings_manager
+            from services.settings.settings_service import settings_service as settings_manager
 
             return settings_manager.get_cache_settings()
         except Exception as e:

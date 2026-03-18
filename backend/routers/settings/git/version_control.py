@@ -57,9 +57,9 @@ async def get_commits(
 ):
     """Get commits for a specific branch."""
     try:
-        from settings_manager import settings_manager
+        from services.settings.settings_service import SettingsService
 
-        cache_cfg = settings_manager.get_cache_settings()
+        cache_cfg = SettingsService().get_cache_settings()
         repo = get_git_repo_by_id(repo_id)
 
         # Check if branch exists
