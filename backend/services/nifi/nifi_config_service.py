@@ -47,6 +47,7 @@ def _server_to_response(server) -> NifiServerResponse:
         hostname=server.hostname,
         credential_id=server.credential_id,
         credential_name=_resolve_credential_name(server.credential_id),
+        installation_type=server.installation_type or "bare",
         created_at=server.created_at,
         updated_at=server.updated_at,
     )
@@ -133,6 +134,7 @@ def create_server(data: NifiServerCreate) -> NifiServerResponse:
         server_id=data.server_id,
         hostname=data.hostname,
         credential_id=data.credential_id,
+        installation_type=data.installation_type,
     )
     logger.info("Created NiFi server server_id=%s id=%d", server.server_id, server.id)
     return _server_to_response(server)

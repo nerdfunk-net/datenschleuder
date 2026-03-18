@@ -11,6 +11,7 @@ class NifiServerCreate(BaseModel):
     server_id: str
     hostname: str
     credential_id: Optional[int] = None
+    installation_type: str = "bare"
 
 
 class NifiServerUpdate(BaseModel):
@@ -19,6 +20,7 @@ class NifiServerUpdate(BaseModel):
     server_id: Optional[str] = None
     hostname: Optional[str] = None
     credential_id: Optional[int] = None
+    installation_type: Optional[str] = None
 
 
 class NifiServerResponse(BaseModel):
@@ -29,6 +31,7 @@ class NifiServerResponse(BaseModel):
     hostname: str
     credential_id: Optional[int] = None
     credential_name: Optional[str] = None
+    installation_type: str = "bare"
     created_at: datetime
     updated_at: datetime
 

@@ -6,12 +6,12 @@ import type { CockpitAgent } from '../types'
 
 interface AgentsGridProps {
   agents: CockpitAgent[]
-  onGitPull: (agentId: string) => void
-  onDockerRestart: (agentId: string) => void
+  onGetStats: (agentId: string) => void
+  onRunCommand: (agentId: string) => void
   onViewHistory: (agentId: string) => void
 }
 
-export function AgentsGrid({ agents, onGitPull, onDockerRestart, onViewHistory }: AgentsGridProps) {
+export function AgentsGrid({ agents, onGetStats, onRunCommand, onViewHistory }: AgentsGridProps) {
   if (agents.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -28,8 +28,8 @@ export function AgentsGrid({ agents, onGitPull, onDockerRestart, onViewHistory }
         <AgentCard
           key={agent.agent_id}
           agent={agent}
-          onGitPull={onGitPull}
-          onDockerRestart={onDockerRestart}
+          onGetStats={onGetStats}
+          onRunCommand={onRunCommand}
           onViewHistory={onViewHistory}
         />
       ))}

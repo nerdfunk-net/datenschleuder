@@ -73,22 +73,19 @@ def send_command(
     user: dict = Depends(verify_token),
     db: Session = Depends(get_db),
 ):
-    """Fire-and-forget: publish a command to an agent without waiting for a result."""
+    """Send a command to an agent and wait for the result."""
     try:
         service = AgentService(db)
-        if not service.check_agent_online(request.agent_id):
-            raise HTTPException(
-                status_code=503, detail="Agent is offline or not responding"
-            )
-        command_id = service.send_command(
+        result = service.send_command_and_wait(
             agent_id=request.agent_id,
             command=request.command,
             params=request.params,
             sent_by=user.get("sub", "system"),
         )
-        return CommandResponse(
-            command_id=command_id, status="pending", execution_time_ms=0
-        )
+        if result["status"] in ("error", "timeout"):
+            status_code = 504 if result["status"] == "timeout" else 500
+            raise HTTPException(status_code=status_code, detail=result.get("error"))
+        return CommandResponse(**result)
     except HTTPException:
         raise
     except Exception as exc:

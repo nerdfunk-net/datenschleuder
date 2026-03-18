@@ -39,6 +39,7 @@ const schema = z.object({
   server_id: z.string().min(1, 'Required'),
   hostname: z.string().min(1, 'Required'),
   credential_id: z.string().optional(),
+  installation_type: z.enum(['docker', 'bare']),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -76,7 +77,7 @@ export function NifiServerDialog({ open, onOpenChange, server }: Props) {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { server_id: '', hostname: '', credential_id: NO_CREDENTIAL },
+    defaultValues: { server_id: '', hostname: '', credential_id: NO_CREDENTIAL, installation_type: 'bare' },
   })
 
   useEffect(() => {
@@ -86,9 +87,10 @@ export function NifiServerDialog({ open, onOpenChange, server }: Props) {
         server_id: server.server_id,
         hostname: server.hostname,
         credential_id: server.credential_id ? String(server.credential_id) : NO_CREDENTIAL,
+        installation_type: server.installation_type ?? 'bare',
       })
     } else {
-      form.reset({ server_id: '', hostname: '', credential_id: NO_CREDENTIAL })
+      form.reset({ server_id: '', hostname: '', credential_id: NO_CREDENTIAL, installation_type: 'bare' })
     }
   }, [open, server, form])
 
@@ -101,6 +103,7 @@ export function NifiServerDialog({ open, onOpenChange, server }: Props) {
       server_id: values.server_id,
       hostname: values.hostname,
       credential_id: credId,
+      installation_type: values.installation_type,
     }
 
     if (isEdit && server) {
@@ -169,6 +172,28 @@ export function NifiServerDialog({ open, onOpenChange, server }: Props) {
                           {c.name} <span className="text-slate-400">({c.type})</span>
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="installation_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>NiFi Installation</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select installation type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="bare">Bare</SelectItem>
+                      <SelectItem value="docker">Docker</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

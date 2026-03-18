@@ -234,6 +234,9 @@ def seed_permissions(verbose: bool = True):
         ("pki", "read", "View PKI Certificate Authority and certificates"),
         ("pki", "write", "Create/issue/revoke PKI certificates and manage CA"),
         ("pki", "delete", "Delete the PKI Certificate Authority"),
+        # Agents permissions
+        ("agents", "read", "View agents, their status, and command history"),
+        ("agents", "execute", "Send commands to agents (git pull, docker restart, etc.)"),
     ]
 
     created_count = 0
@@ -353,6 +356,9 @@ def assign_permissions_to_roles(roles, verbose: bool = True):
         "flows:write",
         "flows:delete",
         "flows:deploy",
+        # Agents (full access)
+        "agents:read",
+        "agents:execute",
     ]
     operator_count = 0
     for perm_key in operator_perms:
@@ -407,6 +413,8 @@ def assign_permissions_to_roles(roles, verbose: bool = True):
         "registry:read",
         # Flows (read-only)
         "flows:read",
+        # Agents (read-only)
+        "agents:read",
     ]
     viewer_count = 0
     for perm_key in viewer_perms:

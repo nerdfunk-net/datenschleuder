@@ -26,7 +26,10 @@ class CommandExecutor:
         self.register("echo", self._execute_echo)
         self.register("git_pull", self._execute_git_pull)
         self.register("git_status", self._execute_git_status)
-        self.register("docker_restart", self._execute_docker_restart)
+        self.register("nifi_restart", self._execute_nifi_restart)
+        self.register("zookeeper_restart", self._execute_zookeeper_restart)
+        self.register("docker_stats", self._execute_docker_stats)
+        self.register("docker_ps", self._execute_docker_ps)
 
     def register(self, command_name: str, handler: Callable):
         """Register a new command handler"""
@@ -319,34 +322,19 @@ class CommandExecutor:
             logger.error(f"Git status exception: {e}", exc_info=True)
             return {"status": "error", "error": str(e), "output": None}
 
-    async def _execute_docker_restart(self, params: dict) -> dict:
+    async def _restart_containers(self, container_names: list, label: str) -> dict:
         """
-        Execute docker restart command
-        Uses container name configured in .env file (DOCKER_CONTAINER_NAME)
+        Restart a list of docker containers sequentially.
+        Returns a combined result with all outputs.
         """
-        logger.info(f"Docker restart request - params: {params}")
+        outputs = []
+        errors = []
 
-        # Use configured container name from .env file
-        if not config.docker_container_names:
-            error_msg = (
-                "No docker containers configured (DOCKER_CONTAINER_NAME not set)"
-            )
-            logger.error(error_msg)
-            return {
-                "status": "error",
-                "error": error_msg,
-                "output": None,
-            }
-
-        container_name = config.docker_container_names[0]
-        logger.info(f"Using configured container name from .env: {container_name}")
-
-        try:
+        for container_name in container_names:
             logger.info(
                 f"Executing: docker restart {container_name} (timeout: {config.docker_timeout}s)"
             )
 
-            # Execute docker restart with timeout
             process = await asyncio.create_subprocess_exec(
                 "docker",
                 "restart",
@@ -365,44 +353,217 @@ class CommandExecutor:
                 )
             except asyncio.TimeoutError:
                 logger.error(
-                    f"Docker restart timed out after {config.docker_timeout}s, killing process"
+                    f"Restart of {container_name} timed out after {config.docker_timeout}s, killing process"
+                )
+                process.kill()
+                await process.wait()
+                errors.append(
+                    f"{container_name}: timed out after {config.docker_timeout}s"
+                )
+                continue
+
+            stdout_text = stdout.decode("utf-8").strip()
+            stderr_text = stderr.decode("utf-8").strip()
+
+            if process.returncode == 0:
+                logger.info(f"Restart successful for {container_name}: {stdout_text}")
+                outputs.append(stdout_text or f"{container_name} restarted")
+            else:
+                error_msg = stderr_text or f"{container_name}: restart failed"
+                logger.error(
+                    f"Restart failed for {container_name} (return code {process.returncode}): {error_msg}"
+                )
+                errors.append(error_msg)
+
+        if errors:
+            return {
+                "status": "error",
+                "error": "; ".join(errors),
+                "output": "; ".join(outputs) or None,
+            }
+
+        return {
+            "status": "success",
+            "output": "; ".join(outputs) or f"All {label} containers restarted",
+            "error": None,
+        }
+
+    async def _execute_nifi_restart(self, params: dict) -> dict:
+        """
+        Restart all configured NiFi containers (NIFI_CONTAINERS).
+        """
+        logger.info(f"NiFi restart request - params: {params}")
+
+        if not config.nifi_container_names:
+            error_msg = "No NiFi containers configured (NIFI_CONTAINERS not set)"
+            logger.error(error_msg)
+            return {"status": "error", "error": error_msg, "output": None}
+
+        logger.info(f"Restarting NiFi containers: {config.nifi_container_names}")
+
+        try:
+            return await self._restart_containers(config.nifi_container_names, "NiFi")
+        except Exception as e:
+            logger.error(f"NiFi restart exception: {e}", exc_info=True)
+            return {"status": "error", "error": str(e), "output": None}
+
+    async def _execute_zookeeper_restart(self, params: dict) -> dict:
+        """
+        Restart all configured ZooKeeper containers (ZOOKEEPER_CONTAINER).
+        """
+        logger.info(f"ZooKeeper restart request - params: {params}")
+
+        if not config.zookeeper_container_names:
+            error_msg = "No ZooKeeper containers configured (ZOOKEEPER_CONTAINER not set)"
+            logger.error(error_msg)
+            return {"status": "error", "error": error_msg, "output": None}
+
+        logger.info(
+            f"Restarting ZooKeeper containers: {config.zookeeper_container_names}"
+        )
+
+        try:
+            return await self._restart_containers(
+                config.zookeeper_container_names, "ZooKeeper"
+            )
+        except Exception as e:
+            logger.error(f"ZooKeeper restart exception: {e}", exc_info=True)
+            return {"status": "error", "error": str(e), "output": None}
+
+
+    async def _execute_docker_stats(self, params: dict) -> dict:
+        """
+        Execute 'docker container stats --no-stream' and return the output.
+        """
+        logger.info("Docker stats request")
+
+        try:
+            logger.info(
+                f"Executing: docker container stats --no-stream (timeout: {config.command_timeout}s)"
+            )
+
+            process = await asyncio.create_subprocess_exec(
+                "docker",
+                "container",
+                "stats",
+                "--no-stream",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            logger.debug(f"Subprocess started with PID: {process.pid}")
+
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=config.command_timeout
+                )
+                logger.debug(
+                    f"Process completed with return code: {process.returncode}"
+                )
+            except asyncio.TimeoutError:
+                logger.error(
+                    f"Docker stats timed out after {config.command_timeout}s, killing process"
                 )
                 process.kill()
                 await process.wait()
                 return {
                     "status": "error",
-                    "error": f"Docker restart timed out after {config.docker_timeout}s",
+                    "error": f"Docker stats timed out after {config.command_timeout}s",
                     "output": None,
                 }
 
             stdout_text = stdout.decode("utf-8").strip()
             stderr_text = stderr.decode("utf-8").strip()
 
-            logger.debug(f"Docker stdout: {stdout_text or '(empty)'}")
-            logger.debug(f"Docker stderr: {stderr_text or '(empty)'}")
+            logger.debug(f"Docker stats stdout: {stdout_text or '(empty)'}")
+            logger.debug(f"Docker stats stderr: {stderr_text or '(empty)'}")
 
             if process.returncode == 0:
-                logger.info(
-                    f"Docker restart successful for {container_name}: {stdout_text}"
-                )
+                logger.info("Docker stats successful")
                 return {
                     "status": "success",
-                    "output": stdout_text or f"Container {container_name} restarted",
+                    "output": stdout_text or "No containers running",
                     "error": None,
                 }
             else:
-                error_msg = stderr_text or "Docker restart failed (no error message)"
+                error_msg = stderr_text or "Docker stats failed (no error message)"
                 logger.error(
-                    f"Docker restart failed (return code {process.returncode}): {error_msg}"
+                    f"Docker stats failed (return code {process.returncode}): {error_msg}"
                 )
                 return {
                     "status": "error",
                     "error": error_msg,
-                    "output": stdout_text,
+                    "output": stdout_text or None,
                 }
 
         except Exception as e:
-            logger.error(f"Docker restart exception: {e}", exc_info=True)
+            logger.error(f"Docker stats exception: {e}", exc_info=True)
+            return {"status": "error", "error": str(e), "output": None}
+
+
+    async def _execute_docker_ps(self, params: dict) -> dict:
+        """
+        Execute 'docker ps' and return the output.
+        """
+        logger.info("Docker ps request")
+
+        try:
+            logger.info(
+                f"Executing: docker ps (timeout: {config.command_timeout}s)"
+            )
+
+            process = await asyncio.create_subprocess_exec(
+                "docker",
+                "ps",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            logger.debug(f"Subprocess started with PID: {process.pid}")
+
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=config.command_timeout
+                )
+                logger.debug(
+                    f"Process completed with return code: {process.returncode}"
+                )
+            except asyncio.TimeoutError:
+                logger.error(
+                    f"Docker ps timed out after {config.command_timeout}s, killing process"
+                )
+                process.kill()
+                await process.wait()
+                return {
+                    "status": "error",
+                    "error": f"Docker ps timed out after {config.command_timeout}s",
+                    "output": None,
+                }
+
+            stdout_text = stdout.decode("utf-8").strip()
+            stderr_text = stderr.decode("utf-8").strip()
+
+            logger.debug(f"Docker ps stdout: {stdout_text or '(empty)'}")
+            logger.debug(f"Docker ps stderr: {stderr_text or '(empty)'}")
+
+            if process.returncode == 0:
+                logger.info("Docker ps successful")
+                return {
+                    "status": "success",
+                    "output": stdout_text or "No containers running",
+                    "error": None,
+                }
+            else:
+                error_msg = stderr_text or "Docker ps failed (no error message)"
+                logger.error(
+                    f"Docker ps failed (return code {process.returncode}): {error_msg}"
+                )
+                return {
+                    "status": "error",
+                    "error": error_msg,
+                    "output": stdout_text or None,
+                }
+
+        except Exception as e:
+            logger.error(f"Docker ps exception: {e}", exc_info=True)
             return {"status": "error", "error": str(e), "output": None}
 
 

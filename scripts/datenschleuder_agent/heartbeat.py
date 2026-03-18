@@ -50,7 +50,7 @@ class HeartbeatThread(threading.Thread):
             "last_heartbeat": now,
             "version": config.agent_version,
             "agent_id": config.agent_id,
-            "capabilities": "git_pull,docker_restart,echo",
+            "capabilities": "echo,git_pull,git_status,nifi_restart,zookeeper_restart,docker_stats,docker_ps",
             "started_at": self.started_at,
             "commands_executed": self.commands_executed,
         }

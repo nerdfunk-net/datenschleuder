@@ -7,7 +7,8 @@ import json
 import logging
 import time
 import uuid
-from typing import Dict, List, Optional
+import re
+from typing import Any, Dict, List, Optional
 
 import redis
 from sqlalchemy.orm import Session
@@ -16,6 +17,53 @@ from config import settings
 from repositories.agent_repository import AgentRepository
 
 logger = logging.getLogger(__name__)
+
+
+def parse_docker_ps(raw: str) -> list[dict]:
+    """Parse `docker ps` tabular output into a list of row dicts."""
+    lines = raw.strip().splitlines()
+    if len(lines) < 2:
+        return []
+    columns = ["container_id", "image", "command", "created", "status", "ports", "names"]
+    rows = []
+    for line in lines[1:]:
+        parts = re.split(r"\s{2,}", line.strip())
+        # docker ps omits the ports column when empty
+        while len(parts) < len(columns):
+            parts.insert(-1, "")
+        row = dict(zip(columns, parts))
+        rows.append(row)
+    return rows
+
+
+def parse_docker_stats(raw: str) -> list[dict]:
+    """Parse `docker stats --no-stream` tabular output into a list of row dicts."""
+    lines = raw.strip().splitlines()
+    if len(lines) < 2:
+        return []
+    rows = []
+    for line in lines[1:]:
+        parts = re.split(r"\s{2,}", line.strip())
+        if len(parts) < 8:
+            continue
+        mem_parts = parts[3].split(" / ") if len(parts) > 3 else ["", ""]
+        net_parts = parts[5].split(" / ") if len(parts) > 5 else ["", ""]
+        block_parts = parts[6].split(" / ") if len(parts) > 6 else ["", ""]
+        rows.append({
+            "container_id": parts[0] if len(parts) > 0 else "",
+            "name": parts[1] if len(parts) > 1 else "",
+            "cpu_percent": parts[2] if len(parts) > 2 else "",
+            "mem_usage": mem_parts[0] if len(mem_parts) > 0 else "",
+            "mem_limit": mem_parts[1] if len(mem_parts) > 1 else "",
+            "mem_percent": parts[4] if len(parts) > 4 else "",
+            "net_io_rx": net_parts[0] if len(net_parts) > 0 else "",
+            "net_io_tx": net_parts[1] if len(net_parts) > 1 else "",
+            "block_io_read": block_parts[0] if len(block_parts) > 0 else "",
+            "block_io_write": block_parts[1] if len(block_parts) > 1 else "",
+            "pids": parts[7] if len(parts) > 7 else "",
+        })
+    return rows
+
 
 # Redis key/channel name constants — must match datenschleuder_agent/config.py
 _AGENT_REGISTRY_PREFIX = "agents:"
@@ -187,6 +235,35 @@ class AgentService:
             }
         command_id = self.send_command(agent_id, "git_pull", {}, sent_by)
         return self.wait_for_response(agent_id, command_id, timeout)
+
+    def send_command_and_wait(
+        self,
+        agent_id: str,
+        command: str,
+        params: dict,
+        sent_by: str,
+        timeout: int = 30,
+    ) -> dict:
+        """Send a command and block until the agent responds or timeout elapses."""
+        if not self.check_agent_online(agent_id):
+            return {
+                "command_id": "",
+                "status": "error",
+                "error": "Agent is offline",
+                "execution_time_ms": 0,
+            }
+        command_id = self.send_command(agent_id, command, params, sent_by)
+        result = self.wait_for_response(agent_id, command_id, timeout)
+
+        parsed: List[Dict[str, Any]] = []
+        raw_output = result.get("output") or ""
+        if command == "docker_ps":
+            parsed = parse_docker_ps(raw_output)
+        elif command == "docker_stats":
+            parsed = parse_docker_stats(raw_output)
+
+        result["parsed_output"] = parsed if parsed else None
+        return result
 
     def send_docker_restart(
         self, agent_id: str, sent_by: str, timeout: int = 60

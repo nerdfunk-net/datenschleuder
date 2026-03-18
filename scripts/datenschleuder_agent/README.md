@@ -1,10 +1,10 @@
-# Datenschleuer Agent - Remote Command Executor
+# Datenschleuder Agent - Remote Command Executor
 
-Lightweight Python agent that runs on remote hosts to execute commands remotely from Datenschleuer.
+Lightweight Python agent that runs on remote hosts to execute commands remotely from Datenschleuder.
 
 ## Features
 
-- **Remote Command Execution**: git pull, docker restart, health checks
+- **Remote Command Execution**: git pull, git status, NiFi/ZooKeeper restart, docker stats, docker ps, health checks
 - **Redis Pub/Sub**: Real-time command delivery via Redis
 - **Health Monitoring**: Automatic heartbeat every 30s
 - **Command Buffering**: Queue commands locally when Redis is unavailable
@@ -14,7 +14,7 @@ Lightweight Python agent that runs on remote hosts to execute commands remotely 
 ## Architecture
 
 ```
-Datenschleuer Backend → Redis Pub/Sub → Datenschleuer Agent → Execute locally
+Datenschleuder Backend → Redis Pub/Sub → Datenschleuder Agent → Execute locally
                                         ↓
                                    Send Response
 ```
@@ -24,7 +24,7 @@ Datenschleuer Backend → Redis Pub/Sub → Datenschleuer Agent → Execute loca
 ### Prerequisites
 
 - Python 3.9+
-- Redis access to Datenschleuer Redis server
+- Redis access to Datenschleuder Redis server
 - Docker (for docker restart commands)
 - Git (for git pull commands)
 
@@ -66,11 +66,12 @@ sudo nano /opt/datenschleuder-agent/.env
 
 **Required settings:**
 ```bash
-REDIS_HOST=datenschleuder.example.com      # Datenschleuer Redis host
+REDIS_HOST=datenschleuder.example.com      # Datenschleuder Redis host
 REDIS_PORT=6379
 REDIS_PASSWORD=your_redis_password
 GIT_REPO_PATH=/opt/app/config   # Git repo to pull
-DOCKER_CONTAINER_NAME=grafana       # Container to restart
+NIFI_CONTAINERS=nifi               # NiFi container(s) to restart (comma-separated)
+ZOOKEEPER_CONTAINER=zookeeper      # ZooKeeper container(s) to restart (optional, comma-separated)
 ```
 
 ### Step 4: Install systemd Service
@@ -150,18 +151,70 @@ Response: `{"status": "success", "output": "hello"}`
 
 Response: `{"status": "success", "output": "Already up to date."}`
 
-### 3. Docker Restart
+### 3. Git Status
 
 ```json
 {
-  "command": "docker_restart",
+  "command": "git_status",
   "params": {
-    "container_name": "grafana"
+    "repository_path": "/opt/app/config"
   }
 }
 ```
 
-Response: `{"status": "success", "output": "grafana"}`
+Response: `{"status": "success", "output": "On branch main\nnothing to commit, working tree clean"}`
+
+### 4. NiFi Restart
+
+Restarts all containers configured via `NIFI_CONTAINERS`.
+
+```json
+{
+  "command": "nifi_restart",
+  "params": {}
+}
+```
+
+Response: `{"status": "success", "output": "nifi restarted"}`
+
+### 5. ZooKeeper Restart
+
+Restarts all containers configured via `ZOOKEEPER_CONTAINER`.
+
+```json
+{
+  "command": "zookeeper_restart",
+  "params": {}
+}
+```
+
+Response: `{"status": "success", "output": "zookeeper restarted"}`
+
+### 6. Docker Stats
+
+Runs `docker container stats --no-stream` and returns the full statistics table.
+
+```json
+{
+  "command": "docker_stats",
+  "params": {}
+}
+```
+
+Response: `{"status": "success", "output": "CONTAINER ID   NAME   CPU %   MEM USAGE / LIMIT   ..."}`
+
+### 7. Docker PS
+
+Runs `docker ps` and returns the list of running containers.
+
+```json
+{
+  "command": "docker_ps",
+  "params": {}
+}
+```
+
+Response: `{"status": "success", "output": "CONTAINER ID   IMAGE   COMMAND   CREATED   STATUS   PORTS   NAMES"}`
 
 ## Adding Custom Commands
 
@@ -230,8 +283,11 @@ sudo -u datenschleuder-agent git -C /opt/app/config pull
 ### Docker restart fails
 
 ```bash
-# Test manually
-sudo -u datenschleuder-agent docker restart grafana
+# Test NiFi containers manually
+sudo -u datenschleuder-agent docker restart nifi
+
+# Test ZooKeeper containers manually
+sudo -u datenschleuder-agent docker restart zookeeper
 
 # Common issues:
 # - User not in docker group → usermod -aG docker datenschleuder-agent
@@ -265,7 +321,7 @@ Fields:
   - last_heartbeat: Unix timestamp
   - version: 1.0.0
   - hostname: app-prod-01
-  - capabilities: git_pull,docker_restart,echo
+  - capabilities: echo,git_pull,git_status,nifi_restart,zookeeper_restart,docker_stats,docker_ps
   - started_at: Unix timestamp
   - commands_executed: Counter
 ```
@@ -285,12 +341,13 @@ Response channel: datenschleuder-agent-response:{hostname}
 | REDIS_PASSWORD | - | Redis password (required) |
 | REDIS_DB | 0 | Redis database number |
 | AGENT_HOSTNAME | hostname | Agent identifier (auto-detected) |
-| GIT_REPO_PATH | /opt/app/config | Git repository path |
-| DOCKER_CONTAINER_NAME | grafana | Docker container name |
+| GIT_REPO_PATH | /opt/app/config | Git repository path(s), comma-separated |
+| NIFI_CONTAINERS | nifi | NiFi container name(s), comma-separated |
+| ZOOKEEPER_CONTAINER | - | ZooKeeper container name(s), comma-separated (optional) |
 | HEARTBEAT_INTERVAL | 30 | Heartbeat interval (seconds) |
-| COMMAND_TIMEOUT | 30 | Git command timeout (seconds) |
-| DOCKER_TIMEOUT | 60 | Docker command timeout (seconds) |
+| COMMAND_TIMEOUT | 30 | Command timeout for git/docker ps/stats (seconds) |
+| DOCKER_TIMEOUT | 60 | Docker restart timeout (seconds) |
 
 ## License
 
-Same as Datenschleuer-NG project
+Same as Datenschleuder-NG project

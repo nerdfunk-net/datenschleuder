@@ -55,5 +55,25 @@ export function useAgentMutations() {
     },
   })
 
-  return { gitPull, dockerRestart }
+  const sendCommand = useMutation({
+    mutationFn: async (input: {
+      agent_id: string
+      command: string
+      params?: Record<string, unknown>
+    }): Promise<CommandResult> => {
+      return apiCall<CommandResult>('datenschleuder-agent/command', {
+        method: 'POST',
+        body: JSON.stringify({ ...input, params: input.params ?? {} }),
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Command failed',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+
+  return { gitPull, dockerRestart, sendCommand }
 }

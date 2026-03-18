@@ -33,9 +33,14 @@ class AgentConfig:
         git_paths = os.getenv("GIT_REPO_PATH", "/opt/app/config")
         self.git_repo_paths = [p.strip() for p in git_paths.split(",") if p.strip()]
 
-        docker_names = os.getenv("DOCKER_CONTAINER_NAME", "app")
-        self.docker_container_names = [
-            n.strip() for n in docker_names.split(",") if n.strip()
+        nifi_names = os.getenv("NIFI_CONTAINERS", "nifi")
+        self.nifi_container_names = [
+            n.strip() for n in nifi_names.split(",") if n.strip()
+        ]
+
+        zookeeper_names = os.getenv("ZOOKEEPER_CONTAINER", "")
+        self.zookeeper_container_names = [
+            n.strip() for n in zookeeper_names.split(",") if n.strip()
         ]
 
         # Operational settings
@@ -70,8 +75,8 @@ class AgentConfig:
         if not self.git_repo_paths:
             return False, "GIT_REPO_PATH is required"
 
-        if not self.docker_container_names:
-            return False, "DOCKER_CONTAINER_NAME is required"
+        if not self.nifi_container_names:
+            return False, "NIFI_CONTAINERS is required"
 
         return True, None
 

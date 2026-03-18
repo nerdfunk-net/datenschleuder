@@ -47,6 +47,7 @@ class CommandResponse(BaseModel):
     output: Optional[str] = None
     error: Optional[str] = None
     execution_time_ms: int
+    parsed_output: Optional[List[Dict[str, Any]]] = None
 
 
 class CommandHistoryItem(BaseModel):

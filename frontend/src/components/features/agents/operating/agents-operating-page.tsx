@@ -8,17 +8,19 @@ import { useAgentsQuery } from './hooks/use-agents-query'
 import { useAgentMutations } from './hooks/use-agent-mutations'
 import { AgentsGrid } from './components/agents-grid'
 import { DeployInstructions } from './components/deploy-instructions'
-import { GitPullDialog } from './dialogs/git-pull-dialog'
+import { GetStatsDialog } from './dialogs/get-stats-dialog'
+import { RunCommandDialog } from './dialogs/run-command-dialog'
 import { CommandHistoryDialog } from './dialogs/command-history-dialog'
 import { EMPTY_AGENTS } from './utils/constants'
 
 export function AgentsOperatingPage() {
   const { data, isLoading, refetch, isFetching } = useAgentsQuery()
-  const { gitPull, dockerRestart } = useAgentMutations()
+  const { sendCommand } = useAgentMutations()
 
   const agents = data?.agents ?? EMPTY_AGENTS
 
-  const [gitPullAgent, setGitPullAgent] = useState<string | null>(null)
+  const [statsAgent, setStatsAgent] = useState<string | null>(null)
+  const [runCommandAgent, setRunCommandAgent] = useState<string | null>(null)
   const [historyAgent, setHistoryAgent] = useState<string | null>(null)
 
   const stats = useMemo(() => {
@@ -26,11 +28,8 @@ export function AgentsOperatingPage() {
     return { total: agents.length, online, offline: agents.length - online }
   }, [agents])
 
-  const handleGitPull = useCallback((agentId: string) => setGitPullAgent(agentId), [])
-  const handleDockerRestart = useCallback(
-    (agentId: string) => { dockerRestart.mutate({ agent_id: agentId }) },
-    [dockerRestart]
-  )
+  const handleGetStats = useCallback((agentId: string) => setStatsAgent(agentId), [])
+  const handleRunCommand = useCallback((agentId: string) => setRunCommandAgent(agentId), [])
   const handleViewHistory = useCallback((agentId: string) => setHistoryAgent(agentId), [])
   const handleRefresh = useCallback(() => refetch(), [refetch])
 
@@ -105,8 +104,8 @@ export function AgentsOperatingPage() {
           ) : (
             <AgentsGrid
               agents={agents}
-              onGitPull={handleGitPull}
-              onDockerRestart={handleDockerRestart}
+              onGetStats={handleGetStats}
+              onRunCommand={handleRunCommand}
               onViewHistory={handleViewHistory}
             />
           )}
@@ -125,12 +124,20 @@ export function AgentsOperatingPage() {
       </div>
 
       {/* Dialogs */}
-      {gitPullAgent && (
-        <GitPullDialog
-          open={!!gitPullAgent}
-          onOpenChange={(open) => !open && setGitPullAgent(null)}
-          agentId={gitPullAgent}
-          mutation={gitPull}
+      {statsAgent && (
+        <GetStatsDialog
+          open={!!statsAgent}
+          onOpenChange={(open) => !open && setStatsAgent(null)}
+          agentId={statsAgent}
+          sendCommand={sendCommand}
+        />
+      )}
+      {runCommandAgent && (
+        <RunCommandDialog
+          open={!!runCommandAgent}
+          onOpenChange={(open) => !open && setRunCommandAgent(null)}
+          agentId={runCommandAgent}
+          sendCommand={sendCommand}
         />
       )}
       {historyAgent && (

@@ -92,7 +92,7 @@ class DatenschleuderAgent:
                 "last_heartbeat": now,
                 "version": config.agent_version,
                 "agent_id": config.agent_id,
-                "capabilities": "echo,git_pull,git_status,docker_restart",
+                "capabilities": "echo,git_pull,git_status,nifi_restart,zookeeper_restart,docker_stats,docker_ps",
                 "started_at": now,
                 "commands_executed": 0,
             }

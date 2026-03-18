@@ -796,6 +796,7 @@ class NifiServer(Base):
     server_id = Column(String(255), unique=True, nullable=False, index=True)
     hostname = Column(String(1024), nullable=False)
     credential_id = Column(Integer, ForeignKey("credentials.id"), nullable=True)
+    installation_type = Column(String(50), nullable=False, default="bare")  # docker, bare
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

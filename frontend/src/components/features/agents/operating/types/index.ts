@@ -41,10 +41,35 @@ export interface DockerRestartInput {
   agent_id: string
 }
 
+export interface DockerPsRow {
+  container_id: string
+  image: string
+  command: string
+  created: string
+  status: string
+  ports: string
+  names: string
+}
+
+export interface DockerStatsRow {
+  container_id: string
+  name: string
+  cpu_percent: string
+  mem_usage: string
+  mem_limit: string
+  mem_percent: string
+  net_io_rx: string
+  net_io_tx: string
+  block_io_read: string
+  block_io_write: string
+  pids: string
+}
+
 export interface CommandResult {
   command_id: string
   status: string
   output: string | null
   error: string | null
   execution_time_ms: number
+  parsed_output?: DockerPsRow[] | DockerStatsRow[] | null
 }

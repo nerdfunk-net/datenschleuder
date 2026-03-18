@@ -3,21 +3,20 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { GitBranch, RotateCcw, History, Clock, Terminal, Server } from 'lucide-react'
+import { BarChart2, History, Clock, Terminal, Server } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatRelativeTime, formatUptime, parseCapabilities } from '../utils/format-utils'
+import { formatRelativeTime, formatUptime } from '../utils/format-utils'
 import type { CockpitAgent } from '../types'
 
 interface AgentCardProps {
   agent: CockpitAgent
-  onGitPull: (agentId: string) => void
-  onDockerRestart: (agentId: string) => void
+  onGetStats: (agentId: string) => void
+  onRunCommand: (agentId: string) => void
   onViewHistory: (agentId: string) => void
 }
 
-export function AgentCard({ agent, onGitPull, onDockerRestart, onViewHistory }: AgentCardProps) {
+export function AgentCard({ agent, onGetStats, onRunCommand, onViewHistory }: AgentCardProps) {
   const isOnline = agent.status === 'online'
-  const capabilities = parseCapabilities(agent.capabilities)
 
   return (
     <Card
@@ -64,17 +63,6 @@ export function AgentCard({ agent, onGitPull, onDockerRestart, onViewHistory }: 
           </div>
         </div>
 
-        {/* Capabilities */}
-        {capabilities.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {capabilities.map((cap) => (
-              <Badge key={cap} variant="outline" className="text-[10px] px-1.5 py-0">
-                {cap}
-              </Badge>
-            ))}
-          </div>
-        )}
-
         {/* Actions */}
         <div className="flex gap-2 pt-1">
           <Button
@@ -82,20 +70,20 @@ export function AgentCard({ agent, onGitPull, onDockerRestart, onViewHistory }: 
             size="sm"
             className="flex-1 text-xs h-8"
             disabled={!isOnline}
-            onClick={() => onGitPull(agent.agent_id)}
+            onClick={() => onGetStats(agent.agent_id)}
           >
-            <GitBranch className="h-3 w-3 mr-1" />
-            Git Pull
+            <BarChart2 className="h-3 w-3 mr-1" />
+            Get Stats
           </Button>
           <Button
             variant="outline"
             size="sm"
             className="flex-1 text-xs h-8"
             disabled={!isOnline}
-            onClick={() => onDockerRestart(agent.agent_id)}
+            onClick={() => onRunCommand(agent.agent_id)}
           >
-            <RotateCcw className="h-3 w-3 mr-1" />
-            Restart
+            <Terminal className="h-3 w-3 mr-1" />
+            Run Command
           </Button>
           <Button
             variant="outline"

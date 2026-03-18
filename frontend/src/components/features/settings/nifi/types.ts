@@ -22,6 +22,7 @@ export interface NifiServer {
   hostname: string
   credential_id: number | null
   credential_name: string | null
+  installation_type: 'docker' | 'bare'
   created_at: string
   updated_at: string
 }
