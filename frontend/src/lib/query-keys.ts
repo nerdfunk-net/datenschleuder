@@ -172,6 +172,11 @@ export const queryKeys = {
     all: ['flows'] as const,
     list: () => [...queryKeys.flows.all, 'list'] as const,
     columns: () => [...queryKeys.flows.all, 'columns'] as const,
+    importRepos: () => [...queryKeys.flows.all, 'import-repos'] as const,
+    importTree: (repoId: number, path?: string) =>
+      path
+        ? ([...queryKeys.flows.all, 'import-tree', repoId, path] as const)
+        : ([...queryKeys.flows.all, 'import-tree', repoId] as const),
   },
 
   // Flow Views (saved column configurations)

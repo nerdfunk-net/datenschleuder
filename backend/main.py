@@ -52,6 +52,7 @@ from routers.nifi import (
     certificates_router as nifi_certificates_router,
     install_router as nifi_install_router,
     nifi_config_router,
+    flow_import_router as nifi_flow_import_router,
 )
 
 # Agent router
@@ -398,6 +399,7 @@ app.include_router(nifi_hierarchy_router)
 app.include_router(nifi_certificates_router)
 app.include_router(nifi_install_router)
 app.include_router(nifi_config_router)
+app.include_router(nifi_flow_import_router)
 
 # Datenschleuder Agents
 app.include_router(agent_router)

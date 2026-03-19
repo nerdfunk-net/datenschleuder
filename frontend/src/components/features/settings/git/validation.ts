@@ -5,7 +5,7 @@ import { z } from 'zod'
 // Repository form schema
 export const repositoryFormSchema = z.object({
   name: z.string().min(1, 'Repository name is required'),
-  category: z.enum(['nifi_configs', 'datenschleuder_configs', 'agent', 'export']),
+  category: z.enum(['nifi_configs', 'datenschleuder_configs', 'agent', 'export', 'import']),
   url: z.string().url('Invalid repository URL'),
   branch: z.string().min(1, 'Branch name is required'),
   auth_type: z.enum(['none', 'token', 'ssh_key', 'generic']),

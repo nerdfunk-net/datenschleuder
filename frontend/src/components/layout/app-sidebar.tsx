@@ -32,6 +32,7 @@ import {
   Rocket,
   Network,
   Upload,
+  Download,
   ShieldCheck,
 } from 'lucide-react'
 
@@ -69,6 +70,7 @@ const navigationSections: NavSection[] = [
     items: [
       { label: 'Manage', href: '/flows/manage', icon: Network },
       { label: 'Deploy', href: '/flows/deploy', icon: Upload },
+      { label: 'Import', href: '/flows/import', icon: Download },
     ],
   },
   {

@@ -15,6 +15,7 @@ class GitCategory(str, Enum):
     DATENSCHLEUDER_CONFIGS = "datenschleuder_configs"
     AGENT = "agent"
     EXPORT = "export"
+    IMPORT = "import"
 
 
 class GitAuthType(str, Enum):

@@ -29,6 +29,7 @@ export const REPOSITORY_CATEGORIES = [
   { value: 'datenschleuder_configs', label: 'Datenschleuder Configs' },
   { value: 'agent', label: 'Agents' },
   { value: 'export', label: 'Export' },
+  { value: 'import', label: 'Import' },
 ] as const
 
 // Authentication types
