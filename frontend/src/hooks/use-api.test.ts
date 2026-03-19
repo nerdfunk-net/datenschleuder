@@ -103,7 +103,7 @@ describe('useApi', () => {
       body: formData,
     })
 
-    const fetchCall = mockFetch.mock.calls[0]
+    const fetchCall = mockFetch.mock.calls[0]!
     const callHeaders = fetchCall[1].headers
 
     // FormData should not have Content-Type header (browser sets it with boundary)
@@ -213,7 +213,7 @@ describe('useApi', () => {
     const { result } = renderHook(() => useApi())
     await result.current.apiCall('public')
 
-    const fetchCall = mockFetch.mock.calls[0]
+    const fetchCall = mockFetch.mock.calls[0]!
     const callHeaders = fetchCall[1].headers
 
     expect(callHeaders.Authorization).toBeUndefined()
