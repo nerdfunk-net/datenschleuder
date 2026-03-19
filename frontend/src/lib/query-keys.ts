@@ -37,6 +37,7 @@ export const queryKeys = {
     // Templates
     templates: () => [...queryKeys.jobs.all, 'templates'] as const,
     template: (id: number) => [...queryKeys.jobs.templates(), id] as const,
+    exportRepos: () => [...queryKeys.jobs.all, 'export-repos'] as const,
 
     // Template dependencies
     jobTypes: () => [...queryKeys.jobs.all, 'job-types'] as const,
@@ -205,6 +206,8 @@ export const queryKeys = {
     bootstrapConfig: (repoId: number) => [...queryKeys.nifi.all, 'bootstrap-config', repoId] as const,
     nifiProperties: (repoId: number) => [...queryKeys.nifi.all, 'nifi-properties', repoId] as const,
     flowProcessGroups: (flowId: number) => [...queryKeys.nifi.all, 'flow-process-groups', flowId] as const,
+    hierarchyAttributeValues: () => [...queryKeys.nifi.all, 'hierarchy-attribute-values'] as const,
+    filteredFlows: (filters: Record<string, unknown>) => [...queryKeys.nifi.all, 'filtered-flows', filters] as const,
   },
 
   // NiFi Install

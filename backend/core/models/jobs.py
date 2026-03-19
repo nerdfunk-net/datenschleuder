@@ -116,6 +116,27 @@ class JobTemplate(Base):
     check_progress_group_expected_status = Column(
         String(20), nullable=True, default="Running"
     )  # Expected status: Running|Stopped|Enabled|Disabled (check_progress_group type)
+    export_flows_nifi_cluster_ids = Column(
+        Text, nullable=True
+    )  # JSON array of NiFi cluster IDs (informational, export_flows type)
+    export_flows_all_flows = Column(
+        Boolean, nullable=True, default=True
+    )  # When True, export all flows; False = use filters (export_flows type)
+    export_flows_filters = Column(
+        Text, nullable=True
+    )  # JSON object with hierarchy filters (export_flows type)
+    export_flows_git_repo_id = Column(
+        Integer, ForeignKey("git_repositories.id", ondelete="SET NULL"), nullable=True
+    )  # Target git repository for the export (export_flows type)
+    export_flows_filename = Column(
+        String(255), nullable=True
+    )  # Output filename (export_flows type)
+    export_flows_export_type = Column(
+        String(10), nullable=True, default="json"
+    )  # Export format: 'json' or 'csv' (export_flows type)
+    export_flows_push_to_git = Column(
+        Boolean, nullable=True, default=True
+    )  # When True, commit and push to git after export (export_flows type)
     is_global = Column(Boolean, nullable=False, default=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
     created_by = Column(String(255))  # Username of creator
@@ -134,7 +155,7 @@ class JobTemplate(Base):
         Index("idx_job_templates_user", "user_id"),
         Index("idx_job_templates_user_type", "user_id", "job_type"),
         CheckConstraint(
-            "job_type IN ('check_queues', 'check_progress_group')",
+            "job_type IN ('check_queues', 'check_progress_group', 'export_flows')",
             name="ck_job_templates_job_type",
         ),
     )

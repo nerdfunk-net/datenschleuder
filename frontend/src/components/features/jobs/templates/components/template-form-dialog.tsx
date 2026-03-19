@@ -9,8 +9,12 @@ import { useTemplateMutations } from '../hooks/use-template-mutations'
 import { JobTemplateCommonFields } from '../../components/JobTemplateCommonFields'
 import { CheckQueuesFields } from './check-queues-fields'
 import { CheckProgressGroupFields } from './check-progress-group-fields'
+import { ExportFlowsFields } from './export-flows-fields'
 import type { ExpectedStatus } from './check-progress-group-fields'
-import type { JobTemplate } from '../types'
+import type { JobTemplate, ExportFlowsFilters } from '../types'
+
+// Stable default constants – prevents re-render loops
+const EMPTY_EF_FILTERS: ExportFlowsFilters = {}
 
 interface TemplateFormDialogProps {
   open: boolean
@@ -49,6 +53,15 @@ export function TemplateFormDialog({
   const [pgCheckChildren, setPgCheckChildren] = useState(true)
   const [pgExpectedStatus, setPgExpectedStatus] = useState<ExpectedStatus>('Running')
 
+  // export_flows specific state
+  const [efNifiClusterIds, setEfNifiClusterIds] = useState<number[] | null>(null)
+  const [efAllFlows, setEfAllFlows] = useState(true)
+  const [efFilters, setEfFilters] = useState<ExportFlowsFilters>(EMPTY_EF_FILTERS)
+  const [efGitRepoId, setEfGitRepoId] = useState<number | null>(null)
+  const [efFilename, setEfFilename] = useState('nifi_flows')
+  const [efExportType, setEfExportType] = useState<'json' | 'csv'>('json')
+  const [efPushToGit, setEfPushToGit] = useState(true)
+
   const resetForm = useCallback(() => {
     setFormName("")
     setFormJobType("")
@@ -65,6 +78,13 @@ export function TemplateFormDialog({
     setPgProcessGroupPath(null)
     setPgCheckChildren(true)
     setPgExpectedStatus('Running')
+    setEfNifiClusterIds(null)
+    setEfAllFlows(true)
+    setEfFilters(EMPTY_EF_FILTERS)
+    setEfGitRepoId(null)
+    setEfFilename('nifi_flows')
+    setEfExportType('json')
+    setEfPushToGit(true)
   }, [])
 
   // Load editing template data
@@ -86,6 +106,13 @@ export function TemplateFormDialog({
       setPgProcessGroupPath(editingTemplate.check_progress_group_process_group_path ?? null)
       setPgCheckChildren(editingTemplate.check_progress_group_check_children ?? true)
       setPgExpectedStatus((editingTemplate.check_progress_group_expected_status as ExpectedStatus) ?? 'Running')
+      setEfNifiClusterIds(editingTemplate.export_flows_nifi_cluster_ids ?? null)
+      setEfAllFlows(editingTemplate.export_flows_all_flows ?? true)
+      setEfFilters((editingTemplate.export_flows_filters as ExportFlowsFilters) ?? EMPTY_EF_FILTERS)
+      setEfGitRepoId(editingTemplate.export_flows_git_repo_id ?? null)
+      setEfFilename(editingTemplate.export_flows_filename ?? 'nifi_flows')
+      setEfExportType((editingTemplate.export_flows_export_type as 'json' | 'csv') ?? 'json')
+      setEfPushToGit(editingTemplate.export_flows_push_to_git ?? true)
     } else if (open && !editingTemplate) {
       resetForm()
     }
@@ -127,7 +154,18 @@ export function TemplateFormDialog({
               check_progress_group_check_children: pgCheckChildren,
               check_progress_group_expected_status: pgExpectedStatus,
             }
-          : basePayload
+          : formJobType === "export_flows"
+            ? {
+                ...basePayload,
+                export_flows_nifi_cluster_ids: efNifiClusterIds,
+                export_flows_all_flows: efAllFlows,
+                export_flows_filters: efAllFlows ? null : efFilters,
+                export_flows_git_repo_id: efGitRepoId,
+                export_flows_filename: efFilename,
+                export_flows_export_type: efExportType,
+                export_flows_push_to_git: efPushToGit,
+              }
+            : basePayload
 
     if (editingTemplate) {
       await updateTemplate.mutateAsync({ id: editingTemplate.id, data: payload })
@@ -203,6 +241,25 @@ export function TemplateFormDialog({
               onCheckChildrenChange={setPgCheckChildren}
               expectedStatus={pgExpectedStatus}
               onExpectedStatusChange={setPgExpectedStatus}
+            />
+          )}
+
+          {formJobType === "export_flows" && (
+            <ExportFlowsFields
+              nifiClusterIds={efNifiClusterIds}
+              onNifiClusterIdsChange={setEfNifiClusterIds}
+              allFlows={efAllFlows}
+              onAllFlowsChange={setEfAllFlows}
+              filters={efFilters}
+              onFiltersChange={setEfFilters}
+              gitRepoId={efGitRepoId}
+              onGitRepoIdChange={setEfGitRepoId}
+              filename={efFilename}
+              onFilenameChange={setEfFilename}
+              exportType={efExportType}
+              onExportTypeChange={setEfExportType}
+              pushToGit={efPushToGit}
+              onPushToGitChange={setEfPushToGit}
             />
           )}
         </div>

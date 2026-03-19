@@ -69,6 +69,12 @@ def create_job_template(
             else True,
             check_progress_group_expected_status=template_data.check_progress_group_expected_status
             or "Running",
+            export_flows_nifi_cluster_ids=template_data.export_flows_nifi_cluster_ids,
+            export_flows_all_flows=template_data.export_flows_all_flows,
+            export_flows_filters=template_data.export_flows_filters,
+            export_flows_git_repo_id=template_data.export_flows_git_repo_id,
+            export_flows_filename=template_data.export_flows_filename,
+            export_flows_export_type=template_data.export_flows_export_type or "json",
         )
 
         return JobTemplateResponse(**template)
@@ -197,6 +203,12 @@ def update_job_template(
             check_progress_group_process_group_path=update_data.check_progress_group_process_group_path,
             check_progress_group_check_children=update_data.check_progress_group_check_children,
             check_progress_group_expected_status=update_data.check_progress_group_expected_status,
+            export_flows_nifi_cluster_ids=update_data.export_flows_nifi_cluster_ids,
+            export_flows_all_flows=update_data.export_flows_all_flows,
+            export_flows_filters=update_data.export_flows_filters,
+            export_flows_git_repo_id=update_data.export_flows_git_repo_id,
+            export_flows_filename=update_data.export_flows_filename,
+            export_flows_export_type=update_data.export_flows_export_type,
             is_global=update_data.is_global,
             user_id=current_user["user_id"],
         )

@@ -21,6 +21,7 @@ from datetime import datetime
 JobTemplateType = Literal[
     "check_queues",
     "check_progress_group",
+    "export_flows",
 ]
 
 
@@ -86,6 +87,35 @@ class JobTemplateBase(BaseModel):
         "Running",
         description="Expected operational status: 'Running', 'Stopped', 'Enabled', or 'Disabled' (only applies to check_progress_group type)",
     )
+    export_flows_nifi_cluster_ids: Optional[List[int]] = Field(
+        None,
+        description="List of NiFi cluster IDs (informational label only; flows come from local DB) (only applies to export_flows type)",
+    )
+    export_flows_all_flows: Optional[bool] = Field(
+        True,
+        description="When True, export all flows; when False use export_flows_filters (only applies to export_flows type)",
+    )
+    export_flows_filters: Optional[dict] = Field(
+        None,
+        description="Hierarchy filter conditions keyed by attribute name (only applies to export_flows type)",
+    )
+    export_flows_git_repo_id: Optional[int] = Field(
+        None,
+        description="ID of the git repository to write the exported file into (only applies to export_flows type)",
+    )
+    export_flows_filename: Optional[str] = Field(
+        None,
+        max_length=255,
+        description="Output filename (extension added automatically if omitted) (only applies to export_flows type)",
+    )
+    export_flows_export_type: Optional[str] = Field(
+        "json",
+        description="Export format: 'json' or 'csv' (only applies to export_flows type)",
+    )
+    export_flows_push_to_git: Optional[bool] = Field(
+        True,
+        description="When True, commit and push the exported file to the git repository (only applies to export_flows type)",
+    )
     is_global: bool = Field(
         False,
         description="Whether this template is global (available to all users) or private",
@@ -116,6 +146,13 @@ class JobTemplateUpdate(BaseModel):
     )
     check_progress_group_check_children: Optional[bool] = None
     check_progress_group_expected_status: Optional[str] = None
+    export_flows_nifi_cluster_ids: Optional[List[int]] = None
+    export_flows_all_flows: Optional[bool] = None
+    export_flows_filters: Optional[dict] = None
+    export_flows_git_repo_id: Optional[int] = None
+    export_flows_filename: Optional[str] = Field(None, max_length=255)
+    export_flows_export_type: Optional[str] = None
+    export_flows_push_to_git: Optional[bool] = None
     is_global: Optional[bool] = None
 
 

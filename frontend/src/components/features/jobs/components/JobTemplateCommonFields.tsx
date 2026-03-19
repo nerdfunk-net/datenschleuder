@@ -77,6 +77,12 @@ export function JobTemplateCommonFields({
                   <span>Check ProcessGroup</span>
                 </div>
               </SelectItem>
+              <SelectItem value="export_flows">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-violet-500" />
+                  <span>Export Flows</span>
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

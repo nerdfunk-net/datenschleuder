@@ -259,6 +259,71 @@ def update_flow(flow_id: int, **kwargs) -> Optional[dict]:
     return get_flow(flow_id)
 
 
+def get_hierarchy_attribute_values() -> dict:
+    """Return distinct source/destination values per hierarchy attribute across all flows.
+
+    Iterates list_flows() and collects every distinct value seen on each side of every
+    hierarchy attribute.  Returns an empty dict if the table does not yet exist.
+
+    Returns:
+        dict mapping attribute name to {"source": [sorted values], "destination": [sorted values]}
+        Example: {"DC": {"source": ["NET1"], "destination": ["NET2"]}}
+    """
+    if not _table_exists():
+        return {}
+    hierarchy = _get_hierarchy()
+    flows = list_flows()
+    result = {
+        attr["name"]: {"source": set(), "destination": set()} for attr in hierarchy
+    }
+    for flow in flows:
+        for attr_name, sides in (flow.get("hierarchy_values") or {}).items():
+            if attr_name in result:
+                if sides.get("source"):
+                    result[attr_name]["source"].add(sides["source"])
+                if sides.get("destination"):
+                    result[attr_name]["destination"].add(sides["destination"])
+    return {
+        k: {
+            "source": sorted(v["source"]),
+            "destination": sorted(v["destination"]),
+        }
+        for k, v in result.items()
+    }
+
+
+def get_filtered_flows(filters: dict) -> list:
+    """Return flows matching all filter conditions.
+
+    Args:
+        filters: dict keyed by hierarchy attribute name.  Each value is a dict with
+            optional "source" and "destination" keys containing lists of allowed values.
+            An empty list for a side means *any* value is accepted for that side.
+
+        Example:
+            {"DC": {"source": ["NET1"], "destination": []}}
+
+    Returns:
+        List of flow dicts that match all filter conditions.
+    """
+    if not _table_exists():
+        return []
+    all_flows = list_flows()
+
+    def _matches(flow: dict) -> bool:
+        for attr_name, cond in filters.items():
+            vals = flow.get("hierarchy_values", {}).get(attr_name, {})
+            src_filter = cond.get("source", [])
+            dest_filter = cond.get("destination", [])
+            if src_filter and vals.get("source") not in src_filter:
+                return False
+            if dest_filter and vals.get("destination") not in dest_filter:
+                return False
+        return True
+
+    return [f for f in all_flows if _matches(f)]
+
+
 def delete_flow(flow_id: int) -> bool:
     """Delete a NiFi flow. Returns True if deleted, False if not found."""
     if not _table_exists():

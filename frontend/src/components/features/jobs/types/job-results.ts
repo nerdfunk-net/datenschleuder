@@ -446,6 +446,32 @@ export function isDeployAgentJobResult(result: Record<string, unknown>): result 
 }
 
 // ============================================================================
+// Export Flows Job Result Types
+// ============================================================================
+
+export interface ExportFlowsJobResult {
+  success: boolean
+  exported_count: number
+  flows: unknown[]
+  export_type: 'json' | 'csv'
+  filename: string
+  git_repo_name: string | null
+  commit_sha: string | null
+  nifi_clusters: string
+  error?: string
+  [key: string]: unknown
+}
+
+export function isExportFlowsJobResult(result: Record<string, unknown>): result is ExportFlowsJobResult {
+  return (
+    'exported_count' in result &&
+    'nifi_clusters' in result &&
+    'export_type' in result &&
+    ['json', 'csv'].includes(result.export_type as string)
+  )
+}
+
+// ============================================================================
 // Check Queues Job Result Types (NiFi queue depth monitoring)
 // ============================================================================
 

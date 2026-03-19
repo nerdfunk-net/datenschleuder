@@ -5,6 +5,17 @@ export interface DeployTemplateEntry {
   custom_variables: Record<string, string>
 }
 
+// Export Flows filter types
+export interface ExportFlowsFilter {
+  source: string[]
+  destination: string[]
+}
+
+export type ExportFlowsFilters = Record<string, ExportFlowsFilter>
+
+/** Returned by GET /api/nifi/flows/hierarchy-attribute-values */
+export type HierarchyAttributeValues = Record<string, { source: string[]; destination: string[] }>
+
 export interface NifiClusterMember {
   instance_id: number
   name: string | null
@@ -61,6 +72,13 @@ export interface JobTemplate {
   check_progress_group_process_group_path?: string | null
   check_progress_group_check_children?: boolean
   check_progress_group_expected_status?: 'Running' | 'Stopped' | 'Enabled' | 'Disabled'
+  export_flows_nifi_cluster_ids?: number[] | null
+  export_flows_all_flows?: boolean
+  export_flows_filters?: ExportFlowsFilters | null
+  export_flows_git_repo_id?: number | null
+  export_flows_filename?: string | null
+  export_flows_export_type?: 'json' | 'csv'
+  export_flows_push_to_git?: boolean
   is_global: boolean
   user_id?: number
   created_by?: string

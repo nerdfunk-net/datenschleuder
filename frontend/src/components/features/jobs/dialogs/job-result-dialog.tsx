@@ -24,6 +24,7 @@ import {
   isDeployAgentJobResult,
   isCheckQueuesJobResult,
   isCheckProcessGroupJobResult,
+  isExportFlowsJobResult,
   GenericJobResult,
 } from "../types/job-results"
 import { BackupJobResultView } from "../components/results/backup-job-result"
@@ -37,6 +38,7 @@ import { DeployAgentResultView } from "../components/results/deploy-agent-result
 import { GenericJobResultView } from "../components/results/generic-job-result"
 import { CheckQueuesResultView } from "../components/results/check-queues-result"
 import { CheckProcessGroupResultView } from "../components/results/check-process-group-result"
+import { ExportFlowsResultView } from "../components/results/export-flows-result"
 
 interface JobResultDialogProps {
   jobRun: JobRun | null
@@ -57,6 +59,11 @@ function renderJobResult(result: Record<string, any>, taskId?: string): React.Re
 
   if (isCheckProcessGroupJobResult(result)) {
     return <CheckProcessGroupResultView result={result} />
+  }
+
+  // Export flows: unique combination of exported_count + nifi_clusters + export_type(json|csv)
+  if (isExportFlowsJobResult(result)) {
+    return <ExportFlowsResultView result={result} />
   }
 
   // Export devices must be checked first to avoid conflicts

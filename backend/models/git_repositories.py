@@ -14,6 +14,7 @@ class GitCategory(str, Enum):
     NIFI_CONFIGS = "nifi_configs"
     DATENSCHLEUDER_CONFIGS = "datenschleuder_configs"
     AGENT = "agent"
+    EXPORT = "export"
 
 
 class GitAuthType(str, Enum):

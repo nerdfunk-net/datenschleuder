@@ -56,7 +56,7 @@ class TaskStatusResponse(BaseModel):
 
 @router.post("/test", response_model=TaskResponse)
 @handle_celery_errors("submit test task")
-def submit_test_task(
+async def submit_test_task(
     request: TestTaskRequest,
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
@@ -72,7 +72,7 @@ def submit_test_task(
 
 @router.post("/test/progress", response_model=TaskResponse)
 @handle_celery_errors("submit progress test task")
-def submit_progress_test_task(
+async def submit_progress_test_task(
     request: ProgressTaskRequest,
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
@@ -277,7 +277,7 @@ def get_celery_config(
 
 @router.post("/tasks/cache-demo", response_model=TaskResponse)
 @handle_celery_errors("trigger cache demo task")
-def trigger_cache_demo(
+async def trigger_cache_demo(
     current_user: dict = Depends(require_permission("settings.cache", "write")),
 ):
     """
@@ -323,7 +323,7 @@ class CheckQueuesRequest(BaseModel):
 
 @router.post("/tasks/check-queues", response_model=TaskResponse)
 @handle_celery_errors("trigger NiFi check-queues task")
-def trigger_check_queues(
+async def trigger_check_queues(
     request: CheckQueuesRequest,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
@@ -412,7 +412,7 @@ class CheckProcessGroupRequest(BaseModel):
 
 @router.post("/tasks/check-process-group", response_model=TaskResponse)
 @handle_celery_errors("trigger NiFi check-process-group task")
-def trigger_check_process_group(
+async def trigger_check_process_group(
     request: CheckProcessGroupRequest,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
@@ -541,7 +541,7 @@ def update_celery_settings(
 
 @router.post("/cleanup", response_model=TaskResponse)
 @handle_celery_errors("trigger cleanup task")
-def trigger_cleanup(
+async def trigger_cleanup(
     current_user: dict = Depends(require_permission("settings.celery", "write")),
 ):
     """Manually trigger the Celery cleanup task."""

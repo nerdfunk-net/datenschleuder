@@ -250,7 +250,7 @@ def delete_job_run(
 
 
 @router.post("/execute/{schedule_id}")
-def execute_job_manually(
+async def execute_job_manually(
     schedule_id: int,
     current_user: dict = Depends(require_permission("jobs.runs", "execute")),
 ):

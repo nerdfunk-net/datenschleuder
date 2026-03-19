@@ -89,7 +89,7 @@ def handle_errors(
                         extra={
                             "operation": operation,
                             "function": func.__name__,
-                            "module": func.__module__,
+                            "source_module": func.__module__,
                             "args": args,
                             "kwargs": kwargs,
                         },
@@ -122,7 +122,7 @@ def handle_errors(
                         extra={
                             "operation": operation,
                             "function": func.__name__,
-                            "module": func.__module__,
+                            "source_module": func.__module__,
                             "args": args,
                             "kwargs": kwargs,
                         },

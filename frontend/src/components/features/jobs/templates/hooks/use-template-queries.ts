@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { useApi } from '@/hooks/use-api'
 import { queryKeys } from '@/lib/query-keys'
-import type { JobTemplate, JobType, GitRepository, CommandTemplate, NifiCluster, ProcessGroup } from '../types'
-import { STALE_TIME, EMPTY_TEMPLATES, EMPTY_TYPES, EMPTY_REPOS, EMPTY_CMD_TEMPLATES, EMPTY_NIFI_CLUSTERS, EMPTY_PROCESS_GROUPS } from '../utils/constants'
+import type { JobTemplate, JobType, GitRepository, CommandTemplate, NifiCluster, ProcessGroup, HierarchyAttributeValues, ExportFlowsFilters } from '../types'
+import { STALE_TIME, EMPTY_TEMPLATES, EMPTY_TYPES, EMPTY_REPOS, EMPTY_CMD_TEMPLATES, EMPTY_NIFI_CLUSTERS, EMPTY_PROCESS_GROUPS, EMPTY_HIERARCHY_ATTRIBUTE_VALUES, EMPTY_EXPORT_REPOS } from '../utils/constants'
 
 interface UseQueryOptions {
   enabled?: boolean
@@ -106,6 +106,69 @@ export function useNifiClusters(options: UseQueryOptions = DEFAULT_OPTIONS) {
     },
     enabled,
     staleTime: 2 * 60 * 1000, // 2 minutes - clusters rarely change
+  })
+}
+
+/**
+ * Fetch export git repositories (category=export)
+ */
+export function useExportRepos(options: UseQueryOptions = DEFAULT_OPTIONS) {
+  const { apiCall } = useApi()
+  const { enabled = true } = options
+
+  return useQuery({
+    queryKey: queryKeys.jobs.exportRepos(),
+    queryFn: async () => {
+      const response = await apiCall<{ repositories: GitRepository[] }>(
+        '/api/git-repositories?category=export',
+        { method: 'GET' }
+      )
+      return response?.repositories || EMPTY_EXPORT_REPOS
+    },
+    enabled,
+    staleTime: STALE_TIME.EXPORT_REPOS,
+  })
+}
+
+/**
+ * Fetch distinct source/destination values per hierarchy attribute across all flows.
+ * Used by the export_flows template UI to populate filter checkboxes.
+ */
+export function useHierarchyAttributeValues(options: UseQueryOptions = DEFAULT_OPTIONS) {
+  const { apiCall } = useApi()
+  const { enabled = true } = options
+
+  return useQuery({
+    queryKey: queryKeys.nifi.hierarchyAttributeValues(),
+    queryFn: async () => {
+      const response = await apiCall<HierarchyAttributeValues>(
+        '/api/nifi/flows/hierarchy-attribute-values',
+        { method: 'GET' }
+      )
+      return response || EMPTY_HIERARCHY_ATTRIBUTE_VALUES
+    },
+    enabled,
+    staleTime: STALE_TIME.HIERARCHY_ATTRIBUTE_VALUES,
+  })
+}
+
+/**
+ * Mutation to preview how many flows match the current filter config.
+ */
+export function useFilteredFlows() {
+  const { apiCall } = useApi()
+
+  return useMutation({
+    mutationFn: async (filters: ExportFlowsFilters) => {
+      const response = await apiCall<{ count: number; flows: unknown[] }>(
+        '/api/nifi/flows/filtered',
+        {
+          method: 'POST',
+          body: JSON.stringify({ filters }),
+        }
+      )
+      return response || { count: 0, flows: [] }
+    },
   })
 }
 

@@ -5,7 +5,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
-from models.nifi import NifiFlowCreate, NifiFlowUpdate, NifiFlowResponse, FlowProcessGroupsResponse
+from models.nifi import NifiFlowCreate, NifiFlowUpdate, NifiFlowResponse, FlowProcessGroupsResponse, FlowFilterRequest
 from services.nifi import nifi_flow_service
 
 logger = logging.getLogger(__name__)
@@ -50,6 +50,31 @@ def create_flow(
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get("/hierarchy-attribute-values")
+def get_hierarchy_attribute_values(
+    current_user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Return distinct source/destination values per hierarchy attribute across all flows.
+
+    Used by the export_flows job template UI to populate filter checkboxes.
+    """
+    return nifi_flow_service.get_hierarchy_attribute_values()
+
+
+@router.post("/filtered")
+def get_filtered_flows(
+    request: FlowFilterRequest,
+    current_user: dict = Depends(require_permission("nifi", "read")),
+):
+    """Return flows matching all supplied filter conditions.
+
+    Used by the export_flows job template UI to preview the number of flows
+    that will be exported with the current filter configuration.
+    """
+    flows = nifi_flow_service.get_filtered_flows(request.filters)
+    return {"count": len(flows), "flows": flows}
 
 
 @router.put("/{flow_id}", response_model=NifiFlowResponse)

@@ -28,6 +28,7 @@ export const REPOSITORY_CATEGORIES = [
   { value: 'nifi_configs', label: 'Nifi Configs' },
   { value: 'datenschleuder_configs', label: 'Datenschleuder Configs' },
   { value: 'agent', label: 'Agents' },
+  { value: 'export', label: 'Export' },
 ] as const
 
 // Authentication types

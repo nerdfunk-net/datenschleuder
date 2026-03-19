@@ -35,10 +35,24 @@ class JobTemplateService:
         check_progress_group_process_group_path: Optional[str] = None,
         check_progress_group_check_children: bool = True,
         check_progress_group_expected_status: str = "Running",
+        export_flows_nifi_cluster_ids: Optional[List[int]] = None,
+        export_flows_all_flows: Optional[bool] = True,
+        export_flows_filters: Optional[dict] = None,
+        export_flows_git_repo_id: Optional[int] = None,
+        export_flows_filename: Optional[str] = None,
+        export_flows_export_type: Optional[str] = "json",
     ) -> Dict[str, Any]:
         if self.repo.check_name_exists(name, user_id if not is_global else None):
             raise ValueError(f"A job template with name '{name}' already exists")
         nifi_cluster_ids_json = json.dumps(nifi_cluster_ids) if nifi_cluster_ids is not None else None
+        export_flows_nifi_cluster_ids_json = (
+            json.dumps(export_flows_nifi_cluster_ids)
+            if export_flows_nifi_cluster_ids is not None
+            else None
+        )
+        export_flows_filters_json = (
+            json.dumps(export_flows_filters) if export_flows_filters is not None else None
+        )
         template = self.repo.create(
             name=name,
             job_type=job_type,
@@ -57,6 +71,12 @@ class JobTemplateService:
             check_progress_group_process_group_path=check_progress_group_process_group_path,
             check_progress_group_check_children=check_progress_group_check_children,
             check_progress_group_expected_status=check_progress_group_expected_status,
+            export_flows_nifi_cluster_ids=export_flows_nifi_cluster_ids_json,
+            export_flows_all_flows=export_flows_all_flows,
+            export_flows_filters=export_flows_filters_json,
+            export_flows_git_repo_id=export_flows_git_repo_id,
+            export_flows_filename=export_flows_filename,
+            export_flows_export_type=export_flows_export_type,
         )
         logger.info("Created job template: %s (ID: %s)", name, template.id)
         return self._model_to_dict(template)
@@ -98,6 +118,12 @@ class JobTemplateService:
         check_progress_group_process_group_path: Optional[str] = None,
         check_progress_group_check_children: Optional[bool] = None,
         check_progress_group_expected_status: Optional[str] = None,
+        export_flows_nifi_cluster_ids: Optional[List[int]] = None,
+        export_flows_all_flows: Optional[bool] = None,
+        export_flows_filters: Optional[dict] = None,
+        export_flows_git_repo_id: Optional[int] = None,
+        export_flows_filename: Optional[str] = None,
+        export_flows_export_type: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         if name is not None:
             if self.repo.check_name_exists(name, user_id, exclude_id=template_id):
@@ -129,6 +155,20 @@ class JobTemplateService:
             update_data["check_progress_group_check_children"] = check_progress_group_check_children
         if check_progress_group_expected_status is not None:
             update_data["check_progress_group_expected_status"] = check_progress_group_expected_status
+        if export_flows_nifi_cluster_ids is not None:
+            update_data["export_flows_nifi_cluster_ids"] = json.dumps(
+                export_flows_nifi_cluster_ids
+            )
+        if export_flows_all_flows is not None:
+            update_data["export_flows_all_flows"] = export_flows_all_flows
+        if export_flows_filters is not None:
+            update_data["export_flows_filters"] = json.dumps(export_flows_filters)
+        if export_flows_git_repo_id is not None:
+            update_data["export_flows_git_repo_id"] = export_flows_git_repo_id
+        if export_flows_filename is not None:
+            update_data["export_flows_filename"] = export_flows_filename
+        if export_flows_export_type is not None:
+            update_data["export_flows_export_type"] = export_flows_export_type
         if is_global is not None:
             update_data["is_global"] = is_global
             if is_global:
@@ -163,6 +203,11 @@ class JobTemplateService:
                 "label": "Check ProcessGroup",
                 "description": "Check the operational status of a NiFi process group",
             },
+            {
+                "value": "export_flows",
+                "label": "Export Flows",
+                "description": "Export NiFi flows from the local database to a git repository as JSON or CSV",
+            },
         ]
 
     def _model_to_dict(self, template) -> Dict[str, Any]:
@@ -182,6 +227,20 @@ class JobTemplateService:
             "check_progress_group_process_group_path": template.check_progress_group_process_group_path,
             "check_progress_group_check_children": template.check_progress_group_check_children,
             "check_progress_group_expected_status": template.check_progress_group_expected_status,
+            "export_flows_nifi_cluster_ids": (
+                json.loads(template.export_flows_nifi_cluster_ids)
+                if getattr(template, "export_flows_nifi_cluster_ids", None)
+                else None
+            ),
+            "export_flows_all_flows": getattr(template, "export_flows_all_flows", True),
+            "export_flows_filters": (
+                json.loads(template.export_flows_filters)
+                if getattr(template, "export_flows_filters", None)
+                else None
+            ),
+            "export_flows_git_repo_id": getattr(template, "export_flows_git_repo_id", None),
+            "export_flows_filename": getattr(template, "export_flows_filename", None),
+            "export_flows_export_type": getattr(template, "export_flows_export_type", "json"),
             "is_global": template.is_global,
             "user_id": template.user_id,
             "created_by": template.created_by,

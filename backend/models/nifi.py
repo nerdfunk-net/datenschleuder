@@ -698,3 +698,9 @@ class FlowProcessGroupsResponse(BaseModel):
     flow_id: int
     source: ProcessGroupLinkInfo
     destination: ProcessGroupLinkInfo
+
+
+class FlowFilterRequest(BaseModel):
+    """Request body for POST /api/nifi/flows/filtered."""
+
+    filters: Dict[str, Any]

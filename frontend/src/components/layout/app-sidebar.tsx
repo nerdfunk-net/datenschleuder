@@ -96,7 +96,7 @@ const navigationSections: NavSection[] = [
       { label: 'Deploy', href: '/settings/deploy', icon: Rocket },
       { label: 'Git Management', href: '/settings/git', icon: GitBranch },
       // { label: 'Cache', href: '/settings/cache', icon: Zap },
-      // { label: 'Celery', href: '/settings/celery', icon: Server },
+      { label: 'Celery', href: '/settings/celery', icon: Server },
       { label: 'Credentials', href: '/settings/credentials', icon: Key },
       { label: 'Users & Permissions', href: '/settings/permissions', icon: Shield },
     ],
