@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { useApi } from '@/hooks/use-api'
 import { queryKeys } from '@/lib/query-keys'
 import { useToast } from '@/hooks/use-toast'
@@ -49,5 +50,8 @@ export function useHierarchyMutations() {
     },
   })
 
-  return { saveConfig, saveValues }
+  return useMemo(
+    () => ({ saveConfig, saveValues }),
+    [saveConfig, saveValues],
+  )
 }

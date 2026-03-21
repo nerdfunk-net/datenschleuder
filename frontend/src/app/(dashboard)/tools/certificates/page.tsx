@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -39,20 +39,8 @@ import {
 import Link from 'next/link'
 import { useApi } from '@/hooks/use-api'
 import { useToast } from '@/hooks/use-toast'
-
-interface CertificateInfo {
-  filename: string
-  path: string
-  size: number
-  exists_in_system: boolean
-}
-
-interface ScanResponse {
-  success: boolean
-  certificates: CertificateInfo[]
-  certs_directory: string
-  message?: string
-}
+import { useCertificatesQuery } from './hooks/use-certificates-query'
+import type { CertificateInfo } from './hooks/use-certificates-query'
 
 interface UploadResponse {
   success: boolean
@@ -69,13 +57,13 @@ interface AddCertificateResponse {
 }
 
 export default function AddCertificatePage() {
-  const [certificates, setCertificates] = useState<CertificateInfo[]>([])
+  const { data: scanData, isLoading, isFetching, refetch } = useCertificatesQuery()
+  const certificates: CertificateInfo[] = scanData?.certificates ?? []
+  const certsDirectory = scanData?.certs_directory ?? ''
+
   const [selectedCerts, setSelectedCerts] = useState<Set<string>>(new Set())
-  const [loading, setLoading] = useState(true)
-  const [scanning, setScanning] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [adding, setAdding] = useState(false)
-  const [certsDirectory, setCertsDirectory] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -92,32 +80,6 @@ export default function AddCertificatePage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { apiCall } = useApi()
   const { toast } = useToast()
-
-  const scanCertificates = useCallback(async () => {
-    setScanning(true)
-    setError(null)
-
-    try {
-      const data = await apiCall<ScanResponse>('certificates/scan', { method: 'GET' })
-
-      if (data.success) {
-        setCertificates(data.certificates)
-        setCertsDirectory(data.certs_directory)
-        setSuccessMessage(data.message || null)
-      } else {
-        setError(data.message || 'Failed to scan certificates')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to scan certificates')
-    } finally {
-      setScanning(false)
-      setLoading(false)
-    }
-  }, [apiCall])
-
-  useEffect(() => {
-    scanCertificates()
-  }, [scanCertificates])
 
   const handleUploadClick = () => {
     fileInputRef.current?.click()
@@ -147,7 +109,7 @@ export default function AddCertificatePage() {
 
       if (data.success) {
         setSuccessMessage(`Certificate '${data.filename}' uploaded successfully`)
-        await scanCertificates()
+        refetch()
       } else {
         setError(data.message || 'Failed to upload certificate')
       }
@@ -227,19 +189,19 @@ export default function AddCertificatePage() {
     setModalSuccess(allSuccess)
     setModalOpen(true)
 
-    await scanCertificates()
+    refetch()
     setSelectedCerts(new Set())
     setAdding(false)
   }
 
-  const handleDeleteCert = useCallback(async () => {
+  const handleDeleteCert = async () => {
     if (!deleteTarget) return
 
     setDeleting(true)
     try {
       await apiCall(`certificates/${encodeURIComponent(deleteTarget)}`, { method: 'DELETE' })
       toast({ title: 'Deleted', description: `Certificate '${deleteTarget}' deleted` })
-      setCertificates(prev => prev.filter(c => c.filename !== deleteTarget))
+      refetch()
       setSelectedCerts(prev => {
         const newSet = new Set(prev)
         newSet.delete(deleteTarget)
@@ -252,7 +214,7 @@ export default function AddCertificatePage() {
     } finally {
       setDeleting(false)
     }
-  }, [deleteTarget, apiCall, toast])
+  }
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`
@@ -264,7 +226,7 @@ export default function AddCertificatePage() {
   const allSelectableSelected = certsNotInSystem.length > 0 &&
     certsNotInSystem.every(c => selectedCerts.has(c.filename))
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
@@ -298,12 +260,12 @@ export default function AddCertificatePage() {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              onClick={() => scanCertificates()}
+              onClick={() => refetch()}
               variant="outline"
-              disabled={scanning}
+              disabled={isFetching}
               className="gap-2"
             >
-              <RefreshCw className={`w-4 h-4 ${scanning ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
               Scan
             </Button>
             <input

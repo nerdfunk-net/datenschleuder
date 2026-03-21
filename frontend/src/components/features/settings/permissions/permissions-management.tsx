@@ -4,11 +4,11 @@ import { useState, useCallback } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Shield, Users, Key, UserCog, UserPlus } from 'lucide-react'
-import { RolesManager } from './permissions/roles-manager'
-import { UserRolesManager } from './permissions/user-roles-manager'
-import { PermissionsViewer } from './permissions/permissions-viewer'
-import { UserPermissionsManager } from './permissions/user-permissions-manager'
-import { UsersManager } from './permissions/users-manager'
+import { RolesManager } from './managers/roles-manager'
+import { UserRolesManager } from './managers/user-roles-manager'
+import { PermissionsViewer } from './managers/permissions-viewer'
+import { UserPermissionsManager } from './managers/user-permissions-manager'
+import { UsersManager } from './managers/users-manager'
 
 export function PermissionsManagement() {
   const [activeTab, setActiveTab] = useState('users')

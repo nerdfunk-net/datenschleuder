@@ -257,6 +257,31 @@ export const queryKeys = {
     server: (id: number) => [...queryKeys.redis.all, 'server', id] as const,
   },
 
+  // System Certificates (CA certs tool)
+  systemCertificates: {
+    all: ['systemCertificates'] as const,
+    scan: () => [...queryKeys.systemCertificates.all, 'scan'] as const,
+  },
+
+  // User Profile
+  profile: {
+    all: ['profile'] as const,
+    data: () => [...queryKeys.profile.all, 'data'] as const,
+  },
+
+  // Database Migration (schema status tool)
+  schema: {
+    all: ['schema'] as const,
+    status: () => [...queryKeys.schema.all, 'status'] as const,
+    migrations: () => [...queryKeys.schema.all, 'migrations'] as const,
+  },
+
+  // OIDC Debug
+  oidc: {
+    all: ['oidc'] as const,
+    debugInfo: () => [...queryKeys.oidc.all, 'debug-info'] as const,
+  },
+
   // Templates
   templates: {
     all: ['templates'] as const,

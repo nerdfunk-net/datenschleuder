@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { useApi } from '@/hooks/use-api'
 import { queryKeys } from '@/lib/query-keys'
 import { useToast } from '@/hooks/use-toast'
@@ -195,14 +196,17 @@ export function useGitMutations() {
     // Toast handled by caller since response determines success/error
   })
 
-  return {
-    createRepository,
-    updateRepository,
-    deleteRepository,
-    syncRepository,
-    removeAndSyncRepository,
-    testConnection
-  }
+  return useMemo(
+    () => ({
+      createRepository,
+      updateRepository,
+      deleteRepository,
+      syncRepository,
+      removeAndSyncRepository,
+      testConnection,
+    }),
+    [createRepository, updateRepository, deleteRepository, syncRepository, removeAndSyncRepository, testConnection],
+  )
 }
 
 // Export types

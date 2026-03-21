@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useMemo } from 'react'
 import { useApi } from '@/hooks/use-api'
 import { useAuthStore } from '@/lib/auth-store'
 import { queryKeys } from '@/lib/query-keys'
@@ -41,7 +42,7 @@ export function useRegistryFlowsMutations() {
   })
 
   // Export uses direct fetch to handle blob response
-  const exportFlow = async (
+  const exportFlow = useCallback(async (
     instanceId: number,
     registryId: string,
     bucketId: string,
@@ -63,7 +64,10 @@ export function useRegistryFlowsMutations() {
     link.download = `${flowName}.${format}`
     link.click()
     URL.revokeObjectURL(link.href)
-  }
+  }, [token])
 
-  return { createFlows, deleteFlow, exportFlow }
+  return useMemo(
+    () => ({ createFlows, deleteFlow, exportFlow }),
+    [createFlows, deleteFlow, exportFlow],
+  )
 }

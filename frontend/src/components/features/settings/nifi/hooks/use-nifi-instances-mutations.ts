@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { useApi } from '@/hooks/use-api'
 import { queryKeys } from '@/lib/query-keys'
 import { useToast } from '@/hooks/use-toast'
@@ -100,11 +101,14 @@ export function useNifiInstancesMutations() {
       }) as Promise<TestConnectionResult>,
   })
 
-  return {
-    createInstance,
-    updateInstance,
-    deleteInstance,
-    testSavedConnection,
-    testNewConnection,
-  }
+  return useMemo(
+    () => ({
+      createInstance,
+      updateInstance,
+      deleteInstance,
+      testSavedConnection,
+      testNewConnection,
+    }),
+    [createInstance, updateInstance, deleteInstance, testSavedConnection, testNewConnection],
+  )
 }
