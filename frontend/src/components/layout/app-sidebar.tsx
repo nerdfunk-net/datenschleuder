@@ -34,6 +34,7 @@ import {
   Upload,
   Download,
   ShieldCheck,
+  Database,
 } from 'lucide-react'
 
 interface NavItem {
@@ -99,6 +100,7 @@ const navigationSections: NavSection[] = [
       { label: 'Git Management', href: '/settings/git', icon: GitBranch },
       // { label: 'Cache', href: '/settings/cache', icon: Zap },
       { label: 'Celery', href: '/settings/celery', icon: Server },
+      { label: 'Redis', href: '/settings/redis', icon: Database },
       { label: 'Credentials', href: '/settings/credentials', icon: Key },
       { label: 'Users & Permissions', href: '/settings/permissions', icon: Shield },
     ],

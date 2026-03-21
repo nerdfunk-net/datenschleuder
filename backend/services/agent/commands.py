@@ -32,11 +32,14 @@ class AgentCommands:
         repository: AgentRepository,
         parser: AgentCommandParser,
         registry: AgentRegistry,
+        redis_url: str = "",
     ) -> None:
         self.redis_client = redis_client
         self.repository = repository
         self.parser = parser
         self.registry = registry
+        self.redis_url = redis_url or settings.redis_url
+        self.server_id: int | None = None
 
     def send_command(
         self, agent_id: str, command: str, params: dict, sent_by: str
@@ -57,6 +60,7 @@ class AgentCommands:
             command=command,
             params=json.dumps(params),
             sent_by=sent_by,
+            redis_server_id=self.server_id,
         )
 
         try:
@@ -82,7 +86,7 @@ class AgentCommands:
         response_channel = f"{_RESPONSE_CHANNEL_PREFIX}{agent_id}"
         try:
             sub_client = redis.from_url(
-                settings.redis_url, decode_responses=True, socket_timeout=timeout
+                self.redis_url, decode_responses=True, socket_timeout=timeout
             )
             pubsub = sub_client.pubsub()
             pubsub.subscribe(response_channel)
@@ -153,7 +157,7 @@ class AgentCommands:
 
         # 1. Subscribe BEFORE publishing so we never miss a fast response.
         sub_client = redis.from_url(
-            settings.redis_url,
+            self.redis_url,
             decode_responses=True,
             socket_timeout=timeout + 2,  # socket outlives the logical timeout
         )

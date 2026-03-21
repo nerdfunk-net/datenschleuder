@@ -1,6 +1,6 @@
 """Agent models: DatenschleuderAgentCommand."""
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Index
+from sqlalchemy import Column, ForeignKey, Integer, String, Text, DateTime, Index
 from sqlalchemy.sql import func
 from core.database import Base
 
@@ -22,9 +22,15 @@ class DatenschleuderAgentCommand(Base):
     sent_at = Column(DateTime(timezone=True), nullable=False, index=True)
     completed_at = Column(DateTime(timezone=True))
     sent_by = Column(String(255))
+    redis_server_id = Column(
+        Integer,
+        ForeignKey("redis_servers.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     __table_args__ = (
         Index("idx_ds_agent_command_agent", "agent_id"),
         Index("idx_ds_agent_command_sent_at", "sent_at"),
         Index("idx_ds_agent_command_status", "status"),
+        Index("idx_ds_agent_command_redis_server", "redis_server_id"),
     )

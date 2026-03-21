@@ -250,6 +250,13 @@ export const queryKeys = {
     containers: (agentId: string) => [...queryKeys.agents.all, 'containers', agentId] as const,
   },
 
+  // Redis Servers
+  redis: {
+    all: ['redis'] as const,
+    servers: () => [...queryKeys.redis.all, 'servers'] as const,
+    server: (id: number) => [...queryKeys.redis.all, 'server', id] as const,
+  },
+
   // Templates
   templates: {
     all: ['templates'] as const,

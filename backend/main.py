@@ -30,6 +30,7 @@ from routers.settings import (
     credentials_router,
     templates_router,
     rbac_router,
+    redis_router,
 )
 
 # Job routers
@@ -380,13 +381,14 @@ app.include_router(job_schedules_router)
 app.include_router(job_runs_router)
 app.include_router(celery_router)
 
-# Settings (Git, Templates, Cache, Celery, Credentials, RBAC, Common)
+# Settings (Git, Templates, Cache, Celery, Credentials, RBAC, Common, Redis)
 app.include_router(git_router)
 app.include_router(templates_router)
 app.include_router(cache_router)
 app.include_router(credentials_router)
 app.include_router(rbac_router)
 app.include_router(settings_router)
+app.include_router(redis_router)
 
 # NiFi
 app.include_router(nifi_instances_router)

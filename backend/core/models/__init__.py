@@ -27,7 +27,7 @@ from .jobs import Job, JobTemplate, JobSchedule, JobRun
 from .templates import Template, TemplateVersion
 
 # Settings
-from .settings import Setting, GitSetting, CacheSetting, CelerySetting, SettingsMetadata
+from .settings import Setting, GitSetting, CacheSetting, CelerySetting, SettingsMetadata, RedisServer
 
 # Audit
 from .audit import AuditLog
@@ -80,6 +80,7 @@ __all__ = [
     "CacheSetting",
     "CelerySetting",
     "SettingsMetadata",
+    "RedisServer",
     # Audit
     "AuditLog",
     # NiFi

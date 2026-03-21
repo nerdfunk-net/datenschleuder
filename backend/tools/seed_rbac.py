@@ -183,6 +183,8 @@ def seed_permissions(verbose: bool = True):
         ("settings.cache", "write", "Modify cache settings and manage cache"),
         ("settings.celery", "read", "View Celery task queue status"),
         ("settings.celery", "write", "Manage Celery tasks and workers"),
+        ("settings.redis", "read", "View Redis server configurations"),
+        ("settings.redis", "write", "Create/modify/delete Redis server configurations"),
         ("settings.credentials", "read", "View credentials"),
         ("settings.credentials", "write", "Create/modify credentials"),
         ("settings.credentials", "delete", "Delete credentials"),

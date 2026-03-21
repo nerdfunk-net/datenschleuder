@@ -12,6 +12,8 @@ export interface CockpitAgent {
   capabilities: string // JSON array of Capability objects
   started_at: number // unix timestamp
   commands_executed: number
+  redis_server_id: number | null
+  redis_server_name: string | null
 }
 
 export interface AgentListResponse {
@@ -31,6 +33,7 @@ export interface CommandHistoryItem {
   sent_at: string // ISO datetime
   completed_at: string | null // ISO datetime
   sent_by: string | null
+  redis_server_id: number | null
 }
 
 export interface CommandHistoryResponse {

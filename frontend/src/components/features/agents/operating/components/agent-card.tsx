@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { BarChart2, History, Clock, Terminal, Server } from 'lucide-react'
+import { BarChart2, History, Clock, Terminal, Server, Database } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime, formatUptime } from '../utils/format-utils'
 import type { CockpitAgent } from '../types'
@@ -61,6 +61,12 @@ export function AgentCard({ agent, onGetStats, onRunCommand, onViewHistory }: Ag
             <Terminal className="h-3 w-3" />
             <span>{agent.commands_executed} cmds</span>
           </div>
+          {agent.redis_server_name && (
+            <div className="flex items-center gap-1 col-span-2">
+              <Database className="h-3 w-3" />
+              <span>{agent.redis_server_name}</span>
+            </div>
+          )}
         </div>
 
         {/* Actions */}

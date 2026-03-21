@@ -4,7 +4,7 @@ Settings-related Pydantic models.
 
 from __future__ import annotations
 from pydantic import BaseModel
-from typing import Optional, Dict, Literal
+from typing import Optional, Dict, List, Literal
 
 
 class GitSettingsRequest(BaseModel):
@@ -205,3 +205,45 @@ class ComplianceCheckRequest(BaseModel):
     selected_login_ids: list[int] = []
     selected_snmp_ids: list[int] = []
     selected_regex_ids: list[int] = []
+
+
+# ============================================================================
+# Redis Server Models
+# ============================================================================
+
+
+class RedisServerCreate(BaseModel):
+    """Request model for creating a Redis server."""
+
+    name: str
+    host: str
+    port: int = 6379
+    use_tls: bool = False
+    db_index: int = 0
+    password: Optional[str] = None
+
+
+class RedisServerUpdate(BaseModel):
+    """Request model for updating a Redis server."""
+
+    name: Optional[str] = None
+    host: Optional[str] = None
+    port: Optional[int] = None
+    use_tls: Optional[bool] = None
+    db_index: Optional[int] = None
+    password: Optional[str] = None  # Empty string clears password
+
+
+class RedisServerResponse(BaseModel):
+    """Response model for a Redis server (never returns raw password)."""
+
+    id: int
+    name: str
+    host: str
+    port: int
+    use_tls: bool
+    db_index: int
+    has_password: bool
+
+    class Config:
+        from_attributes = True

@@ -24,6 +24,7 @@ class AgentRepository:
         command: str,
         params: str,
         sent_by: str,
+        redis_server_id: Optional[int] = None,
     ) -> DatenschleuderAgentCommand:
         record = DatenschleuderAgentCommand(
             agent_id=agent_id,
@@ -33,6 +34,7 @@ class AgentRepository:
             status="pending",
             sent_at=datetime.utcnow(),
             sent_by=sent_by,
+            redis_server_id=redis_server_id,
         )
         self.db.add(record)
         self.db.commit()

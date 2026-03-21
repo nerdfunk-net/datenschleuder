@@ -19,6 +19,8 @@ class AgentStatusResponse(BaseModel):
     capabilities: str
     started_at: int
     commands_executed: int
+    redis_server_id: Optional[int] = None
+    redis_server_name: Optional[str] = None
 
 
 class AgentListResponse(BaseModel):
@@ -84,6 +86,7 @@ class CommandHistoryItem(BaseModel):
     sent_at: datetime
     completed_at: Optional[datetime] = None
     sent_by: Optional[str] = None
+    redis_server_id: Optional[int] = None
 
     class Config:
         from_attributes = True

@@ -17,6 +17,7 @@ from .credentials import router as credentials_router
 from .templates import router as templates_router
 from .rbac import router as rbac_router
 from .git import router as git_router
+from .redis import router as redis_router
 
 # Export all routers
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "templates_router",
     "rbac_router",
     "git_router",
+    "redis_router",
 ]

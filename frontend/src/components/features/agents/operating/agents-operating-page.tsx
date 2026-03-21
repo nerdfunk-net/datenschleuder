@@ -3,11 +3,10 @@
 import { useState, useMemo, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Activity, RefreshCw, Server, Wifi, WifiOff, Loader2, BookOpen } from 'lucide-react'
+import { Activity, RefreshCw, Server, Wifi, WifiOff, Loader2 } from 'lucide-react'
 import { useAgentsQuery } from './hooks/use-agents-query'
 import { useAgentMutations } from './hooks/use-agent-mutations'
 import { AgentsGrid } from './components/agents-grid'
-import { DeployInstructions } from './components/deploy-instructions'
 import { GetStatsDialog } from './dialogs/get-stats-dialog'
 import { RunCommandDialog } from './dialogs/run-command-dialog'
 import { CommandHistoryDialog } from './dialogs/command-history-dialog'
@@ -115,17 +114,6 @@ export function AgentsOperatingPage() {
               onViewHistory={handleViewHistory}
             />
           )}
-        </div>
-      </div>
-
-      {/* Deployment Instructions */}
-      <div className="shadow-lg border-0 p-0 bg-white rounded-lg">
-        <div className="bg-gradient-to-r from-blue-400/80 to-blue-500/80 text-white py-2 px-4 flex items-center space-x-2 rounded-t-lg">
-          <BookOpen className="h-4 w-4" />
-          <span className="text-sm font-medium">Deployment Instructions</span>
-        </div>
-        <div className="p-6 bg-gradient-to-b from-white to-gray-50">
-          <DeployInstructions />
         </div>
       </div>
 

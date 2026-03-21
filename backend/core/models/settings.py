@@ -110,6 +110,29 @@ class CelerySetting(Base):
     )
 
 
+class RedisServer(Base):
+    """Redis server connection configuration."""
+
+    __tablename__ = "redis_servers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    host = Column(String(255), nullable=False)
+    port = Column(Integer, nullable=False, default=6379)
+    use_tls = Column(Boolean, nullable=False, default=False)
+    db_index = Column(Integer, nullable=False, default=0)
+    password = Column(String(500), nullable=True)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
 class SettingsMetadata(Base):
     """Settings metadata for versioning and status."""
 
