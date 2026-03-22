@@ -245,10 +245,10 @@ export function useXxxMutations() {
 5. ~~`flows-manage-page.tsx` — extract components and hooks~~ ✅
 6. ~~`database-migration/page.tsx` — separate migration/RBAC concerns~~ ✅
 
-### P3 — Structural cleanup (consistency) ✅ COMPLETE (2026-03-21)
+### P3 — Structural cleanup (consistency) ✅ COMPLETE (2026-03-22)
 
 7. ~~`nifi/install/` — add `components/` directory~~ ✅
 8. ~~`oidc-test/page.tsx` — extract components~~ ✅ (+ TanStack Query migration bonus)
 9. ~~Rename `permissions/permissions/` → `permissions/managers/`~~ ✅
-10. Standardize all hook signatures (options object + `DEFAULT_OPTIONS`) — remaining: query hooks in settings/ (low priority)
+10. ~~Standardize all hook signatures (options object + `DEFAULT_OPTIONS`) — remaining: query hooks in settings/~~ ✅
 11. ~~Add `useMemo` to mutation hook returns that are missing it~~ ✅ (fixed 7 hooks)

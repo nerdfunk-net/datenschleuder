@@ -18,7 +18,7 @@ interface UseQueryOptions {
   enabled?: boolean
 }
 
-const DEFAULT_SETTINGS_OPTIONS: UseCacheSettingsOptions = { enabled: true }
+const DEFAULT_SETTINGS_OPTIONS: UseCacheSettingsOptions = {}
 const DEFAULT_QUERY_OPTIONS: UseQueryOptions = {}
 
 /**

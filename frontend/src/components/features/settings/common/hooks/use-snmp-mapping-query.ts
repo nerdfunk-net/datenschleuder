@@ -8,7 +8,7 @@ interface UseSnmpMappingOptions {
   enabled?: boolean
 }
 
-const DEFAULT_OPTIONS: UseSnmpMappingOptions = { enabled: true }
+const DEFAULT_OPTIONS: UseSnmpMappingOptions = {}
 
 /**
  * Fetch SNMP mapping YAML content with automatic caching

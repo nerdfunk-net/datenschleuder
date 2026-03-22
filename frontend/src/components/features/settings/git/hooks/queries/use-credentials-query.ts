@@ -10,9 +10,7 @@ interface UseCredentialsQueryOptions {
   enabled?: boolean
 }
 
-const DEFAULT_OPTIONS: UseCredentialsQueryOptions = {
-  enabled: true,
-}
+const DEFAULT_OPTIONS: UseCredentialsQueryOptions = {}
 
 /**
  * Fetches credentials suitable for git authentication

@@ -46,7 +46,7 @@ export function RegistryFlowsPage() {
   const [exportingIds, setExportingIds] = useState<Set<string>>(new Set())
 
   const { data: clusters = EMPTY_CLUSTERS } = useNifiClustersQuery()
-  const { data: flows = EMPTY_FLOWS, isLoading } = useRegistryFlowsQuery(filterClusterId)
+  const { data: flows = EMPTY_FLOWS, isLoading } = useRegistryFlowsQuery({ clusterId: filterClusterId })
   const { deleteFlow: deleteFlowMutation, exportFlow } = useRegistryFlowsMutations()
 
   const filterOptions = useMemo(() => [

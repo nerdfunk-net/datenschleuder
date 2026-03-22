@@ -1,6 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { useApi } from '@/hooks/use-api'
 
+interface UseNifiConfigFileQueryOptions {
+  enabled?: boolean
+}
+
+const DEFAULT_OPTIONS: UseNifiConfigFileQueryOptions = {}
+
 /**
  * Fetch a config file from a git repository.
  * The proxy converts PlainTextResponse to a JSON-encoded string.
@@ -9,8 +15,10 @@ export function useNifiConfigFileQuery(
   repoId: number | null,
   path: string,
   queryKey: readonly unknown[],
+  options: UseNifiConfigFileQueryOptions = DEFAULT_OPTIONS,
 ) {
   const { apiCall } = useApi()
+  const { enabled = true } = options
 
   return useQuery<string>({
     queryKey,
@@ -20,7 +28,7 @@ export function useNifiConfigFileQuery(
       )
       return result
     },
-    enabled: repoId != null,
+    enabled: enabled && repoId != null,
     staleTime: 30 * 1000,
   })
 }

@@ -4,16 +4,16 @@ import { queryKeys } from '@/lib/query-keys'
 import type { Role, Permission, UsersResponse, RoleWithPermissions } from '../types'
 import { CACHE_TIME, EMPTY_USERS, EMPTY_ROLES, EMPTY_PERMISSIONS } from '../utils/constants'
 
-interface UseRbacUsersOptions {
+interface UseQueryOptions {
   enabled?: boolean
 }
 
-const DEFAULT_USERS_OPTIONS: UseRbacUsersOptions = { enabled: true }
+const DEFAULT_OPTIONS: UseQueryOptions = {}
 
 /**
  * Fetch all users with automatic caching
  */
-export function useRbacUsers(options: UseRbacUsersOptions = DEFAULT_USERS_OPTIONS) {
+export function useRbacUsers(options: UseQueryOptions = DEFAULT_OPTIONS) {
   const { apiCall } = useApi()
   const { enabled = true } = options
 
@@ -28,16 +28,10 @@ export function useRbacUsers(options: UseRbacUsersOptions = DEFAULT_USERS_OPTION
   })
 }
 
-interface UseRbacRolesOptions {
-  enabled?: boolean
-}
-
-const DEFAULT_ROLES_OPTIONS: UseRbacRolesOptions = { enabled: true }
-
 /**
  * Fetch all roles with automatic caching
  */
-export function useRbacRoles(options: UseRbacRolesOptions = DEFAULT_ROLES_OPTIONS) {
+export function useRbacRoles(options: UseQueryOptions = DEFAULT_OPTIONS) {
   const { apiCall } = useApi()
   const { enabled = true } = options
 
@@ -52,16 +46,10 @@ export function useRbacRoles(options: UseRbacRolesOptions = DEFAULT_ROLES_OPTION
   })
 }
 
-interface UseRbacPermissionsOptions {
-  enabled?: boolean
-}
-
-const DEFAULT_PERMISSIONS_OPTIONS: UseRbacPermissionsOptions = { enabled: true }
-
 /**
  * Fetch all permissions with automatic caching
  */
-export function useRbacPermissions(options: UseRbacPermissionsOptions = DEFAULT_PERMISSIONS_OPTIONS) {
+export function useRbacPermissions(options: UseQueryOptions = DEFAULT_OPTIONS) {
   const { apiCall } = useApi()
   const { enabled = true } = options
 
@@ -76,19 +64,10 @@ export function useRbacPermissions(options: UseRbacPermissionsOptions = DEFAULT_
   })
 }
 
-interface UseRolePermissionsOptions {
-  enabled?: boolean
-}
-
-const DEFAULT_ROLE_PERMISSIONS_OPTIONS: UseRolePermissionsOptions = { enabled: true }
-
 /**
  * Fetch role with its permissions
  */
-export function useRolePermissions(
-  roleId: number | null,
-  options: UseRolePermissionsOptions = DEFAULT_ROLE_PERMISSIONS_OPTIONS
-) {
+export function useRolePermissions(roleId: number | null, options: UseQueryOptions = DEFAULT_OPTIONS) {
   const { apiCall } = useApi()
   const { enabled = true } = options
 
@@ -103,19 +82,10 @@ export function useRolePermissions(
   })
 }
 
-interface UseUserPermissionsOptions {
-  enabled?: boolean
-}
-
-const DEFAULT_USER_PERMISSIONS_OPTIONS: UseUserPermissionsOptions = { enabled: true }
-
 /**
  * Fetch user's effective permissions (from roles + overrides)
  */
-export function useUserPermissions(
-  userId: number | null,
-  options: UseUserPermissionsOptions = DEFAULT_USER_PERMISSIONS_OPTIONS
-) {
+export function useUserPermissions(userId: number | null, options: UseQueryOptions = DEFAULT_OPTIONS) {
   const { apiCall } = useApi()
   const { enabled = true } = options
 
@@ -130,19 +100,10 @@ export function useUserPermissions(
   })
 }
 
-interface UseUserPermissionOverridesOptions {
-  enabled?: boolean
-}
-
-const DEFAULT_USER_OVERRIDES_OPTIONS: UseUserPermissionOverridesOptions = { enabled: true }
-
 /**
  * Fetch user's explicit permission overrides
  */
-export function useUserPermissionOverrides(
-  userId: number | null,
-  options: UseUserPermissionOverridesOptions = DEFAULT_USER_OVERRIDES_OPTIONS
-) {
+export function useUserPermissionOverrides(userId: number | null, options: UseQueryOptions = DEFAULT_OPTIONS) {
   const { apiCall } = useApi()
   const { enabled = true } = options
 

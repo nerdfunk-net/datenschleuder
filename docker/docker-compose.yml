@@ -2,27 +2,27 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    container_name: cockpit-postgres
+    container_name: datenschleuder-postgres
     environment:
-      - POSTGRES_DB=${POSTGRES_DB:-cockpit}
-      - POSTGRES_USER=${POSTGRES_USER:-cockpit}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cockpit123}
+      - POSTGRES_DB=${POSTGRES_DB:-datenschleuder}
+      - POSTGRES_USER=${POSTGRES_USER:-datenschleuder}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-datenschleuder123}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cockpit}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-datenschleuder}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s  # Allow time for initial database setup
     networks:
-      - cockpit-network
+      - datenschleuder-network
 
   # Redis Message Broker
   redis:
     image: redis:7-alpine
-    container_name: cockpit-redis
+    container_name: datenschleuder-redis
     command: redis-server --appendonly yes --requirepass ${DATENSCHLEUDER_REDIS_PASSWORD:-changeme}
     environment:
       - REDIS_PASSWORD=${DATENSCHLEUDER_REDIS_PASSWORD:-changeme}
@@ -36,22 +36,19 @@ services:
       retries: 5
       start_period: 20s  # Allow time for initial AOF loading
     networks:
-      - cockpit-network
+      - datenschleuder-network
 
   # Main Web Application (Frontend + Backend API)
-  cockpit-web:
+  datenschleuder-web:
     build:
       context: ..
       dockerfile: docker/Dockerfile.all-in-one
-    container_name: cockpit-web
+    container_name: datenschleuder-web
     ports:
       - "${FRONTEND_PORT:-3000}:${FRONTEND_PORT:-3000}"  # Frontend (Next.js)
       - "8000:8000"  # Backend (FastAPI)
     environment:
       # Backend Environment Variables
-      - NAUTOBOT_URL=${NAUTOBOT_URL:-http://localhost:8080}
-      - NAUTOBOT_TOKEN=${NAUTOBOT_TOKEN:-your_nautobot_token_here}
-      - NAUTOBOT_TIMEOUT=${NAUTOBOT_TIMEOUT:-30}
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this-in-production}
       - DATA_DIR=/app/data
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -59,9 +56,9 @@ services:
       # Database Configuration
       - DATENSCHLEUDER_DATABASE_HOST=postgres
       - DATENSCHLEUDER_DATABASE_PORT=5432
-      - DATENSCHLEUDER_DATABASE_NAME=${POSTGRES_DB:-cockpit}
-      - DATENSCHLEUDER_DATABASE_USERNAME=${POSTGRES_USER:-cockpit}
-      - DATENSCHLEUDER_DATABASE_PASSWORD=${POSTGRES_PASSWORD:-cockpit123}
+      - DATENSCHLEUDER_DATABASE_NAME=${POSTGRES_DB:-datenschleuder}
+      - DATENSCHLEUDER_DATABASE_USERNAME=${POSTGRES_USER:-datenschleuder}
+      - DATENSCHLEUDER_DATABASE_PASSWORD=${POSTGRES_PASSWORD:-datenschleuder123}
       - DATENSCHLEUDER_DATABASE_SSL=false
 
       # Redis Configuration
@@ -85,7 +82,7 @@ services:
       - SUPERVISORD_CONF=/etc/supervisor/conf.d/supervisord-web.conf
     volumes:
       # Persist data directory
-      - cockpit_data:/app/data
+      - datenschleuder_data:/app/data
       # Mount configuration directory for OIDC and other configs (read-write for user editing)
       - ../config:/app/config
       # Note: The config directory should contain:
@@ -105,20 +102,17 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - cockpit-network
+      - datenschleuder-network
     command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord-web.conf"]
 
   # Celery Worker (Background Tasks)
-  cockpit-worker:
+  datenschleuder-worker:
     build:
       context: ..
       dockerfile: docker/Dockerfile.all-in-one
-    container_name: cockpit-worker
+    container_name: datenschleuder-worker
     environment:
       # Backend Environment Variables
-      - NAUTOBOT_URL=${NAUTOBOT_URL:-http://localhost:8080}
-      - NAUTOBOT_TOKEN=${NAUTOBOT_TOKEN:-your_nautobot_token_here}
-      - NAUTOBOT_TIMEOUT=${NAUTOBOT_TIMEOUT:-30}
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this-in-production}
       - DATA_DIR=/app/data
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -126,9 +120,9 @@ services:
       # Database Configuration
       - DATENSCHLEUDER_DATABASE_HOST=postgres
       - DATENSCHLEUDER_DATABASE_PORT=5432
-      - DATENSCHLEUDER_DATABASE_NAME=${POSTGRES_DB:-cockpit}
-      - DATENSCHLEUDER_DATABASE_USERNAME=${POSTGRES_USER:-cockpit}
-      - DATENSCHLEUDER_DATABASE_PASSWORD=${POSTGRES_PASSWORD:-cockpit123}
+      - DATENSCHLEUDER_DATABASE_NAME=${POSTGRES_DB:-datenschleuder}
+      - DATENSCHLEUDER_DATABASE_USERNAME=${POSTGRES_USER:-datenschleuder}
+      - DATENSCHLEUDER_DATABASE_PASSWORD=${POSTGRES_PASSWORD:-datenschleuder123}
       - DATENSCHLEUDER_DATABASE_SSL=false
 
       # Redis Configuration
@@ -149,7 +143,7 @@ services:
       - SUPERVISORD_CONF=/etc/supervisor/conf.d/supervisord-worker.conf
     volumes:
       # Persist data directory
-      - cockpit_data:/app/data
+      - datenschleuder_data:/app/data
       # Mount configuration directory
       - ../config:/app/config
     depends_on:
@@ -157,24 +151,21 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      cockpit-web:
+      datenschleuder-web:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - cockpit-network
+      - datenschleuder-network
     command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord-worker.conf"]
 
   # Celery Beat (Periodic Task Scheduler)
-  cockpit-beat:
+  datenschleuder-beat:
     build:
       context: ..
       dockerfile: docker/Dockerfile.all-in-one
-    container_name: cockpit-beat
+    container_name: datenschleuder-beat
     environment:
       # Backend Environment Variables
-      - NAUTOBOT_URL=${NAUTOBOT_URL:-http://localhost:8080}
-      - NAUTOBOT_TOKEN=${NAUTOBOT_TOKEN:-your_nautobot_token_here}
-      - NAUTOBOT_TIMEOUT=${NAUTOBOT_TIMEOUT:-30}
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this-in-production}
       - DATA_DIR=/app/data
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -182,9 +173,9 @@ services:
       # Database Configuration
       - DATENSCHLEUDER_DATABASE_HOST=postgres
       - DATENSCHLEUDER_DATABASE_PORT=5432
-      - DATENSCHLEUDER_DATABASE_NAME=${POSTGRES_DB:-cockpit}
-      - DATENSCHLEUDER_DATABASE_USERNAME=${POSTGRES_USER:-cockpit}
-      - DATENSCHLEUDER_DATABASE_PASSWORD=${POSTGRES_PASSWORD:-cockpit123}
+      - DATENSCHLEUDER_DATABASE_NAME=${POSTGRES_DB:-datenschleuder}
+      - DATENSCHLEUDER_DATABASE_USERNAME=${POSTGRES_USER:-datenschleuder}
+      - DATENSCHLEUDER_DATABASE_PASSWORD=${POSTGRES_PASSWORD:-datenschleuder123}
       - DATENSCHLEUDER_DATABASE_SSL=false
 
       # Redis Configuration
@@ -202,7 +193,7 @@ services:
       - SUPERVISORD_CONF=/etc/supervisor/conf.d/supervisord-beat.conf
     volumes:
       # Persist data directory
-      - cockpit_data:/app/data
+      - datenschleuder_data:/app/data
       # Mount configuration directory
       - ../config:/app/config
     depends_on:
@@ -210,26 +201,23 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      cockpit-web:
+      datenschleuder-web:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - cockpit-network
+      - datenschleuder-network
     command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord-beat.conf"]
 
   # Celery Worker - Specialized for Backup Tasks
   # This worker only processes tasks from the 'backup' queue
   # Can be deployed on a dedicated node for resource isolation
-  cockpit-worker-backup:
+  datenschleuder-worker-backup:
     build:
       context: ..
       dockerfile: docker/Dockerfile.all-in-one
-    container_name: cockpit-worker-backup
+    container_name: datenschleuder-worker-backup
     environment:
       # Backend Environment Variables
-      - NAUTOBOT_URL=${NAUTOBOT_URL:-http://localhost:8080}
-      - NAUTOBOT_TOKEN=${NAUTOBOT_TOKEN:-your_nautobot_token_here}
-      - NAUTOBOT_TIMEOUT=${NAUTOBOT_TIMEOUT:-30}
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this-in-production}
       - DATA_DIR=/app/data
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -237,9 +225,9 @@ services:
       # Database Configuration
       - DATENSCHLEUDER_DATABASE_HOST=postgres
       - DATENSCHLEUDER_DATABASE_PORT=5432
-      - DATENSCHLEUDER_DATABASE_NAME=${POSTGRES_DB:-cockpit}
-      - DATENSCHLEUDER_DATABASE_USERNAME=${POSTGRES_USER:-cockpit}
-      - DATENSCHLEUDER_DATABASE_PASSWORD=${POSTGRES_PASSWORD:-cockpit123}
+      - DATENSCHLEUDER_DATABASE_NAME=${POSTGRES_DB:-datenschleuder}
+      - DATENSCHLEUDER_DATABASE_USERNAME=${POSTGRES_USER:-datenschleuder}
+      - DATENSCHLEUDER_DATABASE_PASSWORD=${POSTGRES_PASSWORD:-datenschleuder123}
       - DATENSCHLEUDER_DATABASE_SSL=false
 
       # Redis Configuration
@@ -261,7 +249,7 @@ services:
       - SUPERVISORD_CONF=/etc/supervisor/conf.d/supervisord-worker.conf
     volumes:
       # Persist data directory
-      - cockpit_data:/app/data
+      - datenschleuder_data:/app/data
       # Mount configuration directory
       - ../config:/app/config
     depends_on:
@@ -269,11 +257,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      cockpit-web:
+      datenschleuder-web:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - cockpit-network
+      - datenschleuder-network
     command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord-worker.conf"]
     # Optional: Uncomment to limit resources for this worker
     # deploy:
@@ -283,7 +271,7 @@ services:
     #       memory: 2G
 
 volumes:
-  cockpit_data:
+  datenschleuder_data:
     driver: local
   postgres_data:
     driver: local
@@ -291,5 +279,5 @@ volumes:
     driver: local
 
 networks:
-  cockpit-network:
+  datenschleuder-network:
     driver: bridge

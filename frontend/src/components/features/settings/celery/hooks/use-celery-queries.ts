@@ -25,7 +25,7 @@ interface UseQueryOptions {
   enabled?: boolean
 }
 
-const DEFAULT_STATUS_OPTIONS: UseCeleryStatusOptions = { enabled: true }
+const DEFAULT_STATUS_OPTIONS: UseCeleryStatusOptions = {}
 const DEFAULT_QUERY_OPTIONS: UseQueryOptions = {}
 
 /**
