@@ -445,7 +445,7 @@ export function RunCommandDialog({
                               const isFirstInRepo = !prevRow || prevRow.repo !== row.repo
                               const isFirstOriginDiff = row.origin_diff && (!prevRow || !prevRow.origin_diff)
                               return (
-                                <Fragment key={`${row.repo}-${row.origin_diff ? 'diff' : 'local'}-${row.file || 'clean'}-${i}`}>
+                                <Fragment key={`${row.repo}-${row.origin_diff ? 'diff' : 'local'}-${row.file || 'clean'}-${row.status}`}>
                                   {isFirstOriginDiff && (
                                     <TableRow key={`${row.repo}-origin-diff-header`} className="bg-indigo-50 border-t-2 border-indigo-200">
                                       <TableCell colSpan={4} className="py-1 px-3">
