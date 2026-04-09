@@ -1,0 +1,11 @@
+---
+nifi-docker-1:
+  restart: /path/to/your/nifi/nifi-2.8.0/bin/nifi.sh restart
+  stop: /path/to/your/nifi/nifi-2.8.0/bin/nifi.sh stop
+  start: /path/to/your/nifi/nifi-2.8.0/bin/nifi.sh start
+  type: nifi
+zookeeper-1:
+  restart: /path/to/your/zookeeper/zookeeper-3.7.0/bin/zkServer.sh restart
+  stop: /path/to/your/zookeeper/zookeeper-3.7.0/bin/zkServer.sh stop
+  start: /path/to/your/zookeeper/zookeeper-3.7.0/bin/zkServer.sh start
+  type: zookeeper

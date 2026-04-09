@@ -45,14 +45,14 @@ function AuthBadge({ instance }: { instance: NifiInstance }) {
 
 function SslBadge({ enabled }: { enabled: boolean }) {
   return enabled
-    ? <Badge className="bg-green-600 text-white hover:bg-green-700">Enabled</Badge>
-    : <Badge variant="secondary">Disabled</Badge>
+    ? <Badge variant="secondary">Enabled</Badge>
+    : <Badge className="bg-red-600 text-white hover:bg-red-700">Disabled</Badge>
 }
 
 function YesNoBadge({ value }: { value: boolean }) {
   return value
-    ? <Badge className="bg-green-600 text-white hover:bg-green-700">Yes</Badge>
-    : <Badge className="bg-amber-500 text-white hover:bg-amber-600">No</Badge>
+    ? <Badge variant="secondary">Yes</Badge>
+    : <Badge className="bg-red-600 text-white hover:bg-red-700">No</Badge>
 }
 
 export function InstanceCard({ instance, canWrite, onEdit, clusterInfo }: Props) {
@@ -103,11 +103,6 @@ export function InstanceCard({ instance, canWrite, onEdit, clusterInfo }: Props)
             <span className="text-sm font-semibold text-white bg-white/20 rounded-full px-3 py-1 truncate">
               {displayTitle}
             </span>
-            {clusterInfo && (
-              <span className="text-[10px] text-white/80 bg-white/15 rounded-full px-2 py-0.5 whitespace-nowrap flex-shrink-0">
-                {clusterInfo.clusterLabel}
-              </span>
-            )}
           </div>
           {canWrite && (
             <div className="flex items-center gap-1">
@@ -196,6 +191,14 @@ export function InstanceCard({ instance, canWrite, onEdit, clusterInfo }: Props)
               <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100">
                 {gitRepoName}
               </Badge>
+            </div>
+          )}
+          {clusterInfo && (
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <span className="text-xs font-semibold text-slate-500">Cluster</span>
+              <span className={`text-xs font-medium rounded-full px-2.5 py-0.5 ${clusterInfo.badgeClass}`}>
+                {clusterInfo.clusterLabel}
+              </span>
             </div>
           )}
         </div>

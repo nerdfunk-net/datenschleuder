@@ -1,0 +1,10 @@
+---
+nifi-docker-1:
+  path: /path/to/your/nifi/node-1/conf
+  container: nifi-nifi-docker-1-1
+nifi-docker-2:
+  path: /path/to/your/nifi/node-2/conf
+  container: nifi-nifi-docker-2-1
+nifi-docker-3:
+  path: /path/to/your/nifi/node-3/conf
+  container: nifi-nifi-docker-3-1
