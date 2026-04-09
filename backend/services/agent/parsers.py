@@ -7,6 +7,16 @@ import json
 import re
 
 
+_GIT_DIFF_LABELS: dict[str, str] = {
+    "M": "modified",
+    "A": "added",
+    "D": "deleted",
+    "R": "renamed",
+    "C": "copied",
+    "T": "type-changed",
+    "U": "unmerged",
+}
+
 _GIT_XY_LABELS: dict[str, str] = {
     "??": "untracked",
     " M": "modified",   "M ": "staged",       "MM": "staged+modified",
@@ -16,30 +26,83 @@ _GIT_XY_LABELS: dict[str, str] = {
 }
 
 
+def _parse_tracking_status(branch_line: str) -> tuple[str, str]:
+    """Extract branch name and tracking label from a '## ...' git status line.
+
+    Returns (branch_name, tracking_label) where tracking_label is one of
+    "ahead", "behind", "ahead+behind", or "" (clean / no remote).
+    """
+    info = branch_line[3:]  # strip leading "## "
+    branch = info.split("...")[0].split(" ")[0]
+
+    ahead_m = re.search(r"\[ahead (\d+)", info)
+    behind_m = re.search(r"behind (\d+)", info)
+    ahead = int(ahead_m.group(1)) if ahead_m else 0
+    behind = int(behind_m.group(1)) if behind_m else 0
+
+    if ahead and behind:
+        tracking = "ahead+behind"
+    elif ahead:
+        tracking = "ahead"
+    elif behind:
+        tracking = "behind"
+    else:
+        tracking = ""
+
+    return branch, tracking
+
+
 def parse_git_status(raw: str) -> list[dict]:
     """Parse multi-repo git status --short --branch output into structured rows.
 
     The agent prefixes each repo block with [repo-id].  For repos with no
-    changed files a synthetic {"status": "clean"} row is emitted so every
-    repo is always represented in the output.
+    changed files a synthetic row is emitted so every repo is always
+    represented in the output.  The status for such rows reflects the remote
+    tracking state: "clean", "ahead", "behind", or "ahead+behind".
     """
     rows: list[dict] = []
     current_repo: str | None = None
     current_branch = ""
+    current_tracking = ""
     repo_has_files = False
+    in_origin_diff = False
 
     for raw_line in raw.splitlines():
         line = raw_line.rstrip()
         if not line:
             continue
 
-        # ── Repo header ──────────────────────────────────────────────────────
+        # ── Repo header (must come before in_origin_diff to reset context) ─────
         if line.startswith("[") and line.endswith("]"):
             if current_repo is not None and not repo_has_files:
-                rows.append({"repo": current_repo, "branch": current_branch, "file": "", "status": "clean"})
+                status = current_tracking or "clean"
+                rows.append({"repo": current_repo, "branch": current_branch, "file": "", "status": status})
             current_repo = line[1:-1]
             current_branch = ""
+            current_tracking = ""
             repo_has_files = False
+            in_origin_diff = False
+            continue
+
+        # ── Origin diff section marker ────────────────────────────────────────
+        if line == "---ORIGIN_DIFF---":
+            in_origin_diff = True
+            continue
+
+        # ── Origin diff lines: "STATUS\tFILE" (git diff --name-status) ───────
+        if in_origin_diff:
+            parts = line.split("\t")
+            if len(parts) >= 2 and current_repo is not None:
+                code = parts[0][0]  # first char: M, A, D, R, C, T, U
+                filename = parts[-1]  # last part is destination (handles renames)
+                status = _GIT_DIFF_LABELS.get(code, "modified")
+                rows.append({
+                    "repo": current_repo,
+                    "branch": current_branch,
+                    "file": filename,
+                    "status": status,
+                    "origin_diff": True,
+                })
             continue
 
         if current_repo is None:
@@ -47,9 +110,7 @@ def parse_git_status(raw: str) -> list[dict]:
 
         # ── Branch info line: ## main...origin/main [ahead N] [behind N] ────
         if line.startswith("## "):
-            info = line[3:]
-            # handles "main...origin/main", "HEAD (no branch)", "No commits yet on main"
-            current_branch = info.split("...")[0].split(" ")[0]
+            current_branch, current_tracking = _parse_tracking_status(line)
             continue
 
         # ── File status line: "XY filename" ──────────────────────────────────
@@ -62,7 +123,8 @@ def parse_git_status(raw: str) -> list[dict]:
 
     # flush last repo
     if current_repo is not None and not repo_has_files:
-        rows.append({"repo": current_repo, "branch": current_branch, "file": "", "status": "clean"})
+        status = current_tracking or "clean"
+        rows.append({"repo": current_repo, "branch": current_branch, "file": "", "status": status})
 
     return rows
 

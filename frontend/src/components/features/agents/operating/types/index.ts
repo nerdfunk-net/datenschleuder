@@ -105,8 +105,9 @@ export interface RepositoryListRow {
 export interface GitStatusRow {
   repo: string
   branch: string
-  file: string   // empty string when status === 'clean'
-  status: string // 'clean' | 'modified' | 'staged' | 'staged+modified' | 'untracked' | 'deleted' | 'staged deleted' | 'added' | 'added+modified' | 'renamed' | 'conflict'
+  file: string         // empty string when status === 'clean'
+  status: string       // 'clean' | 'modified' | 'staged' | 'staged+modified' | 'untracked' | 'deleted' | 'staged deleted' | 'added' | 'added+modified' | 'renamed' | 'conflict'
+  origin_diff?: boolean // true when the row comes from git diff --name-status origin/main
 }
 
 export interface NifiFetchRow {

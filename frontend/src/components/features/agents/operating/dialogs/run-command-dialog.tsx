@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { Fragment, useState, useMemo, useCallback } from 'react'
 import { UseMutationResult } from '@tanstack/react-query'
 import {
   Dialog,
@@ -30,7 +30,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { Loader2, ChevronDown, Terminal, BarChart2, Server, Play } from 'lucide-react'
+import { Loader2, ChevronDown, Terminal, BarChart2, Server, Play, GitCompare } from 'lucide-react'
 import { parseCapabilities } from '../utils/format-utils'
 import { useAgentRepositoriesQuery } from '../hooks/use-agent-repositories-query'
 import { useAgentContainersQuery } from '../hooks/use-agent-containers-query'
@@ -79,6 +79,9 @@ function isDockerPsRows(rows: AnyRow[]): rows is DockerPsRow[] {
 
 const GIT_STATUS_BADGE: Record<string, string> = {
   clean:           'bg-green-100 text-green-700',
+  ahead:           'bg-blue-100 text-blue-700',
+  behind:          'bg-orange-100 text-orange-700',
+  'ahead+behind':  'bg-purple-100 text-purple-700',
   modified:        'bg-yellow-100 text-yellow-700',
   'staged':        'bg-blue-100 text-blue-700',
   'staged+modified':'bg-purple-100 text-purple-700',
@@ -437,25 +440,41 @@ export function RunCommandDialog({
                           </TableHeader>
                           <TableBody>
                             {(parsedRows as GitStatusRow[]).map((row, i) => {
-                              const prevRow = (parsedRows as GitStatusRow[])[i - 1]
+                              const rows = parsedRows as GitStatusRow[]
+                              const prevRow = rows[i - 1]
                               const isFirstInRepo = !prevRow || prevRow.repo !== row.repo
+                              const isFirstOriginDiff = row.origin_diff && (!prevRow || !prevRow.origin_diff)
                               return (
-                                <TableRow key={`${row.repo}-${row.file || 'clean'}`} className={isFirstInRepo && i > 0 ? 'border-t-2 border-slate-200' : ''}>
-                                  <TableCell className={`font-mono text-xs font-medium ${isFirstInRepo ? '' : 'text-transparent select-none'}`}>
-                                    {isFirstInRepo ? row.repo : '↳'}
-                                  </TableCell>
-                                  <TableCell className={`text-xs text-muted-foreground ${isFirstInRepo ? '' : 'opacity-0'}`}>
-                                    {isFirstInRepo ? row.branch : ''}
-                                  </TableCell>
-                                  <TableCell className="font-mono text-xs">
-                                    {row.file || '—'}
-                                  </TableCell>
-                                  <TableCell>
-                                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${GIT_STATUS_BADGE[row.status] ?? 'bg-slate-100 text-slate-600'}`}>
-                                      {row.status}
-                                    </span>
-                                  </TableCell>
-                                </TableRow>
+                                <Fragment key={`${row.repo}-${row.origin_diff ? 'diff' : 'local'}-${row.file || 'clean'}-${i}`}>
+                                  {isFirstOriginDiff && (
+                                    <TableRow key={`${row.repo}-origin-diff-header`} className="bg-indigo-50 border-t-2 border-indigo-200">
+                                      <TableCell colSpan={4} className="py-1 px-3">
+                                        <span className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700">
+                                          <GitCompare className="h-3 w-3" />
+                                          Diff vs origin/main
+                                        </span>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                  <TableRow
+                                    className={`${isFirstInRepo && i > 0 && !isFirstOriginDiff ? 'border-t-2 border-slate-200' : ''} ${row.origin_diff ? 'bg-indigo-50/40' : ''}`}
+                                  >
+                                    <TableCell className={`font-mono text-xs font-medium ${isFirstInRepo ? '' : 'text-transparent select-none'}`}>
+                                      {isFirstInRepo ? row.repo : '↳'}
+                                    </TableCell>
+                                    <TableCell className={`text-xs text-muted-foreground ${isFirstInRepo ? '' : 'opacity-0'}`}>
+                                      {isFirstInRepo ? row.branch : ''}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-xs">
+                                      {row.file || '—'}
+                                    </TableCell>
+                                    <TableCell>
+                                      <span className={`text-xs px-2 py-0.5 rounded font-medium ${GIT_STATUS_BADGE[row.status] ?? 'bg-slate-100 text-slate-600'}`}>
+                                        {row.status}
+                                      </span>
+                                    </TableCell>
+                                  </TableRow>
+                                </Fragment>
                               )
                             })}
                           </TableBody>

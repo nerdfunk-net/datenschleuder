@@ -317,7 +317,17 @@ class CommandExecutor:
 
         if process.returncode == 0:
             logger.info("Git status successful for %s", repo_id)
-            return {"status": "success", "output": stdout_text or "Git status: clean", "error": None}
+            output = stdout_text or "Git status: clean"
+
+            # When tracking shows ahead/behind, also get per-file diff vs origin/main
+            if "[ahead" in stdout_text or "[behind" in stdout_text:
+                rc_diff, diff_out, diff_err = await self._run_git(repo_path, "diff", "--name-status", "origin/main")
+                if rc_diff == 0 and diff_out:
+                    output = output + "\n---ORIGIN_DIFF---\n" + diff_out
+                elif rc_diff != 0:
+                    logger.warning("git diff --name-status origin/main failed for %s (rc=%s): %s", repo_id, rc_diff, diff_err)
+
+            return {"status": "success", "output": output, "error": None}
         else:
             error_msg = stderr_text or "Git status failed (no error message)"
             logger.error("Git status failed for %s (rc=%s): %s", repo_id, process.returncode, error_msg)
@@ -720,12 +730,14 @@ class CommandExecutor:
         return {"status": "success", "output": combined_output or f"All {service_type} services {action} completed", "error": None}
 
     async def _fetch_nifi_properties_one(self, repo_id: str, repo_path: str, branch: str) -> dict:
-        """Fetch nifi.properties from git remote and overwrite the local file.
+        """Fetch nifi.properties from git remote via git pull.
 
         Steps:
         1. Check whether nifi.properties has local modifications.
-        2. Run 'git fetch origin <branch>' to update remote refs.
-        3. Force-checkout nifi.properties from FETCH_HEAD, discarding local changes.
+        2. Clear --assume-unchanged on flow.json.gz so pull can fast-forward it cleanly.
+        3. Unstage nifi.properties in case it was previously staged.
+        4. Re-set --assume-unchanged on flow.json.gz to suppress status noise for that file.
+        5. Run 'git pull' to update the working tree including nifi.properties.
         Returns a dict with status, output (includes was_modified flag), error.
         """
         if not os.path.isdir(repo_path):
@@ -734,6 +746,7 @@ class CommandExecutor:
             return {"status": "error", "error": f"Not a git repository: {repo_path}", "output": None}
 
         nifi_props_file = "nifi.properties"
+        flow_file = "flow.json.gz"
 
         # 1. Detect local modification
         logger.info("Checking modification status of %s in %s", nifi_props_file, repo_path)
@@ -746,24 +759,28 @@ class CommandExecutor:
         was_modified = bool(status_out.strip())
         logger.info("nifi.properties modified=%s for repo '%s'", was_modified, repo_id)
 
-        # 2. Fetch remote branch
-        logger.info("Executing: git -C %s fetch origin %s", repo_path, branch)
-        rc, _, fetch_err = await self._run_git(repo_path, "fetch", "origin", branch)
-        if rc == -1:
-            return {"status": "error", "error": f"git fetch timed out after {config.command_timeout}s", "output": None}
-        if rc != 0:
-            return {"status": "error", "error": fetch_err or "git fetch failed", "output": None}
+        # 2. Clear --assume-unchanged on flow.json.gz so pull can update it
+        logger.info("Executing: git -C %s update-index --no-assume-unchanged %s", repo_path, flow_file)
+        await self._run_git(repo_path, "update-index", "--no-assume-unchanged", flow_file)
 
-        # 3. Force-checkout nifi.properties from FETCH_HEAD
-        logger.info("Executing: git -C %s checkout FETCH_HEAD -- %s", repo_path, nifi_props_file)
-        rc, _, checkout_err = await self._run_git(repo_path, "checkout", "FETCH_HEAD", "--", nifi_props_file)
+        # 3. Unstage nifi.properties in case it was previously staged
+        logger.info("Executing: git -C %s restore --staged %s", repo_path, nifi_props_file)
+        await self._run_git(repo_path, "restore", "--staged", "--", nifi_props_file)
+
+        # 4. Re-set --assume-unchanged on flow.json.gz to suppress status noise
+        logger.info("Executing: git -C %s update-index --assume-unchanged %s", repo_path, flow_file)
+        await self._run_git(repo_path, "update-index", "--assume-unchanged", flow_file)
+
+        # 5. Pull to update the working tree
+        logger.info("Executing: git -C %s pull", repo_path)
+        rc, pull_out, pull_err = await self._run_git(repo_path, "pull")
         if rc == -1:
-            return {"status": "error", "error": f"git checkout timed out after {config.command_timeout}s", "output": None}
+            return {"status": "error", "error": f"git pull timed out after {config.command_timeout}s", "output": None}
         if rc != 0:
-            return {"status": "error", "error": checkout_err or "git checkout failed", "output": None}
+            return {"status": "error", "error": pull_err or "git pull failed", "output": None}
 
         modified_label = "was modified" if was_modified else "was not modified"
-        output = f"nifi.properties fetched from origin/{branch} ({modified_label})"
+        output = f"nifi.properties fetched via git pull ({modified_label})"
         logger.info("fetch_nifi_properties successful for %s: %s", repo_id, output)
         return {"status": "success", "output": output, "error": None, "was_modified": was_modified}
 
