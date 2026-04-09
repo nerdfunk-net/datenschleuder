@@ -116,6 +116,12 @@ def get_settings_manager(request: Request):
     return request.app.state.settings_manager
 
 
+def get_oidc_config_service():
+    """Return a stateless OIDCConfigService instance."""
+    from services.auth.oidc_config_service import OIDCConfigService
+    return OIDCConfigService()
+
+
 # ---------------------------------------------------------------------------
 # Request-scoped providers — git repository manager
 # ---------------------------------------------------------------------------

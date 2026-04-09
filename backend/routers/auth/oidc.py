@@ -17,7 +17,7 @@ from models.auth import (
     OIDCTestLoginRequest,
 )
 from core.auth import create_access_token, verify_admin_token
-from dependencies import get_oidc_service, get_settings_manager
+from dependencies import get_oidc_service, get_oidc_config_service
 from services.auth.login_service import get_user_with_rbac_safe, build_user_response
 from config import settings
 
@@ -28,25 +28,25 @@ router = APIRouter(prefix="/auth/oidc", tags=["oidc-authentication"])
 
 @router.get("/enabled")
 def check_oidc_enabled(
-    settings_manager=Depends(get_settings_manager),
+    oidc_config=Depends(get_oidc_config_service),
 ):
     """Check if OIDC authentication is enabled."""
-    return {"enabled": settings_manager.is_oidc_enabled()}
+    return {"enabled": oidc_config.is_oidc_enabled()}
 
 
 @router.get("/providers", response_model=OIDCProvidersResponse)
 def get_oidc_providers(
-    settings_manager=Depends(get_settings_manager),
+    oidc_config=Depends(get_oidc_config_service),
 ):
     """Get list of available OIDC providers for login selection."""
-    if not settings_manager.is_oidc_enabled():
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="OIDC authentication is not enabled",
+    if not oidc_config.is_oidc_enabled():
+        return OIDCProvidersResponse(
+            providers=[],
+            allow_traditional_login=True,
         )
 
     try:
-        enabled_providers = settings_manager.get_enabled_oidc_providers()
+        enabled_providers = oidc_config.get_enabled_oidc_providers()
 
         # Return only user-facing information
         providers_list = [
@@ -62,7 +62,7 @@ def get_oidc_providers(
 
         return OIDCProvidersResponse(
             providers=providers_list,
-            allow_traditional_login=settings_manager.get_oidc_global_settings().get(
+            allow_traditional_login=oidc_config.get_oidc_global_settings().get(
                 "allow_traditional_login", True
             ),
         )
@@ -79,14 +79,14 @@ def get_oidc_providers(
 async def oidc_login(
     provider_id: str,
     redirect_uri: str = Query(None, description="Optional redirect URI override"),
-    settings_manager=Depends(get_settings_manager),
+    oidc_config=Depends(get_oidc_config_service),
     oidc_service=Depends(get_oidc_service),
 ):
     """
     Initiate OIDC authentication flow with specific provider.
     Returns authorization URL for redirect.
     """
-    if not settings_manager.is_oidc_enabled():
+    if not oidc_config.is_oidc_enabled():
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="OIDC authentication is not enabled",
@@ -126,7 +126,7 @@ async def oidc_login(
 async def oidc_test_login(
     provider_id: str,
     test_params: OIDCTestLoginRequest,
-    settings_manager=Depends(get_settings_manager),
+    oidc_config=Depends(get_oidc_config_service),
     oidc_service=Depends(get_oidc_service),
 ):
     """
@@ -134,7 +134,7 @@ async def oidc_test_login(
     This endpoint allows overriding default configuration for testing purposes.
     Returns authorization URL for redirect.
     """
-    if not settings_manager.is_oidc_enabled():
+    if not oidc_config.is_oidc_enabled():
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="OIDC authentication is not enabled",
@@ -193,14 +193,14 @@ async def oidc_test_login(
 async def oidc_callback(
     provider_id: str,
     callback_data: OIDCCallbackRequest,
-    settings_manager=Depends(get_settings_manager),
+    oidc_config=Depends(get_oidc_config_service),
     oidc_service=Depends(get_oidc_service),
 ):
     """
     Handle OIDC callback with authorization code for specific provider.
     Exchange code for tokens and authenticate user.
     """
-    if not settings_manager.is_oidc_enabled():
+    if not oidc_config.is_oidc_enabled():
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="OIDC authentication is not enabled",
@@ -325,14 +325,14 @@ async def oidc_callback(
 async def oidc_logout(
     provider_id: str,
     id_token_hint: str = Query(None),
-    settings_manager=Depends(get_settings_manager),
+    oidc_config=Depends(get_oidc_config_service),
     oidc_service=Depends(get_oidc_service),
 ):
     """
     Handle OIDC logout for specific provider.
     Returns end session endpoint URL if available.
     """
-    if not settings_manager.is_oidc_enabled():
+    if not oidc_config.is_oidc_enabled():
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="OIDC authentication is not enabled",
@@ -372,7 +372,7 @@ async def oidc_logout(
 
 @router.get("/debug", dependencies=[Depends(verify_admin_token)])
 async def get_oidc_debug_info(
-    settings_manager=Depends(get_settings_manager),
+    oidc_config=Depends(get_oidc_config_service),
     oidc_service=Depends(get_oidc_service),
 ):
     """
@@ -380,13 +380,13 @@ async def get_oidc_debug_info(
     This endpoint provides comprehensive configuration details for testing and troubleshooting.
     """
     try:
-        oidc_enabled = settings_manager.is_oidc_enabled()
-        global_settings = settings_manager.get_oidc_global_settings()
+        oidc_enabled = oidc_config.is_oidc_enabled()
+        global_settings = oidc_config.get_oidc_global_settings()
 
         providers_debug = []
 
         if oidc_enabled:
-            enabled_providers = settings_manager.get_enabled_oidc_providers()
+            enabled_providers = oidc_config.get_enabled_oidc_providers()
 
             for provider in enabled_providers:
                 provider_id = provider["provider_id"]
