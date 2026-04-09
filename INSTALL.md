@@ -1,10 +1,10 @@
-# Cockpit-NG Installation Guide
+# Datenschleuder Installation Guide
 
-This guide covers how to install and deploy Cockpit-NG using Docker.
+This guide covers how to install and deploy Datenschleuder using Docker.
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 ### Required Software
 - **Docker** (version 20.10 or later)
@@ -16,57 +16,51 @@ This guide covers how to install and deploy Cockpit-NG using Docker.
 - **Recommended**: 4 CPU cores, 8 GB RAM, 50 GB disk space
 
 ### Network Requirements
-- Access to Nautobot instance (API)
-- Access to CheckMK instance (API) - optional
+- Access to your NiFi instance(s) (API + mutual TLS)
 - Outbound internet access for Docker image pulls (or pre-pulled images for air-gapped environments)
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
-Cockpit-NG runs as a multi-container Docker environment:
+Datenschleuder runs as a multi-container Docker environment:
 
 | Container | Service | Purpose |
 |-----------|---------|---------|
-| `cockpit-web` | Frontend + Backend API | Web interface (Next.js) and REST API (FastAPI) |
-| `cockpit-worker` | Celery Worker | Background task execution |
-| `cockpit-beat` | Celery Beat | Periodic task scheduler |
-| `postgres` | PostgreSQL | Database for persistent storage |
-| `redis` | Redis | Message broker and caching |
+| `datenschleuder-web` | Frontend + Backend API | Web interface (Next.js) and REST API (FastAPI) |
+| `datenschleuder-worker` | Celery Worker | Background task execution |
+| `datenschleuder-worker-backup` | Celery Worker (Backup) | Dedicated worker for backup tasks |
+| `datenschleuder-beat` | Celery Beat | Periodic task scheduler |
+| `datenschleuder-postgres` | PostgreSQL | Database for persistent storage |
+| `datenschleuder-redis` | Redis | Message broker and caching |
 
 ```
                     ┌─────────────────┐
                     │   Web Browser   │
                     └────────┬────────┘
                              │ :3000
-                    ┌────────▼────────┐
-                    │   cockpit-web   │
-                    │  (Frontend +    │
-                    │   Backend API)  │
-                    └────────┬────────┘
+                    ┌────────▼──────────────┐
+                    │  datenschleuder-web   │
+                    │  (Frontend + Backend) │
+                    └────────┬──────────────┘
                              │
               ┌──────────────┼──────────────┐
               │              │              │
      ┌────────▼────────┐  ┌──▼───┐  ┌───────▼───────┐
-     │ cockpit-worker  │  │redis │  │   postgres    │
-     │ (Celery Worker) │  └──────┘  │  (Database)   │
-     └────────┬────────┘            └───────────────┘
-              │
-     ┌────────▼────────┐
-     │  cockpit-beat   │
-     │ (Task Scheduler)│
-     └─────────────────┘
+     │    worker(s)    │  │redis │  │   postgres    │
+     │  (Celery/Beat)  │  └──────┘  │  (Database)   │
+     └─────────────────┘            └───────────────┘
 ```
 
 ---
 
-## 🚀 Installation Steps
+## Installation Steps
 
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/nerdfunk-net/cockpit-ng.git
-cd cockpit-ng
+git clone https://github.com/nerdfunk-net/datenschleuder.git
+cd datenschleuder
 ```
 
 ### Step 2: Configure Environment Variables
@@ -80,56 +74,56 @@ cp docker/.env.example docker/.env
 Edit `docker/.env` with your settings:
 
 ```bash
-# ============================================
-# Cockpit-NG Docker Environment Configuration
-# ============================================
+# Frontend Configuration
+FRONTEND_PORT=3000
 
 # Database Configuration
-POSTGRES_DB=cockpit
-POSTGRES_USER=cockpit
+POSTGRES_DB=datenschleuder
+POSTGRES_USER=datenschleuder
 POSTGRES_PASSWORD=your_secure_password_here
 
 # Redis Configuration
-COCKPIT_REDIS_PASSWORD=your_redis_password_here
+DATENSCHLEUDER_REDIS_PASSWORD=your_redis_password_here
 
-# Application Security
+# Security
 SECRET_KEY=your-secret-key-change-this-in-production
-
-# Nautobot Integration
-NAUTOBOT_URL=https://nautobot.example.com
-NAUTOBOT_TOKEN=your_nautobot_api_token
-NAUTOBOT_TIMEOUT=30
-
-# Frontend Configuration
-FRONTEND_PORT=3000
 
 # Logging
 LOG_LEVEL=INFO
 ```
 
-> ⚠️ **Important**: Change all default passwords and the `SECRET_KEY` for production deployments!
+> **Important**: Change all default passwords and the `SECRET_KEY` for production deployments!
 
-### Step 3: Configure External Services
+### Step 3: Configure Certificates
 
-#### Nautobot Configuration
+Datenschleuder uses mutual TLS to communicate with NiFi. You need to prepare certificates before the application can connect to NiFi instances.
 
-The Nautobot URL and token are configured in the `.env` file (see above).
+Copy the example and edit it:
 
-#### CheckMK Configuration (Optional)
-
-Create or edit `config/checkmk.yaml`:
-
-```yaml
-checkmk:
-  url: https://checkmk.example.com/mysite
-  username: automation
-  password: your_automation_secret
-  verify_ssl: true
+```bash
+cp config/nipyapi/certificates.yaml.example config/nipyapi/certificates.yaml
 ```
 
-#### OIDC/SSO Configuration (Optional)
+Edit `config/nipyapi/certificates.yaml`:
 
-Create or edit `config/oidc_providers.yaml`:
+```yaml
+certificates:
+  - name: "nipyapi"
+    ca_cert_file: "ca_cert.pem"
+    cert_file: "nipyapi.crt.pem"
+    key_file: "nipyapi.key.pem"
+    password: your_password
+```
+
+Place your certificate files in a location accessible by the backend. Certificate-based authentication is preferred over OIDC.
+
+### Step 4: Configure OIDC/SSO (Optional)
+
+Copy the bundled example and edit it:
+
+```bash
+cp config/oidc_providers.yaml.example config/oidc_providers.yaml
+```
 
 ```yaml
 providers:
@@ -137,13 +131,11 @@ providers:
     enabled: true
     display_name: "Company SSO"
     issuer: "https://keycloak.example.com/realms/myrealm"
-    client_id: "cockpit-ng"
+    client_id: "datenschleuder"
     client_secret: "your-client-secret"
 ```
 
-See [OIDC_SETUP.md](OIDC_SETUP.md) for detailed OIDC configuration.
-
-### Step 4: Start the Application
+### Step 5: Start the Application
 
 Navigate to the docker directory and start all containers:
 
@@ -156,10 +148,10 @@ This will:
 1. Pull all required Docker images
 2. Create the Docker network
 3. Start PostgreSQL and Redis
-4. Start the web application (frontend + backend)
-5. Start the Celery worker and beat scheduler
+4. Build and start the web application (frontend + backend)
+5. Start the Celery workers and beat scheduler
 
-### Step 5: Verify the Installation
+### Step 6: Verify the Installation
 
 Check that all containers are running:
 
@@ -169,92 +161,73 @@ docker compose ps
 
 Expected output:
 ```
-NAME               STATUS         PORTS
-cockpit-beat       Up             
-cockpit-postgres   Up (healthy)   5432/tcp
-cockpit-redis      Up (healthy)   6379/tcp
-cockpit-web        Up (healthy)   0.0.0.0:3000->3000/tcp, 0.0.0.0:8000->8000/tcp
-cockpit-worker     Up             
+NAME                              STATUS          PORTS
+datenschleuder-beat               Up
+datenschleuder-postgres           Up (healthy)    5432/tcp
+datenschleuder-redis              Up (healthy)    6379/tcp
+datenschleuder-web                Up (healthy)    0.0.0.0:3000->3000/tcp, 0.0.0.0:8000->8000/tcp
+datenschleuder-worker             Up
+datenschleuder-worker-backup      Up
 ```
 
-### Step 6: Access the Application
+### Step 7: Access the Application
 
 Open your web browser and navigate to:
 
 - **Web Interface**: http://localhost:3000
 - **API Documentation**: http://localhost:8000/docs
 
-### Step 7: Initial Login
+### Step 8: Initial Login
 
 Use the default credentials to log in:
 
 - **Username**: `admin`
 - **Password**: `admin`
 
-> ⚠️ **Important**: Change the default password immediately after first login!
+> **Important**: Change the default password immediately after first login!
 
 ---
 
-## 🔧 Post-Installation Configuration
+## Post-Installation Configuration
 
-### Change Admin Password
+After installation, follow the [SETUP.md](SETUP.md) guide to configure the application for your environment. The setup covers:
 
-1. Log in with the default credentials
-2. Navigate to **Settings** → **User Management**
-3. Click on the admin user
-4. Change the password
-
-### Configure SSL/TLS Certificates
-
-If your Nautobot or CheckMK instances use self-signed certificates:
-
-1. Navigate to **Tools** → **Add Certificate**
-2. Upload your CA certificate (`.crt` file)
-3. Click "Add to System" to install the certificate
-
-For Docker environments, certificates uploaded via the web interface are automatically installed in the Celery worker containers on restart.
-
-### Set Up RBAC Permissions
-
-1. Navigate to **Settings** → **Permissions**
-2. Create roles with appropriate permissions
-3. Assign roles to users
-
-See [PERMISSIONS.md](PERMISSIONS.md) for detailed RBAC documentation.
+1. **Hierarchy** — define the attribute structure for NiFi instance identification
+2. **Git Credentials** — add credentials for Git repository access
+3. **Git Repository** — connect the repository that stores NiFi configuration files
+4. **NiFi Cluster Wizard** — register NiFi servers, instances, and clusters
+5. **Registry Flows** — register NiFi Registry flows to manage
+6. **Deployment Paths** — map clusters to source/destination process groups
 
 ---
 
-## 📁 Directory Structure
-
-After installation, the directory structure looks like this:
+## Directory Structure
 
 ```
-cockpit-ng/
+datenschleuder/
 ├── docker/
-│   ├── docker-compose.yml    # Main Docker Compose file
-│   ├── .env                  # Environment configuration (create this)
-│   └── .env.example          # Example environment file
-├── config/
-│   ├── checkmk.yaml          # CheckMK configuration
-│   ├── oidc_providers.yaml   # OIDC/SSO configuration
-│   ├── snmp_mapping.yaml     # SNMP community mappings
-│   └── certs/                # SSL certificates
-├── data/                     # Persistent data (auto-created)
-│   ├── git/                  # Git repository clones
-│   └── ssh_keys/             # SSH keys for device access
-├── backend/                  # Backend source code
-└── frontend/                 # Frontend source code
+│   ├── docker-compose.yml          # Main Docker Compose file
+│   ├── .env                        # Environment configuration (create from .env.example)
+│   └── .env.example                # Example environment file
+├── config/                         # Mounted into containers at /app/config
+│   ├── nipyapi/
+│   │   └── certificates.yaml       # nipyapi certificate configuration
+│   ├── oidc_providers.yaml         # OIDC/SSO configuration (copy from .example)
+│   └── oidc_providers.yaml.example # Bundled template
+├── backend/                        # Backend source code
+└── frontend/                       # Frontend source code
 ```
+
+> **Note**: Application data is stored in the `datenschleuder_data` Docker volume. Use `docker volume inspect datenschleuder_data` to find the mount path.
 
 ---
 
-## 🔄 Updating Cockpit-NG
+## Updating Datenschleuder
 
 To update to a newer version:
 
 ```bash
-# Navigate to the project directory
-cd cockpit-ng
+cd datenschleuder
 
 # Pull the latest changes
 git pull
@@ -268,7 +241,7 @@ docker compose up -d
 
 ---
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### View Container Logs
 
@@ -277,11 +250,11 @@ docker compose up -d
 docker compose logs
 
 # Specific container
-docker compose logs cockpit-web
-docker compose logs cockpit-worker
+docker compose logs datenschleuder-web
+docker compose logs datenschleuder-worker
 
 # Follow logs in real-time
-docker compose logs -f cockpit-web
+docker compose logs -f datenschleuder-web
 ```
 
 ### Restart Services
@@ -291,12 +264,12 @@ docker compose logs -f cockpit-web
 docker compose restart
 
 # Restart specific service
-docker compose restart cockpit-worker
+docker compose restart datenschleuder-worker
 ```
 
 ### Reset the Database
 
-> ⚠️ **Warning**: This will delete all data!
+> **Warning**: This will delete all data!
 
 ```bash
 docker compose down -v
@@ -320,27 +293,26 @@ docker compose ps
 - Verify `.env` file exists and has correct values
 - Ensure ports 3000 and 8000 are not in use
 
-#### Cannot connect to Nautobot
-- Verify `NAUTOBOT_URL` and `NAUTOBOT_TOKEN` in `.env`
-- Check network connectivity from Docker container
-- If using self-signed certificates, upload the CA certificate
+#### Cannot connect to NiFi
+- Verify certificate paths and contents in `config/nipyapi/certificates.yaml`
+- Ensure the NiFi host is reachable from the Docker network
+- Check the backend logs for TLS handshake errors
 
 #### Celery tasks not running
-- Check worker logs: `docker compose logs cockpit-worker`
-- Verify Redis is running: `docker compose ps redis`
-- Restart the worker: `docker compose restart cockpit-worker`
+- Check worker logs: `docker compose logs datenschleuder-worker`
+- Verify Redis is running: `docker compose ps datenschleuder-redis`
+- Restart the worker: `docker compose restart datenschleuder-worker`
 
 ---
 
-## 🌐 Air-Gapped Installation
+## Air-Gapped Installation
 
 For environments without internet access, see [docker/README-ALL-IN-ONE.md](docker/README-ALL-IN-ONE.md) for air-gapped deployment instructions.
 
 ---
 
-## 📚 Additional Resources
+## Additional Resources
 
-- [README.md](README.md) - Overview and features
-- [OIDC_SETUP.md](OIDC_SETUP.md) - OIDC/SSO configuration
-- [PERMISSIONS.md](PERMISSIONS.md) - RBAC and permissions
+- [SETUP.md](SETUP.md) - Initial configuration and NiFi cluster setup
 - [docker/README.md](docker/README.md) - Docker deployment options
+- [docker/DOCKER.md](docker/DOCKER.md) - Docker troubleshooting

@@ -153,3 +153,83 @@ You can also configure global deployment options:
 Once the hierarchy, clusters, registry flows, and deployment paths are configured, you can deploy flows to your NiFi instances.
 
 Use the **Deploy** section to select a registry flow version and target cluster, then trigger the deployment.
+
+---
+
+## Optional: Remote Agent Setup
+
+The Datenschleuder Agent enables remote command execution on NiFi hosts — git pulls, NiFi/ZooKeeper restarts, Docker stats, and health checks — via Redis Pub/Sub.
+
+### Step 1: Configure Redis
+
+Navigate to **Settings > Redis** and click **Add Redis Server**.
+
+Fill in the connection details:
+
+| Field | Description |
+|---|---|
+| **Name** | A label for this Redis instance (e.g. `Primary`) |
+| **Host** | Hostname or IP of the Redis server |
+| **Port** | Redis port (default: `6379`) |
+| **DB Index** | Redis database number (default: `0`) |
+| **Password** | Redis password (required by the agent) |
+| **Use TLS** | Enable if your Redis server requires TLS |
+
+Save the server. The Redis connection will be used by agents and Celery workers.
+
+### Step 2: Install the Agent on the NiFi Host
+
+Copy the agent files from `./scripts/datenschleuder_agent/` to the NiFi host and run the following commands:
+
+**Create a dedicated user:**
+
+```bash
+sudo useradd -r -s /bin/bash -d /opt/datenschleuder-agent datenschleuder-agent
+sudo usermod -aG docker datenschleuder-agent
+sudo mkdir -p /opt/datenschleuder-agent
+sudo chown datenschleuder-agent:datenschleuder-agent /opt/datenschleuder-agent
+```
+
+**Install the agent:**
+
+```bash
+sudo cp -r scripts/datenschleuder_agent/* /opt/datenschleuder-agent/
+sudo chown -R datenschleuder-agent:datenschleuder-agent /opt/datenschleuder-agent
+sudo -u datenschleuder-agent python3 -m venv /opt/datenschleuder-agent/venv
+sudo -u datenschleuder-agent /opt/datenschleuder-agent/venv/bin/pip install -r /opt/datenschleuder-agent/requirements.txt
+```
+
+**Configure the agent:**
+
+```bash
+sudo cp /opt/datenschleuder-agent/.env.example /opt/datenschleuder-agent/.env
+sudo nano /opt/datenschleuder-agent/.env
+```
+
+Set the following values to match your environment:
+
+```bash
+REDIS_HOST=datenschleuder.example.com   # Redis host configured in step 1
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password
+REDIS_DB=0
+
+# MODE=docker (Docker-based NiFi) or MODE=bare (bare-metal NiFi)
+MODE=docker
+
+# NiFi/ZooKeeper container names (comma-separated, docker mode only)
+# NIFI_CONTAINERS=nifi
+# ZOOKEEPER_CONTAINER=zookeeper
+```
+
+**Install and start the systemd service:**
+
+```bash
+sudo cp /opt/datenschleuder-agent/datenschleuder-agent.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable datenschleuder-agent
+sudo systemctl start datenschleuder-agent
+sudo systemctl status datenschleuder-agent
+```
+
+Once the agent is running it will register itself in Redis using the host's hostname and send a heartbeat every 30 seconds. Datenschleuder will display connected agents and their status automatically.
