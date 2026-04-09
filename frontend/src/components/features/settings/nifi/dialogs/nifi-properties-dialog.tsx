@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Loader2, ChevronRight, Search, FileSliders } from 'lucide-react'
+import { Loader2, ChevronRight, Search, FileSliders, Wand2 } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { useNifiConfigFileQuery } from '../hooks/use-nifi-config-query'
 import { useNifiConfigMutations } from '../hooks/use-nifi-config-mutations'
@@ -43,6 +43,7 @@ import {
   generateNifiProperties,
 } from '../utils/nifi-properties-parser'
 import type { NifiProperty, NifiPropertyGroup } from '../types'
+import { UpdateWizardDialog } from './update-wizard-dialog'
 
 // Cycling color palette for group headers — gradient classes from style guide
 const GROUP_GRADIENTS = [
@@ -101,6 +102,7 @@ export function NifiPropertiesDialog({ open, onOpenChange, repoId, instanceName 
   const [filter, setFilter] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+  const [wizardOpen, setWizardOpen] = useState(false)
 
   useEffect(() => {
     if (!open || !rawContent) return
@@ -272,19 +274,32 @@ export function NifiPropertiesDialog({ open, onOpenChange, repoId, instanceName 
               </div>
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => setShowConfirm(true)}
-                  disabled={writeConfigFile.isPending}
-                >
-                  {writeConfigFile.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Save & Push
-                </Button>
+                <div className="flex w-full items-center justify-between">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setWizardOpen(true)}
+                    disabled={!rawContent}
+                  >
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Update Wizard
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => setShowConfirm(true)}
+                      disabled={writeConfigFile.isPending}
+                    >
+                      {writeConfigFile.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Save & Push
+                    </Button>
+                  </div>
+                </div>
               </DialogFooter>
             </>
           )}
@@ -306,6 +321,14 @@ export function NifiPropertiesDialog({ open, onOpenChange, repoId, instanceName 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <UpdateWizardDialog
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        repoId={repoId}
+        instanceName={instanceName}
+        currentRawContent={rawContent ?? ''}
+      />
     </>
   )
 }
