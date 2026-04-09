@@ -132,7 +132,15 @@ async def get_registry_clients(
     instance_id: int,
     current_user: dict = Depends(require_permission("nifi", "read")),
 ):
+    instance = _get_instance(instance_id)
+    logger.info(
+        "get_registry_clients instance_id=%d nifi_url=%s username=%s",
+        instance_id,
+        instance.nifi_url,
+        instance.username,
+    )
     clients = await _execute_with_retry(instance_id, reg_ops.list_registry_clients)
+    logger.info("get_registry_clients returned %d clients: %r", len(clients), clients)
     return {"status": "success", "registry_clients": clients, "count": len(clients)}
 
 

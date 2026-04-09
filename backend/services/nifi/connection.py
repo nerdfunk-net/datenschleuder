@@ -59,15 +59,18 @@ class NifiConnectionService:
         certificate_name: Optional[str] = None,
         check_hostname: bool = True,
         oidc_provider_id: Optional[str] = None,
-        normalize_url: bool = False,
+        normalize_url: bool = False,  # kept for API compat; normalisation is always applied
     ) -> None:
         """Configure nipyapi connection for a NiFi instance."""
         nifi_url = nifi_url.rstrip("/")
 
-        if normalize_url:
-            if nifi_url.endswith("/nifi-api"):
-                nifi_url = nifi_url[:-9]
-            nifi_url = "%s/nifi-api" % nifi_url
+        # Always normalise to /nifi-api regardless of what is stored.
+        # Strip any trailing /nifi or /nifi-api first so we don't double-append.
+        for _suffix in ("/nifi-api", "/nifi"):
+            if nifi_url.endswith(_suffix):
+                nifi_url = nifi_url[: -len(_suffix)]
+                break
+        nifi_url = "%s/nifi-api" % nifi_url
 
         config.nifi_config.host = nifi_url
         config.nifi_config.verify_ssl = verify_ssl

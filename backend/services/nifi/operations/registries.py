@@ -11,13 +11,29 @@ logger = logging.getLogger(__name__)
 
 def list_registry_clients() -> List[Dict[str, Any]]:
     """Get list of registry clients configured in NiFi."""
+    import nipyapi
+
+    logger.info(
+        "list_registry_clients calling NiFi host=%s",
+        nipyapi.config.nifi_config.host,
+    )
+
     registry_clients_entity = versioning.list_registry_clients()
 
+    if registry_clients_entity is None:
+        logger.warning("list_registry_clients returned None")
+        return []
+
+    has_registries = hasattr(registry_clients_entity, "registries")
+    registries_value = getattr(registry_clients_entity, "registries", None)
+    logger.info(
+        "list_registry_clients has_registries=%s registries=%r",
+        has_registries,
+        registries_value,
+    )
+
     clients_list = []
-    if (
-        hasattr(registry_clients_entity, "registries")
-        and registry_clients_entity.registries
-    ):
+    if has_registries and registries_value:
         for client in registry_clients_entity.registries:
             client_data = {
                 "id": client.id if hasattr(client, "id") else "Unknown",
