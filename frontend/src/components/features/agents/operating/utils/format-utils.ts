@@ -40,7 +40,7 @@ export function formatUptime(startedAt: number): string {
  *   - JSON array of strings: ["echo", "git_pull", ...]
  *   - Comma-separated string: "echo,git_pull,..." (legacy fallback)
  */
-export function parseCapabilities(capabilities: string): { id: string; name: string }[] {
+export function parseCapabilities(capabilities: string): { id: string; name: string; description?: string }[] {
   if (!capabilities) return []
   try {
     const parsed = JSON.parse(capabilities)
@@ -50,7 +50,8 @@ export function parseCapabilities(capabilities: string): { id: string; name: str
         if (item && typeof item === 'object') {
           const id = String(item.id ?? '')
           const name = String(item.name ?? item.id ?? id)
-          return { id, name }
+          const description = item.description ? String(item.description) : undefined
+          return { id, name, description }
         }
         return { id: String(item), name: String(item) }
       })

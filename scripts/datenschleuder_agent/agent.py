@@ -29,26 +29,28 @@ logger = logging.getLogger(__name__)
 
 
 CAPABILITIES = [
-    {"id": "echo", "name": "echo"},
-    {"id": "git_pull", "name": "Pull Git Repo"},
-    {"id": "git_push", "name": "Push Config to Git"},
-    {"id": "git_status", "name": "Get Git Status"},
-    {"id": "list_repositories", "name": "Get List of Repos"},
-    {"id": "docker_restart", "name": "Restart Docker Container"},
-    {"id": "list_containers", "name": "Get List of Containers"},
-    {"id": "docker_stats", "name": "Get Docker Stats"},
-    {"id": "docker_ps", "name": "Get running Containers"},
+    {"id": "echo", "name": "echo", "description": "Health check — sends a message and returns it unchanged."},
+    {"id": "git_pull", "name": "Pull Git Repo", "description": "Pull the latest commits from the remote into the local config repository."},
+    {"id": "git_push", "name": "Push Config to Git", "description": "Stage all local changes, commit with a timestamp, and push to the remote."},
+    {"id": "git_status", "name": "Get Git Status", "description": "Show the working-tree status of the local config repository."},
+    {"id": "list_repositories", "name": "Get List of Repos", "description": "List all Git repositories configured on this agent."},
+    {"id": "fetch_nifi_properties", "name": "Fetch nifi.properties", "description": "Fetch nifi.properties from the remote and overwrite the local file, regardless of local modifications."},
+    {"id": "docker_restart", "name": "Restart Docker Container", "description": "Restart one or more Docker containers managed by this agent."},
+    {"id": "list_containers", "name": "Get List of Containers", "description": "List all Docker containers configured on this agent."},
+    {"id": "docker_stats", "name": "Get Docker Stats", "description": "Show live CPU, memory, network and block I/O stats for all running containers."},
+    {"id": "docker_ps", "name": "Get running Containers", "description": "List all currently running Docker containers with their status and ports."},
 ]
 
 CAPABILITIES_BARE = [
-    {"id": "echo", "name": "echo"},
-    {"id": "git_pull", "name": "Pull Git Repo"},
-    {"id": "git_push", "name": "Push Config to Git"},
-    {"id": "git_status", "name": "Get Git Status"},
-    {"id": "list_repositories", "name": "Get List of Repos"},
-    {"id": "nifi_restart", "name": "Restart NiFi"},
-    {"id": "nifi_stop", "name": "Stop NiFi"},
-    {"id": "nifi_start", "name": "Start NiFi"},
+    {"id": "echo", "name": "echo", "description": "Health check — sends a message and returns it unchanged."},
+    {"id": "git_pull", "name": "Pull Git Repo", "description": "Pull the latest commits from the remote into the local config repository."},
+    {"id": "git_push", "name": "Push Config to Git", "description": "Stage all local changes, commit with a timestamp, and push to the remote."},
+    {"id": "git_status", "name": "Get Git Status", "description": "Show the working-tree status of the local config repository."},
+    {"id": "list_repositories", "name": "Get List of Repos", "description": "List all Git repositories configured on this agent."},
+    {"id": "fetch_nifi_properties", "name": "Fetch nifi.properties", "description": "Fetch nifi.properties from the remote and overwrite the local file, regardless of local modifications."},
+    {"id": "nifi_restart", "name": "Restart NiFi", "description": "Restart the NiFi service using the configured start script."},
+    {"id": "nifi_stop", "name": "Stop NiFi", "description": "Stop the NiFi service."},
+    {"id": "nifi_start", "name": "Start NiFi", "description": "Start the NiFi service."},
 ]
 
 class DatenschleuderAgent:

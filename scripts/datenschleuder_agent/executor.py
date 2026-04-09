@@ -30,6 +30,8 @@ class CommandExecutor:
         self.register("git_status", self._execute_git_status)
         self.register("list_repositories", self._execute_list_repositories)
 
+        self.register("fetch_nifi_properties", self._execute_fetch_nifi_properties)
+
         if config.mode == "bare":
             self.register("nifi_restart", self._execute_nifi_restart)
             self.register("nifi_stop", self._execute_nifi_stop)
@@ -716,6 +718,101 @@ class CommandExecutor:
             return {"status": "error", "error": "\n".join(errors), "output": "\n".join(outputs)}
 
         return {"status": "success", "output": combined_output or f"All {service_type} services {action} completed", "error": None}
+
+    async def _fetch_nifi_properties_one(self, repo_id: str, repo_path: str, branch: str) -> dict:
+        """Fetch nifi.properties from git remote and overwrite the local file.
+
+        Steps:
+        1. Check whether nifi.properties has local modifications.
+        2. Run 'git fetch origin <branch>' to update remote refs.
+        3. Force-checkout nifi.properties from FETCH_HEAD, discarding local changes.
+        Returns a dict with status, output (includes was_modified flag), error.
+        """
+        if not os.path.isdir(repo_path):
+            return {"status": "error", "error": f"Path does not exist: {repo_path}", "output": None}
+        if not os.path.isdir(os.path.join(repo_path, ".git")):
+            return {"status": "error", "error": f"Not a git repository: {repo_path}", "output": None}
+
+        nifi_props_file = "nifi.properties"
+
+        # 1. Detect local modification
+        logger.info("Checking modification status of %s in %s", nifi_props_file, repo_path)
+        rc, status_out, status_err = await self._run_git(repo_path, "status", "--short", "--", nifi_props_file)
+        if rc == -1:
+            return {"status": "error", "error": f"git status timed out after {config.command_timeout}s", "output": None}
+        if rc != 0:
+            return {"status": "error", "error": status_err or "git status failed", "output": None}
+
+        was_modified = bool(status_out.strip())
+        logger.info("nifi.properties modified=%s for repo '%s'", was_modified, repo_id)
+
+        # 2. Fetch remote branch
+        logger.info("Executing: git -C %s fetch origin %s", repo_path, branch)
+        rc, _, fetch_err = await self._run_git(repo_path, "fetch", "origin", branch)
+        if rc == -1:
+            return {"status": "error", "error": f"git fetch timed out after {config.command_timeout}s", "output": None}
+        if rc != 0:
+            return {"status": "error", "error": fetch_err or "git fetch failed", "output": None}
+
+        # 3. Force-checkout nifi.properties from FETCH_HEAD
+        logger.info("Executing: git -C %s checkout FETCH_HEAD -- %s", repo_path, nifi_props_file)
+        rc, _, checkout_err = await self._run_git(repo_path, "checkout", "FETCH_HEAD", "--", nifi_props_file)
+        if rc == -1:
+            return {"status": "error", "error": f"git checkout timed out after {config.command_timeout}s", "output": None}
+        if rc != 0:
+            return {"status": "error", "error": checkout_err or "git checkout failed", "output": None}
+
+        modified_label = "was modified" if was_modified else "was not modified"
+        output = f"nifi.properties fetched from origin/{branch} ({modified_label})"
+        logger.info("fetch_nifi_properties successful for %s: %s", repo_id, output)
+        return {"status": "success", "output": output, "error": None, "was_modified": was_modified}
+
+    async def _execute_fetch_nifi_properties(self, params: dict) -> dict:
+        """
+        Fetch nifi.properties from the git remote and overwrite the local file.
+        Accepts optional 'repository_ids' list; if omitted, targets all configured repos.
+        Accepts optional 'branch' string (default: 'main').
+        The response output includes whether the file was locally modified before the fetch.
+        """
+        repository_ids: Optional[List[str]] = params.get("repository_ids") or None
+        branch = params.get("branch", "main")
+        logger.info("fetch_nifi_properties request - params: %s", params)
+
+        if not config.git_repos:
+            error_msg = "No git repositories configured (repos.yaml missing or empty)"
+            logger.error(error_msg)
+            return {"status": "error", "error": error_msg, "output": None}
+
+        if repository_ids:
+            unknown = [rid for rid in repository_ids if rid not in config.git_repos]
+            if unknown:
+                error_msg = f"Unknown repository IDs: {', '.join(unknown)}. Configured: {', '.join(config.git_repos.keys())}"
+                logger.error(error_msg)
+                return {"status": "error", "error": error_msg, "output": None}
+            target_repos = {rid: config.git_repos[rid] for rid in repository_ids}
+        else:
+            target_repos = config.git_repos
+
+        outputs = []
+        errors = []
+
+        for repo_id, repo_info in target_repos.items():
+            repo_path = repo_info.get("path", "")
+            result = await self._fetch_nifi_properties_one(repo_id, repo_path, branch)
+            line = f"[{repo_id}] {result.get('output') or result.get('error') or ''}"
+            if result["status"] == "success":
+                outputs.append(line)
+            else:
+                errors.append(line)
+
+        combined_output = "\n".join(outputs + errors) or None
+
+        if errors and not outputs:
+            return {"status": "error", "error": "\n".join(errors), "output": None}
+        if errors:
+            return {"status": "error", "error": "\n".join(errors), "output": "\n".join(outputs)}
+
+        return {"status": "success", "output": combined_output or "nifi.properties fetched successfully", "error": None}
 
     async def _execute_nifi_restart(self, params: dict) -> dict:
         """Restart all NiFi services defined in bare.yaml"""

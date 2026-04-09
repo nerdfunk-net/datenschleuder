@@ -135,6 +135,29 @@ def parse_docker_stats(raw: str) -> list[dict]:
     return rows
 
 
+def parse_fetch_nifi_properties(raw: str) -> list[dict]:
+    """Parse fetch_nifi_properties output into structured rows.
+
+    Each line has the form:
+        [repo-id] nifi.properties fetched from origin/<branch> (was modified)
+        [repo-id] nifi.properties fetched from origin/<branch> (was not modified)
+    """
+    rows: list[dict] = []
+    pattern = re.compile(
+        r"^\[(?P<repo>[^\]]+)\]\s+nifi\.properties fetched from origin/(?P<branch>\S+)"
+        r"\s+\(was (?P<not_>not )?modified\)"
+    )
+    for line in raw.splitlines():
+        m = pattern.match(line.strip())
+        if m:
+            rows.append({
+                "repo": m.group("repo"),
+                "branch": m.group("branch"),
+                "was_modified": m.group("not_") is None,
+            })
+    return rows
+
+
 class AgentCommandParser:
     """Dispatch output parsing based on command type."""
 
@@ -144,6 +167,7 @@ class AgentCommandParser:
         "list_containers": parse_list_containers,
         "list_repositories": parse_list_repositories,
         "git_status": parse_git_status,
+        "fetch_nifi_properties": parse_fetch_nifi_properties,
     }
 
     def parse(self, command: str, raw_output: str) -> list[dict] | None:

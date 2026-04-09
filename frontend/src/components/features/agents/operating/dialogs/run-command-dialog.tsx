@@ -34,7 +34,7 @@ import { Loader2, ChevronDown, Terminal, BarChart2, Server, Play } from 'lucide-
 import { parseCapabilities } from '../utils/format-utils'
 import { useAgentRepositoriesQuery } from '../hooks/use-agent-repositories-query'
 import { useAgentContainersQuery } from '../hooks/use-agent-containers-query'
-import type { CommandResult, ContainerListRow, DockerPsRow, DockerStatsRow, GitStatusRow, RepositoryListRow } from '../types'
+import type { CommandResult, ContainerListRow, DockerPsRow, DockerStatsRow, GitStatusRow, NifiFetchRow, RepositoryListRow } from '../types'
 
 interface RunCommandDialogProps {
   open: boolean
@@ -48,11 +48,16 @@ interface RunCommandDialogProps {
   >
 }
 
-type AnyRow = DockerPsRow | DockerStatsRow | ContainerListRow | RepositoryListRow | GitStatusRow
+type AnyRow = DockerPsRow | DockerStatsRow | ContainerListRow | RepositoryListRow | GitStatusRow | NifiFetchRow
+
+function isNifiFetchRows(rows: AnyRow[]): rows is NifiFetchRow[] {
+  if (rows.length === 0) return false
+  return 'repo' in rows[0]! && 'was_modified' in rows[0]!
+}
 
 function isGitStatusRows(rows: AnyRow[]): rows is GitStatusRow[] {
   if (rows.length === 0) return false
-  return 'repo' in rows[0]! && 'branch' in rows[0]!
+  return 'repo' in rows[0]! && 'branch' in rows[0]! && 'file' in rows[0]!
 }
 
 function isRepositoryListRows(rows: AnyRow[]): rows is RepositoryListRow[] {
@@ -106,8 +111,12 @@ export function RunCommandDialog({
   const [rawOpen, setRawOpen] = useState(false)
 
   const commands = useMemo(() => parseCapabilities(capabilities), [capabilities])
+  const selectedCommandObj = useMemo(
+    () => commands.find((c) => c.id === selectedCommand) ?? null,
+    [commands, selectedCommand],
+  )
 
-  const isGitCommand = selectedCommand === 'git_pull' || selectedCommand === 'git_push' || selectedCommand === 'git_status'
+  const isGitCommand = selectedCommand === 'git_pull' || selectedCommand === 'git_push' || selectedCommand === 'git_status' || selectedCommand === 'fetch_nifi_properties'
   const isDockerRestart = selectedCommand === 'docker_restart'
 
   const { data: reposData, isLoading: reposLoading } = useAgentRepositoriesQuery(agentId, {
@@ -242,6 +251,11 @@ export function RunCommandDialog({
                   Run
                 </Button>
               </div>
+              {selectedCommandObj?.description && (
+                <p className="text-xs text-muted-foreground px-1">
+                  {selectedCommandObj.description}
+                </p>
+              )}
 
               {/* Container selector — shown for docker_restart */}
               {isDockerRestart && (
@@ -300,7 +314,7 @@ export function RunCommandDialog({
                 <div className="border rounded-md p-3 space-y-2">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-medium text-muted-foreground">
-                      {selectedCommand === 'git_push' ? 'Select repositories to push' : 'Select repositories to pull'}
+                      {selectedCommand === 'git_push' ? 'Select repositories to push' : selectedCommand === 'fetch_nifi_properties' ? 'Select repositories to fetch nifi.properties from' : 'Select repositories to pull'}
                     </span>
                     {repos.length > 0 && (
                       <Button
@@ -380,7 +394,38 @@ export function RunCommandDialog({
                 <div className="space-y-3">
                   {parsedRows && parsedRows.length > 0 ? (
                     <div className="border rounded-md overflow-auto">
-                      {isGitStatusRows(parsedRows) ? (
+                      {isNifiFetchRows(parsedRows) ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-slate-50">
+                              <TableHead className="text-xs font-semibold">Repository</TableHead>
+                              <TableHead className="text-xs font-semibold">Branch</TableHead>
+                              <TableHead className="text-xs font-semibold">nifi.properties</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(parsedRows as NifiFetchRow[]).map((row) => (
+                              <TableRow key={row.repo}>
+                                <TableCell className="font-mono text-xs font-medium">{row.repo}</TableCell>
+                                <TableCell className="text-xs text-muted-foreground font-mono">{row.branch}</TableCell>
+                                <TableCell>
+                                  {row.was_modified ? (
+                                    <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded font-medium bg-amber-100 text-amber-700">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" />
+                                      Was modified — overwritten
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded font-medium bg-green-100 text-green-700">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-green-500 inline-block" />
+                                      Up to date — overwritten
+                                    </span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : isGitStatusRows(parsedRows) ? (
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-slate-50">

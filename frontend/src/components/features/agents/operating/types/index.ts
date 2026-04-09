@@ -1,6 +1,7 @@
 export interface Capability {
   id: string
   name: string
+  description?: string
 }
 
 export interface CockpitAgent {
@@ -108,11 +109,17 @@ export interface GitStatusRow {
   status: string // 'clean' | 'modified' | 'staged' | 'staged+modified' | 'untracked' | 'deleted' | 'staged deleted' | 'added' | 'added+modified' | 'renamed' | 'conflict'
 }
 
+export interface NifiFetchRow {
+  repo: string
+  branch: string
+  was_modified: boolean
+}
+
 export interface CommandResult {
   command_id: string
   status: string
   output: string | null
   error: string | null
   execution_time_ms: number
-  parsed_output?: DockerPsRow[] | DockerStatsRow[] | ContainerListRow[] | RepositoryListRow[] | GitStatusRow[] | null
+  parsed_output?: DockerPsRow[] | DockerStatsRow[] | ContainerListRow[] | RepositoryListRow[] | GitStatusRow[] | NifiFetchRow[] | null
 }

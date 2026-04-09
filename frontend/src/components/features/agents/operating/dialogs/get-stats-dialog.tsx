@@ -23,7 +23,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { Loader2, ChevronDown, Terminal, BarChart2, Server } from 'lucide-react'
-import type { CommandResult, ContainerListRow, DockerPsRow, DockerStatsRow, GitStatusRow, RepositoryListRow } from '../types'
+import type { CommandResult, ContainerListRow, DockerPsRow, DockerStatsRow, GitStatusRow, NifiFetchRow, RepositoryListRow } from '../types'
 
 interface GetStatsDialogProps {
   open: boolean
@@ -43,7 +43,7 @@ const COMMAND_LABELS: Record<NonNullable<LastCommand>, string> = {
   docker_stats: 'Docker Stats',
 }
 
-function isDockerPsRows(rows: DockerPsRow[] | DockerStatsRow[] | ContainerListRow[] | RepositoryListRow[] | GitStatusRow[]): rows is DockerPsRow[] {
+function isDockerPsRows(rows: DockerPsRow[] | DockerStatsRow[] | ContainerListRow[] | RepositoryListRow[] | GitStatusRow[] | NifiFetchRow[]): rows is DockerPsRow[] {
   return rows.length === 0 || ('names' in (rows[0] as DockerPsRow))
 }
 
