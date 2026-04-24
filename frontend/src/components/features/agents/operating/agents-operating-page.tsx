@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Activity, RefreshCw, Server, Wifi, WifiOff, Loader2 } from 'lucide-react'
+import { Activity, RefreshCw, Server, Wifi, WifiOff, Loader2, Download } from 'lucide-react'
 import { useAgentsQuery } from './hooks/use-agents-query'
 import { useAgentMutations } from './hooks/use-agent-mutations'
 import { AgentsGrid } from './components/agents-grid'
@@ -142,6 +142,16 @@ export function AgentsOperatingPage() {
           agentId={historyAgent}
         />
       )}
+
+      {/* Footer */}
+      <div className="flex justify-start">
+        <Button variant="outline" size="sm" asChild>
+          <a href="/api/download/agent" download="datenschleuder_agent.tar.gz">
+            <Download className="h-3.5 w-3.5 mr-1.5" />
+            Download Agent
+          </a>
+        </Button>
+      </div>
     </div>
   )
 }
