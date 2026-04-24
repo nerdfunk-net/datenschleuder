@@ -207,3 +207,4 @@ config/oidc/*.pem
 scripts/datenschleuder_agent/bare.yaml
 scripts/datenschleuder_agent/repos.yaml
 scripts/datenschleuder_agent/containers.yaml
+scripts/datenschleuder_agent.working
