@@ -9,17 +9,11 @@ import logging
 import re
 from typing import List, Optional
 
-from sqlalchemy import inspect
-
-from core.database import engine
-from repositories.nifi.nifi_flow_repository import NifiFlowRepository
 from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
+from repositories.nifi.nifi_flow_repository import nifi_flow_repository as _repo
 from services.nifi.hierarchy_service import get_hierarchy_config
 
 logger = logging.getLogger(__name__)
-
-# Module-level repository instance — shares the reflected table cache.
-_repo = NifiFlowRepository(engine)
 
 
 def invalidate_flow_table_cache() -> None:
@@ -57,7 +51,7 @@ _INTERNAL_COLUMNS = {"id", "updated_at"}
 
 
 def _table_exists() -> bool:
-    return inspect(engine).has_table("nifi_flows")
+    return _repo.has_table()
 
 
 def _get_hierarchy() -> list:

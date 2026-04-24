@@ -8,7 +8,19 @@ via autoload_with so all queries remain fully parameterised (no raw f-strings).
 import logging
 from typing import Optional
 
-from sqlalchemy import MetaData, Table
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    Text,
+    func,
+    inspect,
+    select,
+)
 from sqlalchemy.engine import Engine
 
 logger = logging.getLogger(__name__)
@@ -49,6 +61,8 @@ class NifiFlowRepository:
 
     def list_all(self) -> list[dict]:
         """Return all flows ordered by created_at descending."""
+        if not inspect(self._engine).has_table("nifi_flows"):
+            return []
         table = self._get_table()
         with self._engine.connect() as conn:
             result = conn.execute(table.select().order_by(table.c.created_at.desc()))
@@ -95,3 +109,80 @@ class NifiFlowRepository:
         """Return the reflection-based column names for the nifi_flows table."""
         table = self._get_table()
         return [col.name for col in table.columns]
+
+    def has_table(self) -> bool:
+        """Return True if the nifi_flows table exists in the database."""
+        return inspect(self._engine).has_table("nifi_flows")
+
+    def count(self) -> int:
+        """Return the number of rows, or 0 if the table does not exist."""
+        if not inspect(self._engine).has_table("nifi_flows"):
+            return 0
+        table = self._get_table()
+        with self._engine.connect() as conn:
+            result = conn.execute(select(func.count()).select_from(table))
+            return result.scalar() or 0
+
+    def recreate_table(self, hierarchy: list) -> dict:
+        """Drop and recreate nifi_flows with columns derived from hierarchy.
+
+        Replaces the raw DROP TABLE SQL with SQLAlchemy's table.drop() and
+        invalidates the reflection cache so subsequent queries see the new schema.
+        Returns a summary dict with table_name, hierarchy_columns, total_columns.
+        """
+        hierarchy = sorted(hierarchy, key=lambda x: x.get("order", 0))
+
+        old_meta = MetaData()
+        old_table = Table("nifi_flows", old_meta)
+        old_table.drop(self._engine, checkfirst=True)
+        self._invalidate_table_cache()
+
+        metadata = MetaData()
+        columns: list = [Column("id", Integer, primary_key=True, index=True)]
+        for attr in hierarchy:
+            attr_name = attr["name"].lower()
+            columns.append(Column(f"src_{attr_name}", String, nullable=False, index=True))
+            columns.append(Column(f"dest_{attr_name}", String, nullable=False, index=True))
+        columns.extend(
+            [
+                Column("name", String, nullable=True),
+                Column("contact", String, nullable=True),
+                Column("src_connection_param", String, nullable=False),
+                Column("dest_connection_param", String, nullable=False),
+                Column("src_template_id", Integer, nullable=True),
+                Column("dest_template_id", Integer, nullable=True),
+                Column("active", Boolean, nullable=False, default=True),
+                Column("description", Text, nullable=True),
+                Column("creator_name", String, nullable=True),
+                Column("created_at", DateTime(timezone=True), server_default=func.now()),
+                Column(
+                    "updated_at",
+                    DateTime(timezone=True),
+                    server_default=func.now(),
+                    onupdate=func.now(),
+                ),
+            ]
+        )
+        Table("nifi_flows", metadata, *columns)
+        metadata.create_all(self._engine)
+
+        hierarchy_columns = [
+            {
+                "name": attr["name"],
+                "src_column": f"src_{attr['name'].lower()}",
+                "dest_column": f"dest_{attr['name'].lower()}",
+            }
+            for attr in hierarchy
+        ]
+        logger.info("Recreated nifi_flows table with %d hierarchy columns", len(hierarchy_columns))
+        return {
+            "table_name": "nifi_flows",
+            "hierarchy_columns": hierarchy_columns,
+            "total_columns": len(columns),
+        }
+
+
+# Module-level singleton — shares the reflected table cache across the application.
+from core.database import engine as _engine  # noqa: E402
+
+nifi_flow_repository = NifiFlowRepository(_engine)

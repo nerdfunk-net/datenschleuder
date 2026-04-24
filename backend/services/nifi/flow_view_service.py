@@ -35,7 +35,7 @@ def create_view(
         raise ValueError("View with name '%s' already exists" % name)
 
     if is_default:
-        _unset_all_defaults()
+        _repo.unset_all_defaults()
 
     return _repo.create(
         name=name,
@@ -57,7 +57,7 @@ def update_view(view_id: int, **kwargs) -> Optional[FlowView]:
 
     is_default = kwargs.get("is_default")
     if is_default:
-        _unset_all_defaults_except(view_id)
+        _repo.unset_all_defaults_except(view_id)
 
     return _repo.update(view_id, **kwargs)
 
@@ -70,27 +70,3 @@ def delete_view(view_id: int) -> bool:
 def set_default(view_id: int) -> Optional[FlowView]:
     """Set a view as the default."""
     return _repo.set_default(view_id)
-
-
-def _unset_all_defaults():
-    """Unset all default views."""
-    from core.database import get_db_session
-
-    db = get_db_session()
-    try:
-        db.query(FlowView).update({"is_default": False})
-        db.commit()
-    finally:
-        db.close()
-
-
-def _unset_all_defaults_except(view_id: int):
-    """Unset all default views except the specified one."""
-    from core.database import get_db_session
-
-    db = get_db_session()
-    try:
-        db.query(FlowView).filter(FlowView.id != view_id).update({"is_default": False})
-        db.commit()
-    finally:
-        db.close()

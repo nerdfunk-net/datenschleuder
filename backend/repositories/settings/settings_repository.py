@@ -30,6 +30,15 @@ class GitSettingRepository(BaseRepository[GitSetting]):
         finally:
             session.close()
 
+    def delete_all(self) -> None:
+        """Delete all Git settings records."""
+        session = get_db_session()
+        try:
+            session.query(self.model).delete()
+            session.commit()
+        finally:
+            session.close()
+
 
 class CacheSettingRepository(BaseRepository[CacheSetting]):
     """Repository for Cache settings."""
@@ -45,6 +54,15 @@ class CacheSettingRepository(BaseRepository[CacheSetting]):
         finally:
             session.close()
 
+    def delete_all(self) -> None:
+        """Delete all Cache settings records."""
+        session = get_db_session()
+        try:
+            session.query(self.model).delete()
+            session.commit()
+        finally:
+            session.close()
+
 
 class CelerySettingRepository(BaseRepository[CelerySetting]):
     """Repository for Celery settings."""
@@ -57,6 +75,15 @@ class CelerySettingRepository(BaseRepository[CelerySetting]):
         session = get_db_session()
         try:
             return session.query(CelerySetting).first()
+        finally:
+            session.close()
+
+    def delete_all(self) -> None:
+        """Delete all Celery settings records."""
+        session = get_db_session()
+        try:
+            session.query(self.model).delete()
+            session.commit()
         finally:
             session.close()
 

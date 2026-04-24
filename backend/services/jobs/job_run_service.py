@@ -124,49 +124,26 @@ class JobRunService:
         return {"running": repo.get_running_count(), "pending": repo.get_pending_count()}
 
     def get_dashboard_stats(self) -> Dict[str, Any]:
-        from core.database import get_db_session
-        from sqlalchemy import text
-        session = get_db_session()
-        try:
-            job_stats = session.execute(text("""
-                SELECT
-                    COUNT(*) as total,
-                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-                    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
-                    SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) as running
-                FROM job_runs
-            """)).fetchone()
-            backup_stats = session.execute(text("""
-                SELECT result FROM job_runs
-                WHERE job_type = 'backup'
-                    AND status = 'completed'
-                    AND queued_at >= NOW() - INTERVAL '30 days'
-            """)).fetchall()
-            total_backed_up = 0
-            total_failed = 0
-            for row in backup_stats:
-                if row[0]:
-                    try:
-                        result = json.loads(row[0])
-                        total_backed_up += result.get("devices_backed_up", 0)
-                        total_failed += result.get("devices_failed", 0)
-                    except (json.JSONDecodeError, AttributeError):
-                        pass
-            return {
-                "job_runs": {
-                    "total": job_stats[0] or 0,
-                    "completed": job_stats[1] or 0,
-                    "failed": job_stats[2] or 0,
-                    "running": job_stats[3] or 0,
-                },
-                "backup_devices": {
-                    "total_devices": total_backed_up + total_failed,
-                    "successful_devices": total_backed_up,
-                    "failed_devices": total_failed,
-                },
-            }
-        finally:
-            session.close()
+        job_stats = repo.get_aggregate_stats()
+        backup_results = repo.get_recent_backup_results(days=30)
+        total_backed_up = 0
+        total_failed = 0
+        for raw in backup_results:
+            if raw:
+                try:
+                    result = json.loads(raw)
+                    total_backed_up += result.get("devices_backed_up", 0)
+                    total_failed += result.get("devices_failed", 0)
+                except (json.JSONDecodeError, AttributeError):
+                    pass
+        return {
+            "job_runs": job_stats,
+            "backup_devices": {
+                "total_devices": total_backed_up + total_failed,
+                "successful_devices": total_backed_up,
+                "failed_devices": total_failed,
+            },
+        }
 
     def cleanup_old_runs(self, days: int = 30) -> int:
         count = repo.cleanup_old_runs(days)

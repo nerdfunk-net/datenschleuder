@@ -3,10 +3,8 @@
 import logging
 from typing import List, Literal, Dict, Any, Set
 
-from sqlalchemy import inspect, text
-
-from core.database import engine
 from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
+from repositories.nifi.nifi_flow_repository import nifi_flow_repository as _flow_repo
 from services.nifi import hierarchy_service
 from services.nifi.nifi_context import nifi_connection_scope
 
@@ -24,16 +22,6 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-
-def _get_flows_raw() -> List[Dict[str, Any]]:
-    """Get all flows from nifi_flows table as flat dicts."""
-    if not inspect(engine).has_table("nifi_flows"):
-        return []
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT * FROM nifi_flows"))
-        rows = result.fetchall()
-        keys = list(result.keys())
-    return [dict(zip(keys, row)) for row in rows]
 
 
 def _build_pg_by_path(all_pgs_raw: list) -> tuple:
@@ -161,7 +149,7 @@ def check_path(
     )
 
     # Load flows and configuration
-    flows = _get_flows_raw()
+    flows = _flow_repo.list_all()
     logger.info("Found %d flows in database", len(flows))
 
     deployment_settings = hierarchy_service.get_deployment_settings()

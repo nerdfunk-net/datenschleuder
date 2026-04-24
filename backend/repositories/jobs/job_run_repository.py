@@ -454,6 +454,46 @@ class JobRunRepository(BaseRepository[JobRun]):
         finally:
             session.close()
 
+    def get_aggregate_stats(self) -> Dict[str, Any]:
+        """Return status counts using ORM aggregations (no raw SQL)."""
+        from core.database import get_db_session
+        from sqlalchemy import case, func
+
+        session = get_db_session()
+        try:
+            result = session.query(
+                func.count().label("total"),
+                func.sum(case((self.model.status == "completed", 1), else_=0)).label("completed"),
+                func.sum(case((self.model.status == "failed", 1), else_=0)).label("failed"),
+                func.sum(case((self.model.status == "running", 1), else_=0)).label("running"),
+            ).one()
+            return {
+                "total": result.total or 0,
+                "completed": result.completed or 0,
+                "failed": result.failed or 0,
+                "running": result.running or 0,
+            }
+        finally:
+            session.close()
+
+    def get_recent_backup_results(self, days: int = 30) -> List[Any]:
+        """Return result JSON strings from completed backup jobs in the last N days."""
+        from datetime import datetime, timedelta, timezone
+
+        from core.database import get_db_session
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        session = get_db_session()
+        try:
+            rows = session.query(self.model.result).filter(
+                self.model.job_type == "backup",
+                self.model.status == "completed",
+                self.model.queued_at >= cutoff,
+            ).all()
+            return [row.result for row in rows]
+        finally:
+            session.close()
+
     def get_distinct_templates(self) -> List[Dict[str, Any]]:
         """Get distinct templates used in job runs."""
         from core.database import get_db_session

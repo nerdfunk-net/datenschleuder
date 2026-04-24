@@ -5,22 +5,8 @@ import logging
 import time
 from typing import List
 
-from sqlalchemy import (
-    Table,
-    Column,
-    Integer,
-    String,
-    Boolean,
-    DateTime,
-    Text,
-    MetaData,
-    inspect,
-    text,
-)
-from sqlalchemy.sql import func
-
-from core.database import engine
 from repositories.nifi.hierarchy_repository import HierarchyValueRepository
+from repositories.nifi.nifi_flow_repository import nifi_flow_repository as _flow_repo
 from repositories.nifi.nifi_setting_repository import NifiSettingRepository
 
 logger = logging.getLogger(__name__)
@@ -70,12 +56,7 @@ def invalidate_hierarchy_cache() -> None:
 
 def get_flow_count() -> int:
     """Return the number of existing nifi_flows rows, or 0 if the table does not exist."""
-    inspector = inspect(engine)
-    if not inspector.has_table("nifi_flows"):
-        return 0
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT COUNT(*) FROM nifi_flows"))
-        return result.scalar() or 0
+    return _flow_repo.count()
 
 
 def create_nifi_flows_table(hierarchy: list) -> dict:
@@ -84,66 +65,7 @@ def create_nifi_flows_table(hierarchy: list) -> dict:
     Each hierarchy attribute contributes two columns: src_<name> and dest_<name>.
     Returns a summary dict with table_name, hierarchy_columns, and total_columns.
     """
-    hierarchy = sorted(hierarchy, key=lambda x: x.get("order", 0))
-
-    inspector = inspect(engine)
-    if inspector.has_table("nifi_flows"):
-        with engine.connect() as conn:
-            conn.execute(text("DROP TABLE IF EXISTS nifi_flows"))
-            conn.commit()
-
-    metadata = MetaData()
-
-    columns = [
-        Column("id", Integer, primary_key=True, index=True),
-    ]
-
-    for attr in hierarchy:
-        attr_name = attr["name"].lower()
-        columns.append(Column(f"src_{attr_name}", String, nullable=False, index=True))
-        columns.append(Column(f"dest_{attr_name}", String, nullable=False, index=True))
-
-    columns.extend(
-        [
-            Column("name", String, nullable=True),
-            Column("contact", String, nullable=True),
-            Column("src_connection_param", String, nullable=False),
-            Column("dest_connection_param", String, nullable=False),
-            Column("src_template_id", Integer, nullable=True),
-            Column("dest_template_id", Integer, nullable=True),
-            Column("active", Boolean, nullable=False, default=True),
-            Column("description", Text, nullable=True),
-            Column("creator_name", String, nullable=True),
-            Column("created_at", DateTime(timezone=True), server_default=func.now()),
-            Column(
-                "updated_at",
-                DateTime(timezone=True),
-                server_default=func.now(),
-                onupdate=func.now(),
-            ),
-        ]
-    )
-
-    Table("nifi_flows", metadata, *columns)
-    metadata.create_all(engine)
-
-    hierarchy_columns = [
-        {
-            "name": attr["name"],
-            "src_column": f"src_{attr['name'].lower()}",
-            "dest_column": f"dest_{attr['name'].lower()}",
-        }
-        for attr in hierarchy
-    ]
-
-    logger.info(
-        "Recreated nifi_flows table with %d hierarchy columns", len(hierarchy_columns)
-    )
-    return {
-        "table_name": "nifi_flows",
-        "hierarchy_columns": hierarchy_columns,
-        "total_columns": len(columns),
-    }
+    return _flow_repo.recreate_table(hierarchy)
 
 
 def ensure_nifi_flows_table() -> None:

@@ -57,3 +57,21 @@ class FlowViewRepository(BaseRepository[FlowView]):
             return db.query(FlowView).filter(FlowView.name == name).first()
         finally:
             db.close()
+
+    def unset_all_defaults(self) -> None:
+        """Set is_default=False on every view."""
+        db = get_db_session()
+        try:
+            db.query(FlowView).update({"is_default": False})
+            db.commit()
+        finally:
+            db.close()
+
+    def unset_all_defaults_except(self, view_id: int) -> None:
+        """Set is_default=False on all views except the given one."""
+        db = get_db_session()
+        try:
+            db.query(FlowView).filter(FlowView.id != view_id).update({"is_default": False})
+            db.commit()
+        finally:
+            db.close()

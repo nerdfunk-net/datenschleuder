@@ -279,18 +279,11 @@ class SettingsService:
 
     def reset_to_defaults(self) -> bool:
         try:
-            from core.database import get_db_session
-            from core.models import GitSetting, CacheSetting, CelerySetting
-            session = get_db_session()
-            try:
-                session.query(GitSetting).delete()
-                session.query(CacheSetting).delete()
-                session.query(CelerySetting).delete()
-                session.commit()
-                logger.info("Settings reset to defaults")
-                return True
-            finally:
-                session.close()
+            GitSettingRepository().delete_all()
+            CacheSettingRepository().delete_all()
+            CelerySettingRepository().delete_all()
+            logger.info("Settings reset to defaults")
+            return True
         except Exception as e:
             logger.error("Error resetting settings: %s", e)
             return False
