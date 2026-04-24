@@ -1,4 +1,5 @@
 """MultiRedisManager — one Redis client per configured server with fallback."""
+
 from __future__ import annotations
 
 import logging
@@ -23,7 +24,9 @@ class MultiRedisManager:
     """
 
     def __init__(self) -> None:
-        self._servers: List[Tuple[int, redis.Redis, str, str]] = []  # (id, client, url, name)
+        self._servers: List[
+            Tuple[int, redis.Redis, str, str]
+        ] = []  # (id, client, url, name)
         self._build()
 
     def _build(self) -> None:
@@ -39,7 +42,9 @@ class MultiRedisManager:
                 socket_keepalive=True,
             )
             self._servers = [(_FALLBACK_SERVER_ID, client, url, _FALLBACK_SERVER_NAME)]
-            logger.info("MultiRedisManager: no DB servers, using settings.redis_url fallback")
+            logger.info(
+                "MultiRedisManager: no DB servers, using settings.redis_url fallback"
+            )
             return
 
         for server in db_servers:
@@ -56,9 +61,18 @@ class MultiRedisManager:
                     socket_keepalive=True,
                 )
                 self._servers.append((server.id, client, url, server.name))
-                logger.info("MultiRedisManager: initialized server '%s' (%s:%s)", server.name, server.host, server.port)
+                logger.info(
+                    "MultiRedisManager: initialized server '%s' (%s:%s)",
+                    server.name,
+                    server.host,
+                    server.port,
+                )
             except Exception as exc:
-                logger.error("MultiRedisManager: failed to init server '%s': %s", server.name, exc)
+                logger.error(
+                    "MultiRedisManager: failed to init server '%s': %s",
+                    server.name,
+                    exc,
+                )
 
     def get_all(self) -> List[Tuple[int, redis.Redis, str, str]]:
         """Returns list of (server_id, client, redis_url, server_name) tuples."""

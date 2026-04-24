@@ -463,9 +463,15 @@ class JobRunRepository(BaseRepository[JobRun]):
         try:
             result = session.query(
                 func.count().label("total"),
-                func.sum(case((self.model.status == "completed", 1), else_=0)).label("completed"),
-                func.sum(case((self.model.status == "failed", 1), else_=0)).label("failed"),
-                func.sum(case((self.model.status == "running", 1), else_=0)).label("running"),
+                func.sum(case((self.model.status == "completed", 1), else_=0)).label(
+                    "completed"
+                ),
+                func.sum(case((self.model.status == "failed", 1), else_=0)).label(
+                    "failed"
+                ),
+                func.sum(case((self.model.status == "running", 1), else_=0)).label(
+                    "running"
+                ),
             ).one()
             return {
                 "total": result.total or 0,
@@ -485,11 +491,15 @@ class JobRunRepository(BaseRepository[JobRun]):
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         session = get_db_session()
         try:
-            rows = session.query(self.model.result).filter(
-                self.model.job_type == "backup",
-                self.model.status == "completed",
-                self.model.queued_at >= cutoff,
-            ).all()
+            rows = (
+                session.query(self.model.result)
+                .filter(
+                    self.model.job_type == "backup",
+                    self.model.status == "completed",
+                    self.model.queued_at >= cutoff,
+                )
+                .all()
+            )
             return [row.result for row in rows]
         finally:
             session.close()

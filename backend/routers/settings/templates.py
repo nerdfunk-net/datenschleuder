@@ -22,7 +22,9 @@ from models.templates import (
     AdvancedTemplateRenderRequest,
     AdvancedTemplateRenderResponse,
 )
-from services.settings.templates.authorization_service import TemplateAuthorizationService
+from services.settings.templates.authorization_service import (
+    TemplateAuthorizationService,
+)
 from services.settings.templates.import_service import TemplateImportService
 from services.settings.templates.render_service import TemplateRenderService
 from services.settings.templates.type_inference import infer_from_extension
@@ -36,6 +38,7 @@ _render_service = TemplateRenderService()
 
 def _get_template_manager():
     from services.settings.template_service import template_service
+
     return template_service
 
 
@@ -53,14 +56,21 @@ def list_templates(
         username = current_user.get("username")
 
         if search:
-            templates = template_manager.search_templates(search, search_content=True, username=username)
+            templates = template_manager.search_templates(
+                search, search_content=True, username=username
+            )
         else:
             templates = template_manager.list_templates(
-                category=category, source=source, active_only=active_only, username=username
+                category=category,
+                source=source,
+                active_only=active_only,
+                username=username,
             )
 
         template_responses = [TemplateResponse(**t) for t in templates]
-        return TemplateListResponse(templates=template_responses, total=len(template_responses))
+        return TemplateListResponse(
+            templates=template_responses, total=len(template_responses)
+        )
 
     except Exception as e:
         logger.error("Error listing templates: %s", e)
@@ -229,8 +239,12 @@ def delete_template(
 ) -> Dict[str, str]:
     """Delete a template."""
     try:
-        if _get_template_manager().delete_template(template_id, hard_delete=hard_delete):
-            return {"message": f"Template {template_id} {'deleted' if hard_delete else 'deactivated'} successfully"}
+        if _get_template_manager().delete_template(
+            template_id, hard_delete=hard_delete
+        ):
+            return {
+                "message": f"Template {template_id} {'deleted' if hard_delete else 'deactivated'} successfully"
+            }
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete template",
@@ -299,7 +313,9 @@ async def upload_template_file(
     try:
         template_manager = _get_template_manager()
         content_str = (await file.read()).decode("utf-8")
-        inferred_type, inferred_category = infer_from_extension(file.filename, template_type, category)
+        inferred_type, inferred_category = infer_from_extension(
+            file.filename, template_type, category
+        )
 
         template_data = {
             "name": name,
@@ -348,7 +364,11 @@ def test_git_connection(
         }
     except Exception as e:
         logger.error("Error testing Git connection: %s", e)
-        return {"success": False, "message": f"Git connection test failed: {str(e)}", "repository_accessible": False}
+        return {
+            "success": False,
+            "message": f"Git connection test failed: {str(e)}",
+            "repository_accessible": False,
+        }
 
 
 @router.post("/sync", response_model=TemplateSyncResponse)
@@ -415,17 +435,23 @@ def import_templates(
                 default_template_type=import_request.default_template_type or "jinja2",
                 default_category=import_request.default_category,
             )
-            message = f"Imported {len(result['imported'])} templates from uploaded files"
+            message = (
+                f"Imported {len(result['imported'])} templates from uploaded files"
+            )
 
         else:
-            raise ValueError(f"Unsupported import source type: {import_request.source_type}")
+            raise ValueError(
+                f"Unsupported import source type: {import_request.source_type}"
+            )
 
         return TemplateImportResponse(
             imported_templates=result["imported"],
             skipped_templates=result["skipped"],
             failed_templates=result["failed"],
             errors=result["errors"],
-            total_processed=len(result["imported"]) + len(result["skipped"]) + len(result["failed"]),
+            total_processed=len(result["imported"])
+            + len(result["skipped"])
+            + len(result["failed"]),
             message=message,
         )
 

@@ -52,7 +52,9 @@ class AgentService:
             self._server_names[server_id] = name
             registry = AgentRegistry(client)
             self._registries[server_id] = registry
-            commands = AgentCommands(client, self.repository, self._parser, registry, url)
+            commands = AgentCommands(
+                client, self.repository, self._parser, registry, url
+            )
             commands.server_id = server_id
             self._commands_map[server_id] = commands
 
@@ -67,7 +69,9 @@ class AgentService:
                 if registry.get_agent_status(agent_id) is not None:
                     return server_id
             except Exception as exc:
-                logger.warning("Error checking agent %s on server %d: %s", agent_id, server_id, exc)
+                logger.warning(
+                    "Error checking agent %s on server %d: %s", agent_id, server_id, exc
+                )
         return None
 
     def _get_commands(self, agent_id: str) -> AgentCommands:
@@ -135,11 +139,19 @@ class AgentService:
 
     # ── Commands ─────────────────────────────────────────────────────────────
 
-    def send_command(self, agent_id: str, command: str, params: dict, sent_by: str) -> str:
-        return self._get_commands(agent_id).send_command(agent_id, command, params, sent_by)
+    def send_command(
+        self, agent_id: str, command: str, params: dict, sent_by: str
+    ) -> str:
+        return self._get_commands(agent_id).send_command(
+            agent_id, command, params, sent_by
+        )
 
-    def wait_for_response(self, agent_id: str, command_id: str, timeout: int = 30) -> dict:
-        return self._get_commands(agent_id).wait_for_response(agent_id, command_id, timeout)
+    def wait_for_response(
+        self, agent_id: str, command_id: str, timeout: int = 30
+    ) -> dict:
+        return self._get_commands(agent_id).wait_for_response(
+            agent_id, command_id, timeout
+        )
 
     def send_command_and_wait(
         self, agent_id: str, command: str, params: dict, sent_by: str, timeout: int = 30
@@ -151,8 +163,12 @@ class AgentService:
     def send_git_pull(self, agent_id: str, sent_by: str, timeout: int = 30) -> dict:
         return self._get_commands(agent_id).send_git_pull(agent_id, sent_by, timeout)
 
-    def send_docker_restart(self, agent_id: str, sent_by: str, timeout: int = 60) -> dict:
-        return self._get_commands(agent_id).send_docker_restart(agent_id, sent_by, timeout)
+    def send_docker_restart(
+        self, agent_id: str, sent_by: str, timeout: int = 60
+    ) -> dict:
+        return self._get_commands(agent_id).send_docker_restart(
+            agent_id, sent_by, timeout
+        )
 
     # ── History ──────────────────────────────────────────────────────────────
 

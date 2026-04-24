@@ -71,7 +71,9 @@ class FlowViewRepository(BaseRepository[FlowView]):
         """Set is_default=False on all views except the given one."""
         db = get_db_session()
         try:
-            db.query(FlowView).filter(FlowView.id != view_id).update({"is_default": False})
+            db.query(FlowView).filter(FlowView.id != view_id).update(
+                {"is_default": False}
+            )
             db.commit()
         finally:
             db.close()

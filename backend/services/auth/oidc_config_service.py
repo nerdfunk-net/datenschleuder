@@ -16,7 +16,11 @@ logger = logging.getLogger(__name__)
 
 class OIDCConfigService:
     def get_oidc_providers_config_path(self) -> str:
-        config_path = Path(__file__).parent.parent.parent.parent / "config" / "oidc_providers.yaml"
+        config_path = (
+            Path(__file__).parent.parent.parent.parent
+            / "config"
+            / "oidc_providers.yaml"
+        )
         return str(config_path)
 
     def load_oidc_providers(self) -> Dict[str, Any]:
@@ -34,7 +38,10 @@ class OIDCConfigService:
                 config["providers"] = {}
             if "global" not in config:
                 config["global"] = {"allow_traditional_login": True}
-            logger.info("Loaded %s OIDC provider(s) from config", len(config.get("providers", {})))
+            logger.info(
+                "Loaded %s OIDC provider(s) from config",
+                len(config.get("providers", {})),
+            )
             return config
         except yaml.YAMLError as e:
             logger.error("Error parsing OIDC providers YAML: %s", e)
@@ -50,24 +57,32 @@ class OIDCConfigService:
         providers = self.get_oidc_providers()
         enabled_providers = []
         for provider_id, provider_config in providers.items():
-            if provider_config.get("enabled", False) and not provider_config.get("backend", False):
+            if provider_config.get("enabled", False) and not provider_config.get(
+                "backend", False
+            ):
                 provider_data = provider_config.copy()
                 provider_data["provider_id"] = provider_id
                 enabled_providers.append(provider_data)
         enabled_providers.sort(key=lambda p: p.get("display_order", 999))
-        logger.info("Found %s enabled user-facing OIDC provider(s)", len(enabled_providers))
+        logger.info(
+            "Found %s enabled user-facing OIDC provider(s)", len(enabled_providers)
+        )
         return enabled_providers
 
     def get_nifi_oidc_providers(self) -> List[Dict[str, Any]]:
         providers = self.get_oidc_providers()
         nifi_providers = []
         for provider_id, provider_config in providers.items():
-            if provider_config.get("enabled", False) and provider_config.get("backend", False):
+            if provider_config.get("enabled", False) and provider_config.get(
+                "backend", False
+            ):
                 provider_data = provider_config.copy()
                 provider_data["provider_id"] = provider_id
                 nifi_providers.append(provider_data)
         nifi_providers.sort(key=lambda p: p.get("display_order", 999))
-        logger.info("Found %s enabled NiFi backend OIDC provider(s)", len(nifi_providers))
+        logger.info(
+            "Found %s enabled NiFi backend OIDC provider(s)", len(nifi_providers)
+        )
         return nifi_providers
 
     def get_oidc_provider(self, provider_id: str) -> Optional[Dict[str, Any]]:
@@ -81,7 +96,9 @@ class OIDCConfigService:
         return None
 
     def get_oidc_global_settings(self) -> Dict[str, Any]:
-        return self.load_oidc_providers().get("global", {"allow_traditional_login": True})
+        return self.load_oidc_providers().get(
+            "global", {"allow_traditional_login": True}
+        )
 
     def is_oidc_enabled(self) -> bool:
         return len(self.get_enabled_oidc_providers()) > 0

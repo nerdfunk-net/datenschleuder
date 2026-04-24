@@ -4,19 +4,10 @@ import logging
 from pathlib import Path
 from typing import List, Optional, Dict
 import yaml
-from pydantic import BaseModel
+
+from models.cert_manager import CertificateConfig
 
 logger = logging.getLogger(__name__)
-
-
-class CertificateConfig(BaseModel):
-    """Model for a certificate configuration entry."""
-
-    name: str
-    ca_cert_file: str
-    cert_file: str
-    key_file: str
-    password: str
 
 
 class CertificateManager:

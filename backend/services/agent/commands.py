@@ -6,7 +6,7 @@ import json
 import logging
 import time
 import uuid
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 import redis
 

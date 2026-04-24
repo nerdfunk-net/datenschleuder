@@ -39,20 +39,24 @@ class CeleryQueueMetricsService:
 
             for queue_name in task_queues.keys():
                 pending_count = redis_client.llen(queue_name)
-                workers_consuming = self._get_workers_consuming(queue_name, active_queues)
+                workers_consuming = self._get_workers_consuming(
+                    queue_name, active_queues
+                )
                 active_count = self._get_active_count(workers_consuming, active_tasks)
                 routed_tasks = self._get_routed_tasks(queue_name, task_routes)
 
-                queues.append({
-                    "name": queue_name,
-                    "pending_tasks": pending_count,
-                    "active_tasks": active_count,
-                    "workers_consuming": workers_consuming,
-                    "worker_count": len(workers_consuming),
-                    "routed_tasks": routed_tasks,
-                    "exchange": task_queues[queue_name].get("exchange"),
-                    "routing_key": task_queues[queue_name].get("routing_key"),
-                })
+                queues.append(
+                    {
+                        "name": queue_name,
+                        "pending_tasks": pending_count,
+                        "active_tasks": active_count,
+                        "workers_consuming": workers_consuming,
+                        "worker_count": len(workers_consuming),
+                        "routed_tasks": routed_tasks,
+                        "exchange": task_queues[queue_name].get("exchange"),
+                        "routing_key": task_queues[queue_name].get("routing_key"),
+                    }
+                )
 
             redis_client.close()
             return {"success": True, "queues": queues, "total_queues": len(queues)}

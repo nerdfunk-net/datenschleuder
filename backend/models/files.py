@@ -22,3 +22,11 @@ class FileExportRequest(BaseModel):
     right_file: str
     format: str = "unified"
     repo_id: Optional[int] = None
+
+
+class WriteFileRequest(BaseModel):
+    """Request body for writing a file to a Git repository."""
+
+    path: str
+    content: str
+    commit_message: str

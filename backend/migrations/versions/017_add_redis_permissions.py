@@ -24,7 +24,11 @@ class Migration(BaseMigration):
 
         new_permissions = [
             ("settings.redis", "read", "View Redis server configurations"),
-            ("settings.redis", "write", "Create/modify/delete Redis server configurations"),
+            (
+                "settings.redis",
+                "write",
+                "Create/modify/delete Redis server configurations",
+            ),
         ]
 
         with self.engine.connect() as conn:
@@ -93,12 +97,8 @@ class Migration(BaseMigration):
                     )
                     conn.commit()
                     stats["grants_added"] += 1
-                    self.log_info(
-                        f"Granted {resource}:{action} to admin role"
-                    )
+                    self.log_info(f"Granted {resource}:{action} to admin role")
                 else:
-                    self.log_info(
-                        f"Admin already has {resource}:{action}, skipping"
-                    )
+                    self.log_info(f"Admin already has {resource}:{action}, skipping")
 
         return stats

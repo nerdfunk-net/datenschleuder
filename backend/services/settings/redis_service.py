@@ -53,7 +53,9 @@ class RedisService:
         )
         return _to_safe_dict(server)
 
-    def update_server(self, server_id: int, data: RedisServerUpdate) -> Optional[Dict[str, Any]]:
+    def update_server(
+        self, server_id: int, data: RedisServerUpdate
+    ) -> Optional[Dict[str, Any]]:
         """Update an existing Redis server. Empty string password clears it."""
         server = self._repo.get_by_id(server_id)
         if server is None:

@@ -141,8 +141,12 @@ class NifiFlowRepository:
         columns: list = [Column("id", Integer, primary_key=True, index=True)]
         for attr in hierarchy:
             attr_name = attr["name"].lower()
-            columns.append(Column(f"src_{attr_name}", String, nullable=False, index=True))
-            columns.append(Column(f"dest_{attr_name}", String, nullable=False, index=True))
+            columns.append(
+                Column(f"src_{attr_name}", String, nullable=False, index=True)
+            )
+            columns.append(
+                Column(f"dest_{attr_name}", String, nullable=False, index=True)
+            )
         columns.extend(
             [
                 Column("name", String, nullable=True),
@@ -154,7 +158,9 @@ class NifiFlowRepository:
                 Column("active", Boolean, nullable=False, default=True),
                 Column("description", Text, nullable=True),
                 Column("creator_name", String, nullable=True),
-                Column("created_at", DateTime(timezone=True), server_default=func.now()),
+                Column(
+                    "created_at", DateTime(timezone=True), server_default=func.now()
+                ),
                 Column(
                     "updated_at",
                     DateTime(timezone=True),
@@ -174,7 +180,10 @@ class NifiFlowRepository:
             }
             for attr in hierarchy
         ]
-        logger.info("Recreated nifi_flows table with %d hierarchy columns", len(hierarchy_columns))
+        logger.info(
+            "Recreated nifi_flows table with %d hierarchy columns",
+            len(hierarchy_columns),
+        )
         return {
             "table_name": "nifi_flows",
             "hierarchy_columns": hierarchy_columns,

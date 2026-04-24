@@ -5,6 +5,9 @@ import logging
 import time
 from typing import List
 
+from sqlalchemy import inspect
+
+from core.database import engine
 from repositories.nifi.hierarchy_repository import HierarchyValueRepository
 from repositories.nifi.nifi_flow_repository import nifi_flow_repository as _flow_repo
 from repositories.nifi.nifi_setting_repository import NifiSettingRepository

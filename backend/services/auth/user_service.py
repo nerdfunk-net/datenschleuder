@@ -19,7 +19,11 @@ PERMISSION_USER_MANAGE = 16
 PERMISSIONS_VIEWER = PERMISSION_READ
 PERMISSIONS_USER = PERMISSION_READ | PERMISSION_WRITE
 PERMISSIONS_ADMIN = (
-    PERMISSION_READ | PERMISSION_WRITE | PERMISSION_ADMIN | PERMISSION_DELETE | PERMISSION_USER_MANAGE
+    PERMISSION_READ
+    | PERMISSION_WRITE
+    | PERMISSION_ADMIN
+    | PERMISSION_DELETE
+    | PERMISSION_USER_MANAGE
 )
 
 
@@ -74,7 +78,9 @@ class UserService:
             users = self.user_repo.get_active_users()
         return [_user_to_dict(u) for u in users]
 
-    def get_user_by_id(self, user_id: int, include_inactive: bool = False) -> Optional[Dict[str, Any]]:
+    def get_user_by_id(
+        self, user_id: int, include_inactive: bool = False
+    ) -> Optional[Dict[str, Any]]:
         user = self.user_repo.get_by_id(user_id)
         if user and (include_inactive or user.is_active):
             return _user_to_dict(user)
@@ -86,7 +92,9 @@ class UserService:
             return _user_to_dict(user)
         return None
 
-    def authenticate_user(self, username: str, password: str) -> Optional[Dict[str, Any]]:
+    def authenticate_user(
+        self, username: str, password: str
+    ) -> Optional[Dict[str, Any]]:
         user = self.user_repo.get_by_username(username)
         if user and user.is_active and verify_password(password, user.password):
             return _user_to_dict(user)
@@ -157,7 +165,9 @@ class UserService:
                 errors.append(f"Failed to delete user ID {user_id}: {str(e)}")
         return success_count, errors
 
-    def bulk_update_permissions(self, user_ids: List[int], permissions: int) -> Tuple[int, List[str]]:
+    def bulk_update_permissions(
+        self, user_ids: List[int], permissions: int
+    ) -> Tuple[int, List[str]]:
         success_count = 0
         errors = []
         for user_id in user_ids:
@@ -167,7 +177,9 @@ class UserService:
                 else:
                     errors.append(f"User ID {user_id} not found")
             except Exception as e:
-                errors.append(f"Failed to update permissions for user ID {user_id}: {str(e)}")
+                errors.append(
+                    f"Failed to update permissions for user ID {user_id}: {str(e)}"
+                )
         return success_count, errors
 
     def has_permission(self, user: Dict[str, Any], permission: int) -> bool:
@@ -212,6 +224,7 @@ class UserService:
     def _ensure_admin_role_assigned(self, user_id: Optional[int] = None) -> None:
         try:
             from services.auth.rbac_service import RBACService
+
             rbac = RBACService()
             if user_id is None:
                 admin_user = self.get_user_by_username("admin")
@@ -222,12 +235,17 @@ class UserService:
             if not admin_role:
                 try:
                     from tools import seed_rbac
+
                     seed_rbac.main(verbose=False)
                     admin_role = rbac.get_role_by_name("admin")
                     import logging
-                    logging.getLogger(__name__).info("Initialized RBAC system with default roles and permissions")
+
+                    logging.getLogger(__name__).info(
+                        "Initialized RBAC system with default roles and permissions"
+                    )
                 except Exception as e:
                     import logging
+
                     logging.getLogger(__name__).warning("Failed to seed RBAC: %s", e)
                     return
             if admin_role:
@@ -235,10 +253,16 @@ class UserService:
                 if not any(role["name"] == "admin" for role in user_roles):
                     rbac.assign_role_to_user(user_id, admin_role["id"])
                     import logging
-                    logging.getLogger(__name__).info("Assigned admin role to user ID %s", user_id)
+
+                    logging.getLogger(__name__).info(
+                        "Assigned admin role to user ID %s", user_id
+                    )
         except Exception as e:
             import logging
-            logging.getLogger(__name__).warning("Failed to ensure admin role assignment: %s", e)
+
+            logging.getLogger(__name__).warning(
+                "Failed to ensure admin role assignment: %s", e
+            )
 
     def _create_default_admin_without_rbac(self) -> Optional[Dict[str, Any]]:
         user_count = self.user_repo.count()
@@ -247,6 +271,7 @@ class UserService:
             return None
         try:
             from config import settings as config_settings
+
             admin_user = self.create_user(
                 username="admin",
                 realname="System Administrator",
@@ -256,10 +281,14 @@ class UserService:
                 debug=True,
             )
             import logging
-            logging.getLogger(__name__).info("Created default admin user (RBAC role will be assigned at startup)")
+
+            logging.getLogger(__name__).info(
+                "Created default admin user (RBAC role will be assigned at startup)"
+            )
             return admin_user
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).warning("Failed to create default admin: %s", e)
             return None
 
@@ -271,4 +300,7 @@ class UserService:
                 self._ensure_admin_role_assigned(admin_user["id"])
         except Exception as e:
             import logging
-            logging.getLogger(__name__).warning("Failed to ensure admin RBAC role: %s", e)
+
+            logging.getLogger(__name__).warning(
+                "Failed to ensure admin RBAC role: %s", e
+            )

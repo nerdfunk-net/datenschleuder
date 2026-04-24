@@ -5,7 +5,10 @@ from typing import List, Optional
 
 from core.auth import require_permission, get_current_username
 from models.credentials import CredentialCreate, CredentialUpdate
-from services.settings.credentials_service import CredentialsService as _CredentialsService
+from services.settings.credentials_service import (
+    CredentialsService as _CredentialsService,
+)
+
 cred_mgr = _CredentialsService()
 
 router = APIRouter(prefix="/api/credentials", tags=["credentials"])

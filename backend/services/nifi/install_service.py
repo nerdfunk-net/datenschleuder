@@ -23,7 +23,6 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 # ---------------------------------------------------------------------------
 
 
-
 def _build_pg_by_path(all_pgs_raw: list) -> tuple:
     """Build lookup structures for process groups.
 

@@ -19,9 +19,17 @@ _GIT_DIFF_LABELS: dict[str, str] = {
 
 _GIT_XY_LABELS: dict[str, str] = {
     "??": "untracked",
-    " M": "modified",   "M ": "staged",       "MM": "staged+modified",
-    " D": "deleted",    "D ": "staged deleted","A ": "added",        "AM": "added+modified",
-    "R ": "renamed",    " R": "renamed",       "UU": "conflict",     "AA": "conflict",
+    " M": "modified",
+    "M ": "staged",
+    "MM": "staged+modified",
+    " D": "deleted",
+    "D ": "staged deleted",
+    "A ": "added",
+    "AM": "added+modified",
+    "R ": "renamed",
+    " R": "renamed",
+    "UU": "conflict",
+    "AA": "conflict",
     " A": "added",
 }
 
@@ -76,7 +84,14 @@ def parse_git_status(raw: str) -> list[dict]:
         if line.startswith("[") and line.endswith("]"):
             if current_repo is not None and not repo_has_files:
                 status = current_tracking or "clean"
-                rows.append({"repo": current_repo, "branch": current_branch, "file": "", "status": status})
+                rows.append(
+                    {
+                        "repo": current_repo,
+                        "branch": current_branch,
+                        "file": "",
+                        "status": status,
+                    }
+                )
             current_repo = line[1:-1]
             current_branch = ""
             current_tracking = ""
@@ -96,13 +111,15 @@ def parse_git_status(raw: str) -> list[dict]:
                 code = parts[0][0]  # first char: M, A, D, R, C, T, U
                 filename = parts[-1]  # last part is destination (handles renames)
                 status = _GIT_DIFF_LABELS.get(code, "modified")
-                rows.append({
-                    "repo": current_repo,
-                    "branch": current_branch,
-                    "file": filename,
-                    "status": status,
-                    "origin_diff": True,
-                })
+                rows.append(
+                    {
+                        "repo": current_repo,
+                        "branch": current_branch,
+                        "file": filename,
+                        "status": status,
+                        "origin_diff": True,
+                    }
+                )
             continue
 
         if current_repo is None:
@@ -118,13 +135,27 @@ def parse_git_status(raw: str) -> list[dict]:
             xy = line[:2]
             filename = line[3:]
             status = _GIT_XY_LABELS.get(xy, xy.strip() or "modified")
-            rows.append({"repo": current_repo, "branch": current_branch, "file": filename, "status": status})
+            rows.append(
+                {
+                    "repo": current_repo,
+                    "branch": current_branch,
+                    "file": filename,
+                    "status": status,
+                }
+            )
             repo_has_files = True
 
     # flush last repo
     if current_repo is not None and not repo_has_files:
         status = current_tracking or "clean"
-        rows.append({"repo": current_repo, "branch": current_branch, "file": "", "status": status})
+        rows.append(
+            {
+                "repo": current_repo,
+                "branch": current_branch,
+                "file": "",
+                "status": status,
+            }
+        )
 
     return rows
 
@@ -135,7 +166,11 @@ def parse_list_repositories(raw: str) -> list[dict]:
         parsed = json.loads(raw)
         if not isinstance(parsed, list):
             return []
-        return [{"id": item["id"]} for item in parsed if isinstance(item, dict) and "id" in item]
+        return [
+            {"id": item["id"]}
+            for item in parsed
+            if isinstance(item, dict) and "id" in item
+        ]
     except (json.JSONDecodeError, KeyError):
         return []
 
@@ -146,7 +181,11 @@ def parse_list_containers(raw: str) -> list[dict]:
         parsed = json.loads(raw)
         if not isinstance(parsed, list):
             return []
-        return [{"id": item["id"], "type": item.get("type", "")} for item in parsed if isinstance(item, dict) and "id" in item]
+        return [
+            {"id": item["id"], "type": item.get("type", "")}
+            for item in parsed
+            if isinstance(item, dict) and "id" in item
+        ]
     except (json.JSONDecodeError, KeyError):
         return []
 
@@ -156,7 +195,15 @@ def parse_docker_ps(raw: str) -> list[dict]:
     lines = raw.strip().splitlines()
     if len(lines) < 2:
         return []
-    columns = ["container_id", "image", "command", "created", "status", "ports", "names"]
+    columns = [
+        "container_id",
+        "image",
+        "command",
+        "created",
+        "status",
+        "ports",
+        "names",
+    ]
     rows = []
     for line in lines[1:]:
         parts = re.split(r"\s{2,}", line.strip())
@@ -181,19 +228,21 @@ def parse_docker_stats(raw: str) -> list[dict]:
         mem_parts = parts[3].split(" / ") if len(parts) > 3 else ["", ""]
         net_parts = parts[5].split(" / ") if len(parts) > 5 else ["", ""]
         block_parts = parts[6].split(" / ") if len(parts) > 6 else ["", ""]
-        rows.append({
-            "container_id": parts[0] if len(parts) > 0 else "",
-            "name": parts[1] if len(parts) > 1 else "",
-            "cpu_percent": parts[2] if len(parts) > 2 else "",
-            "mem_usage": mem_parts[0] if len(mem_parts) > 0 else "",
-            "mem_limit": mem_parts[1] if len(mem_parts) > 1 else "",
-            "mem_percent": parts[4] if len(parts) > 4 else "",
-            "net_io_rx": net_parts[0] if len(net_parts) > 0 else "",
-            "net_io_tx": net_parts[1] if len(net_parts) > 1 else "",
-            "block_io_read": block_parts[0] if len(block_parts) > 0 else "",
-            "block_io_write": block_parts[1] if len(block_parts) > 1 else "",
-            "pids": parts[7] if len(parts) > 7 else "",
-        })
+        rows.append(
+            {
+                "container_id": parts[0] if len(parts) > 0 else "",
+                "name": parts[1] if len(parts) > 1 else "",
+                "cpu_percent": parts[2] if len(parts) > 2 else "",
+                "mem_usage": mem_parts[0] if len(mem_parts) > 0 else "",
+                "mem_limit": mem_parts[1] if len(mem_parts) > 1 else "",
+                "mem_percent": parts[4] if len(parts) > 4 else "",
+                "net_io_rx": net_parts[0] if len(net_parts) > 0 else "",
+                "net_io_tx": net_parts[1] if len(net_parts) > 1 else "",
+                "block_io_read": block_parts[0] if len(block_parts) > 0 else "",
+                "block_io_write": block_parts[1] if len(block_parts) > 1 else "",
+                "pids": parts[7] if len(parts) > 7 else "",
+            }
+        )
     return rows
 
 
@@ -212,11 +261,13 @@ def parse_fetch_nifi_properties(raw: str) -> list[dict]:
     for line in raw.splitlines():
         m = pattern.match(line.strip())
         if m:
-            rows.append({
-                "repo": m.group("repo"),
-                "branch": m.group("branch"),
-                "was_modified": m.group("not_") is None,
-            })
+            rows.append(
+                {
+                    "repo": m.group("repo"),
+                    "branch": m.group("branch"),
+                    "was_modified": m.group("not_") is None,
+                }
+            )
     return rows
 
 

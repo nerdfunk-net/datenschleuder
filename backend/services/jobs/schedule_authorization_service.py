@@ -18,6 +18,7 @@ class JobScheduleAuthorizationService:
 
     def __init__(self):
         from services.auth.rbac_service import RBACService
+
         self._rbac = RBACService()
 
     def _is_admin(self, current_user: dict) -> bool:
@@ -33,7 +34,10 @@ class JobScheduleAuthorizationService:
         Private schedules are allowed for any authenticated user.
         """
         if is_global:
-            if not (self._is_admin(current_user) or self._has_permission(current_user, "jobs.schedules", "write")):
+            if not (
+                self._is_admin(current_user)
+                or self._has_permission(current_user, "jobs.schedules", "write")
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Permission denied: jobs.schedules:write required for global schedules",

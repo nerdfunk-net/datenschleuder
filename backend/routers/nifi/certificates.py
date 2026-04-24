@@ -2,14 +2,22 @@
 
 import logging
 from pathlib import Path
-from typing import List, Literal
+from typing import Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from pydantic import BaseModel
 
 from core.auth import require_permission
 from dependencies import get_certificate_manager, get_git_service
-from services.settings.git_repository_service import GitRepositoryService as GitRepositoryManager
+from models.nifi import (
+    NifiCertificateInfo,
+    NifiCertificatesResponse,
+    ReadStoreRequest,
+    ReadStoreResponse,
+    UploadStoreResponse,
+)
+from services.settings.git_repository_service import (
+    GitRepositoryService as GitRepositoryManager,
+)
 from services.settings.git.paths import repo_path
 from services.cert_manager.cert_parser import parse_p12_file, parse_pem_file
 
@@ -20,51 +28,15 @@ router = APIRouter(prefix="/api/nifi/certificates", tags=["nifi-certificates"])
 _git_repo_manager = GitRepositoryManager()
 
 
-class CertificateInfo(BaseModel):
-    name: str
-
-
-class CertificatesResponse(BaseModel):
-    certificates: List[CertificateInfo]
-
-
-class ReadStoreRequest(BaseModel):
-    """Request to read a PKCS12 keystore or truststore from a git repository."""
-
-    git_repo_id: int
-    filename: str  # e.g. "keystore.p12" or "truststore.p12"
-    password: str
-
-
-class ReadStoreResponse(BaseModel):
-    """Certificate subject info extracted from a PKCS12 store."""
-
-    subject: str
-    issuer: str
-    is_expired: bool
-    fingerprint_sha256: str
-
-
-class UploadStoreResponse(BaseModel):
-    """Result of uploading a keystore or truststore to a git repository."""
-
-    filename: str
-    subject: str
-    issuer: str
-    is_expired: bool
-    fingerprint_sha256: str
-    commit_sha: str
-
-
-@router.get("/", response_model=CertificatesResponse)
+@router.get("/", response_model=NifiCertificatesResponse)
 def get_certificates(
     current_user: dict = Depends(require_permission("nifi", "read")),
     certificate_manager=Depends(get_certificate_manager),
 ):
     """Get list of available client certificates for NiFi authentication."""
     certificates = certificate_manager.get_certificates()
-    return CertificatesResponse(
-        certificates=[CertificateInfo(name=cert.name) for cert in certificates]
+    return NifiCertificatesResponse(
+        certificates=[NifiCertificateInfo(name=cert.name) for cert in certificates]
     )
 
 

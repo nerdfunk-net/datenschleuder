@@ -3,20 +3,23 @@ Job Templates Router
 API endpoints for managing job templates
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
 from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
 from core.auth import verify_token
-from services.auth.rbac_service import RBACService as _RBACService
-from services.jobs.job_template_service import JobTemplateService as _JobTemplateService
-rbac_manager = _RBACService()
-job_template_manager = _JobTemplateService()
 from models.jobs import (
     JobTemplateCreate,
-    JobTemplateUpdate,
-    JobTemplateResponse,
     JobTemplateListResponse,
+    JobTemplateResponse,
+    JobTemplateUpdate,
 )
-import logging
+from services.auth.rbac_service import RBACService as _RBACService
+from services.jobs.job_template_service import JobTemplateService as _JobTemplateService
+
+rbac_manager = _RBACService()
+job_template_manager = _JobTemplateService()
 
 logger = logging.getLogger(__name__)
 
@@ -125,9 +128,7 @@ def get_job_types(current_user: dict = Depends(verify_token)):
 
 
 @router.get("/{template_id}", response_model=JobTemplateResponse)
-def get_job_template(
-    template_id: int, current_user: dict = Depends(verify_token)
-):
+def get_job_template(template_id: int, current_user: dict = Depends(verify_token)):
     """Get a specific job template by ID"""
     try:
         template = job_template_manager.get_job_template(template_id)
@@ -233,9 +234,7 @@ def update_job_template(
 
 
 @router.delete("/{template_id}")
-def delete_job_template(
-    template_id: int, current_user: dict = Depends(verify_token)
-):
+def delete_job_template(template_id: int, current_user: dict = Depends(verify_token)):
     """Delete a job template"""
     try:
         template = job_template_manager.get_job_template(template_id)

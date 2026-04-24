@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 import os
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 
 from services.settings.git.paths import repo_path as git_repo_path
 from services.settings.git.shared_utils import get_git_repo_by_id
@@ -44,11 +44,15 @@ class GitDirectoryService:
         if not os.path.exists(target_path):
             raise HTTPException(status_code=404, detail=f"Path not found: {path}")
         if not os.path.isdir(target_path):
-            raise HTTPException(status_code=400, detail=f"Path is not a directory: {path}")
+            raise HTTPException(
+                status_code=400, detail=f"Path is not a directory: {path}"
+            )
 
         tree = self._build_tree(target_path, path)
         if tree is None:
-            raise HTTPException(status_code=403, detail="Permission denied accessing directory")
+            raise HTTPException(
+                status_code=403, detail="Permission denied accessing directory"
+            )
 
         tree["repository_name"] = repository["name"]
         return tree
@@ -70,12 +74,16 @@ class GitDirectoryService:
         if not os.path.exists(target_path):
             return {"path": path, "files": [], "directory_exists": False}
         if not os.path.isdir(target_path):
-            raise HTTPException(status_code=400, detail=f"Path is not a directory: {path}")
+            raise HTTPException(
+                status_code=400, detail=f"Path is not a directory: {path}"
+            )
 
         try:
             items = os.listdir(target_path)
         except PermissionError:
-            raise HTTPException(status_code=403, detail="Permission denied accessing directory")
+            raise HTTPException(
+                status_code=403, detail="Permission denied accessing directory"
+            )
 
         files_data = []
         for item in items:
@@ -86,12 +94,14 @@ class GitDirectoryService:
                 continue
 
             file_rel_path = os.path.join(path, item) if path else item
-            files_data.append({
-                "name": item,
-                "path": file_rel_path,
-                "size": os.path.getsize(item_path),
-                "last_commit": self._get_file_commit_info(repo, file_rel_path),
-            })
+            files_data.append(
+                {
+                    "name": item,
+                    "path": file_rel_path,
+                    "size": os.path.getsize(item_path),
+                    "last_commit": self._get_file_commit_info(repo, file_rel_path),
+                }
+            )
 
         files_data.sort(key=lambda x: x["name"].lower())
         return {"path": path, "files": files_data, "directory_exists": True}
@@ -102,7 +112,9 @@ class GitDirectoryService:
         target = os.path.join(repo_path, sub_path) if sub_path else repo_path
         target_resolved = os.path.realpath(target)
         if not target_resolved.startswith(repo_path_resolved):
-            raise HTTPException(status_code=403, detail="Access denied: path is outside repository")
+            raise HTTPException(
+                status_code=403, detail="Access denied: path is outside repository"
+            )
         return target_resolved, repo_path_resolved
 
     def _build_tree(self, dir_path: str, rel_path: str = "") -> dict:

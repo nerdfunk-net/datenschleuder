@@ -167,6 +167,7 @@ def require_permission(resource: str, action: str):
 
     def permission_checker(user_info: dict = Depends(verify_token)) -> dict:
         from services.auth.rbac_service import RBACService as _RBACService
+
         rbac = _RBACService()
 
         user_id = user_info.get("user_id")
@@ -198,6 +199,7 @@ def require_any_permission(resource: str, actions: list):
 
     def permission_checker(user_info: dict = Depends(verify_token)) -> dict:
         from services.auth.rbac_service import RBACService as _RBACService
+
         rbac = _RBACService()
 
         user_id = user_info.get("user_id")
@@ -229,6 +231,7 @@ def require_all_permissions(resource: str, actions: list):
 
     def permission_checker(user_info: dict = Depends(verify_token)) -> dict:
         from services.auth.rbac_service import RBACService as _RBACService
+
         rbac = _RBACService()
 
         user_id = user_info.get("user_id")
@@ -260,6 +263,7 @@ def require_role(role_name: str):
 
     def role_checker(user_info: dict = Depends(verify_token)) -> dict:
         from services.auth.rbac_service import RBACService as _RBACService
+
         rbac = _RBACService()
 
         user_id = user_info.get("user_id")
@@ -286,6 +290,7 @@ def require_role(role_name: str):
 def has_permission_check(user_id: int, resource: str, action: str) -> bool:
     """Helper function to check permission (non-dependency version)."""
     from services.auth.rbac_service import RBACService as _RBACService
+
     rbac = _RBACService()
 
     return rbac.has_permission(user_id, resource, action)

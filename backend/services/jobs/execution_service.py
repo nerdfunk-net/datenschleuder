@@ -43,7 +43,9 @@ class JobExecutionService:
 
         schedule = JobScheduleService().get_job_schedule(schedule_id)
         if not schedule:
-            raise HTTPException(status_code=404, detail=f"Schedule {schedule_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Schedule {schedule_id} not found"
+            )
 
         template_id = schedule.get("job_template_id")
         if not template_id:
@@ -54,7 +56,9 @@ class JobExecutionService:
 
         template = JobTemplateService().get_job_template(template_id)
         if not template:
-            raise HTTPException(status_code=404, detail=f"Template {template_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Template {template_id} not found"
+            )
 
         job_parameters = dict(schedule.get("job_parameters") or {})
         if override_parameters:
@@ -125,6 +129,7 @@ class JobExecutionService:
             return
         try:
             from celery_app import celery_app
+
             celery_app.control.revoke(celery_task_id, terminate=True)
         except Exception as e:
             logger.warning("Could not revoke Celery task %s: %s", celery_task_id, e)

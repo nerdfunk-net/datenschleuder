@@ -62,7 +62,9 @@ def _parse_json_flows(content: str) -> list[dict]:
         return data
     if isinstance(data, dict) and "flows" in data:
         return data["flows"]
-    raise ValueError("JSON file must contain a list of flows or a dict with a 'flows' key")
+    raise ValueError(
+        "JSON file must contain a list of flows or a dict with a 'flows' key"
+    )
 
 
 def _parse_csv_flows(content: str, hierarchy: list) -> list[dict]:
@@ -124,7 +126,9 @@ def import_flows_from_repo(
     elif lower_path.endswith(".csv"):
         raw_flows = _parse_csv_flows(content, hierarchy)
     else:
-        raise ValueError(f"Unsupported file type: {file_path}. Only .json and .csv are supported.")
+        raise ValueError(
+            f"Unsupported file type: {file_path}. Only .json and .csv are supported."
+        )
 
     existing_flows = nifi_flow_service.list_flows()
     existing_index: set = _build_existing_index(existing_flows, hierarchy)

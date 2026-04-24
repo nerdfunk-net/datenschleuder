@@ -31,6 +31,7 @@ def check_job_schedules_task() -> Dict[str, Any]:
 
         from services.jobs.job_schedule_service import JobScheduleService as _JSS
         from services.jobs.job_template_service import JobTemplateService as _JTS
+
         jobs_manager = _JSS()
         job_template_manager = _JTS()
         from .job_dispatcher import dispatch_job

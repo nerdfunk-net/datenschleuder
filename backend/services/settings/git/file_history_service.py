@@ -8,7 +8,6 @@ from __future__ import annotations
 import logging
 
 from fastapi import HTTPException, status
-from git import InvalidGitRepositoryError, GitCommandError
 
 from services.settings.git.shared_utils import get_git_repo_by_id
 
@@ -46,7 +45,9 @@ class GitFileHistoryService:
         history_commits = []
 
         if from_commit:
-            history_commits = self._prepend_context_commit(repo, from_commit, file_path, commits)
+            history_commits = self._prepend_context_commit(
+                repo, from_commit, file_path, commits
+            )
 
         history_commits.extend(self._build_history_entries(commits, file_path))
 
@@ -80,7 +81,9 @@ class GitFileHistoryService:
                 detail=f"File not found: {file_path}",
             )
 
-    def _prepend_context_commit(self, repo, from_commit: str, file_path: str, commits: list) -> list:
+    def _prepend_context_commit(
+        self, repo, from_commit: str, file_path: str, commits: list
+    ) -> list:
         """If from_commit didn't touch the file, add it as a context entry."""
         selected_found = any(
             c.hexsha == from_commit
@@ -95,17 +98,19 @@ class GitFileHistoryService:
             commit_obj = repo.commit(from_commit)
             try:
                 commit_obj.tree[file_path]
-                return [{
-                    "hash": commit_obj.hexsha,
-                    "short_hash": commit_obj.hexsha[:8],
-                    "message": commit_obj.message.strip(),
-                    "author": {
-                        "name": commit_obj.author.name,
-                        "email": commit_obj.author.email,
-                    },
-                    "date": commit_obj.committed_datetime.isoformat(),
-                    "change_type": "N",
-                }]
+                return [
+                    {
+                        "hash": commit_obj.hexsha,
+                        "short_hash": commit_obj.hexsha[:8],
+                        "message": commit_obj.message.strip(),
+                        "author": {
+                            "name": commit_obj.author.name,
+                            "email": commit_obj.author.email,
+                        },
+                        "date": commit_obj.committed_datetime.isoformat(),
+                        "change_type": "N",
+                    }
+                ]
             except KeyError:
                 return []
         except Exception:
@@ -124,17 +129,19 @@ class GitFileHistoryService:
                 except KeyError:
                     change_type = "D"
 
-            entries.append({
-                "hash": commit.hexsha,
-                "short_hash": commit.hexsha[:8],
-                "message": commit.message.strip(),
-                "author": {
-                    "name": commit.author.name,
-                    "email": commit.author.email,
-                },
-                "date": commit.committed_datetime.isoformat(),
-                "change_type": change_type,
-            })
+            entries.append(
+                {
+                    "hash": commit.hexsha,
+                    "short_hash": commit.hexsha[:8],
+                    "message": commit.message.strip(),
+                    "author": {
+                        "name": commit.author.name,
+                        "email": commit.author.email,
+                    },
+                    "date": commit.committed_datetime.isoformat(),
+                    "change_type": change_type,
+                }
+            )
         return entries
 
     def get_last_commit(self, repo_id: int, file_path: str) -> dict:
@@ -216,7 +223,9 @@ class GitFileHistoryService:
 
         if file_path:
             try:
-                file_content = (commit.tree / file_path).data_stream.read().decode("utf-8")
+                file_content = (
+                    (commit.tree / file_path).data_stream.read().decode("utf-8")
+                )
                 return {
                     "file_path": file_path,
                     "content": file_content,
@@ -230,4 +239,6 @@ class GitFileHistoryService:
 
         config_extensions = _settings.allowed_file_extensions
         files = [item.path for item in commit.tree.traverse() if item.type == "blob"]
-        return sorted(f for f in files if any(f.endswith(ext) for ext in config_extensions))
+        return sorted(
+            f for f in files if any(f.endswith(ext) for ext in config_extensions)
+        )

@@ -163,7 +163,9 @@ async def lifespan(app: FastAPI):
 
     # Ensure built-in Celery queues exist
     try:
-        from services.settings.settings_service import settings_service as settings_manager
+        from services.settings.settings_service import (
+            settings_service as settings_manager,
+        )
 
         settings_manager.ensure_builtin_queues()
         logger.info("Built-in Celery queues verified")
@@ -194,7 +196,9 @@ async def lifespan(app: FastAPI):
 
     # Initialize next_run for job schedules that don't have one
     try:
-        from services.jobs.job_schedule_service import JobScheduleService as _JobScheduleService
+        from services.jobs.job_schedule_service import (
+            JobScheduleService as _JobScheduleService,
+        )
 
         result = _JobScheduleService().initialize_schedule_next_runs()
         if result["initialized_count"] > 0:
@@ -208,7 +212,9 @@ async def lifespan(app: FastAPI):
     try:
         logger.debug("Startup cache: hook invoked")
         # Local imports to avoid circular dependencies at import time
-        from services.settings.settings_service import settings_service as settings_manager
+        from services.settings.settings_service import (
+            settings_service as settings_manager,
+        )
         from services.settings.git.shared_utils import get_git_repo_by_id
 
         cache_service = app.state.cache_service

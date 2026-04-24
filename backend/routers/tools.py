@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel
+from typing import Dict, Any, List
 from pathlib import Path
 import yaml
 from core.auth import verify_admin_token
 from core.schema_manager import SchemaManager
 from dependencies import get_certificate_manager
+from models.cert_manager import CertificateEntry
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,14 +13,6 @@ logger = logging.getLogger(__name__)
 # Path to the NiPyAPI certs directory (project_root/config/nipyapi/)
 _CERTS_DIR = Path(__file__).parent.parent.parent / "config" / "nipyapi"
 _CERTS_CONFIG = _CERTS_DIR / "certificates.yaml"
-
-
-class CertificateEntry(BaseModel):
-    name: str
-    ca_cert_content: Optional[str] = None
-    cert_content: Optional[str] = None
-    key_content: Optional[str] = None
-    password: str = ""
 
 
 def _load_cert_config() -> List[Dict]:

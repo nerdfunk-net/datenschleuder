@@ -72,12 +72,16 @@ class GitFileSearchService:
                     continue
                 full_path = os.path.join(rel_root, file) if rel_root else file
                 abs_path = os.path.join(root, file)
-                structured_files.append({
-                    "name": file,
-                    "path": full_path,
-                    "directory": rel_root,
-                    "size": os.path.getsize(abs_path) if os.path.exists(abs_path) else 0,
-                })
+                structured_files.append(
+                    {
+                        "name": file,
+                        "path": full_path,
+                        "directory": rel_root,
+                        "size": os.path.getsize(abs_path)
+                        if os.path.exists(abs_path)
+                        else 0,
+                    }
+                )
         return structured_files
 
     def _filter_files(self, files: list, query: str) -> list:
@@ -87,7 +91,8 @@ class GitFileSearchService:
 
         query_lower = query.lower()
         matched = [
-            f for f in files
+            f
+            for f in files
             if (
                 query_lower in f["name"].lower()
                 or query_lower in f["path"].lower()

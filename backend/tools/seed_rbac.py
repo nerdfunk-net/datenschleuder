@@ -10,6 +10,7 @@ import argparse
 import sys
 from services.auth.rbac_service import RBACService as _RBACService
 from services.auth.user_service import UserService as _UserService
+
 rbac = _RBACService()
 user_db = _UserService()
 
@@ -238,7 +239,11 @@ def seed_permissions(verbose: bool = True):
         ("pki", "delete", "Delete the PKI Certificate Authority"),
         # Agents permissions
         ("agents", "read", "View agents, their status, and command history"),
-        ("agents", "execute", "Send commands to agents (git pull, docker restart, etc.)"),
+        (
+            "agents",
+            "execute",
+            "Send commands to agents (git pull, docker restart, etc.)",
+        ),
     ]
 
     created_count = 0

@@ -356,3 +356,60 @@ class JobRunListResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+# ============================================================================
+# Celery Task Models (from routers/jobs/celery_api.py)
+# ============================================================================
+
+
+class TestTaskRequest(BaseModel):
+    message: str = "Hello from Celery!"
+
+
+class ProgressTaskRequest(BaseModel):
+    duration: int = 10
+
+
+class TaskResponse(BaseModel):
+    task_id: str
+    status: str
+    message: str
+
+
+class TaskWithJobResponse(BaseModel):
+    """Response model for tasks that are tracked in the job database."""
+
+    task_id: str
+    job_id: Optional[str] = None
+    status: str
+    message: str
+
+
+class TaskStatusResponse(BaseModel):
+    task_id: str
+    status: str
+    result: Optional[dict] = None
+    error: Optional[str] = None
+    progress: Optional[dict] = None
+
+
+class CheckQueuesRequest(BaseModel):
+    """Request body for the NiFi queue-check task endpoint."""
+
+    cluster_ids: Optional[List[int]] = None
+    check_queues_mode: str = "count"
+    count_yellow: int = 1_000
+    count_red: int = 10_000
+    bytes_yellow: int = 10
+    bytes_red: int = 100
+
+
+class CheckProcessGroupRequest(BaseModel):
+    """Request body for the NiFi check-process-group task endpoint."""
+
+    nifi_cluster_id: int
+    process_group_id: str
+    process_group_path: Optional[str] = None
+    check_children: bool = True
+    expected_status: str = "Running"

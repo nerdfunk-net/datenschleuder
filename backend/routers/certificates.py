@@ -9,12 +9,16 @@ import logging
 import subprocess
 import shutil
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
-from pydantic import BaseModel
 
 from core.auth import verify_admin_token
+from models.cert_manager import (
+    SystemCertificateInfo,
+    SystemCertScanResponse,
+    SystemAddCertRequest,
+    SystemAddCertResponse,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/certificates", tags=["certificates"])
@@ -24,44 +28,10 @@ CONFIG_CERTS_DIR = Path(__file__).parent.parent.parent / "config" / "oidc"
 SYSTEM_CA_DIR = Path("/usr/local/share/ca-certificates")
 
 
-class CertificateInfo(BaseModel):
-    """Certificate file information."""
-
-    filename: str
-    path: str
-    size: int
-    exists_in_system: bool
-
-
-class ScanResponse(BaseModel):
-    """Response for certificate scan operation."""
-
-    success: bool
-    certificates: list[CertificateInfo]
-    certs_directory: str
-    message: Optional[str] = None
-
-
-class AddCertificateRequest(BaseModel):
-    """Request to add a certificate to system CA store."""
-
-    filename: str
-
-
-class AddCertificateResponse(BaseModel):
-    """Response from adding certificate to system CA store."""
-
-    success: bool
-    message: str
-    output: Optional[str] = None
-    error: Optional[str] = None
-    command_output: Optional[str] = None
-
-
-@router.get("/scan", response_model=ScanResponse)
+@router.get("/scan", response_model=SystemCertScanResponse)
 def scan_certificates(
     current_user: dict = Depends(verify_admin_token),
-) -> ScanResponse:
+) -> SystemCertScanResponse:
     """
     Scan the config/oidc directory for .crt files.
 
@@ -73,7 +43,7 @@ def scan_certificates(
         # Create directory if it doesn't exist
         certs_dir.mkdir(parents=True, exist_ok=True)
 
-        certificates: list[CertificateInfo] = []
+        certificates: list[SystemCertificateInfo] = []
 
         # Scan for .crt files
         for cert_file in certs_dir.glob("*.crt"):
@@ -83,7 +53,7 @@ def scan_certificates(
                 exists_in_system = system_cert_path.exists()
 
                 certificates.append(
-                    CertificateInfo(
+                    SystemCertificateInfo(
                         filename=cert_file.name,
                         path=str(cert_file),
                         size=cert_file.stat().st_size,
@@ -94,7 +64,7 @@ def scan_certificates(
         # Sort by filename
         certificates.sort(key=lambda c: c.filename.lower())
 
-        return ScanResponse(
+        return SystemCertScanResponse(
             success=True,
             certificates=certificates,
             certs_directory=str(certs_dir),
@@ -185,11 +155,11 @@ async def upload_certificate(
         )
 
 
-@router.post("/add-to-system", response_model=AddCertificateResponse)
+@router.post("/add-to-system", response_model=SystemAddCertResponse)
 def add_certificate_to_system(
-    request: AddCertificateRequest,
+    request: SystemAddCertRequest,
     current_user: dict = Depends(verify_admin_token),
-) -> AddCertificateResponse:
+) -> SystemAddCertResponse:
     """
     Add a certificate to the system CA store.
 
@@ -203,7 +173,7 @@ def add_certificate_to_system(
         # Validate filename (prevent path traversal)
         filename = Path(request.filename).name
         if not filename.endswith(".crt"):
-            return AddCertificateResponse(
+            return SystemAddCertResponse(
                 success=False,
                 message="Certificate file must have .crt extension",
             )
@@ -213,7 +183,7 @@ def add_certificate_to_system(
 
         # Verify source certificate exists
         if not source_path.exists():
-            return AddCertificateResponse(
+            return SystemAddCertResponse(
                 success=False,
                 message=f"Certificate '{filename}' not found in {certs_dir}",
             )
@@ -247,7 +217,7 @@ def add_certificate_to_system(
 
             if result.returncode == 0:
                 logger.info("Certificate %s added to system CA store", filename)
-                return AddCertificateResponse(
+                return SystemAddCertResponse(
                     success=True,
                     message=f"Certificate '{filename}' added to system CA store successfully",
                     command_output="\n".join(command_outputs),
@@ -256,7 +226,7 @@ def add_certificate_to_system(
                 logger.warning(
                     "update-ca-certificates returned non-zero: %s", result.returncode
                 )
-                return AddCertificateResponse(
+                return SystemAddCertResponse(
                     success=False,
                     message="Certificate copied but update-ca-certificates failed",
                     error=result.stderr or "Unknown error",
@@ -265,7 +235,7 @@ def add_certificate_to_system(
 
         except PermissionError as e:
             logger.error("Permission denied adding certificate to system: %s", e)
-            return AddCertificateResponse(
+            return SystemAddCertResponse(
                 success=False,
                 message="Permission denied. This operation requires root/sudo privileges.",
                 error=str(e),
@@ -273,14 +243,14 @@ def add_certificate_to_system(
             )
         except subprocess.TimeoutExpired:
             logger.error("update-ca-certificates timed out")
-            return AddCertificateResponse(
+            return SystemAddCertResponse(
                 success=False,
                 message="update-ca-certificates command timed out",
                 command_output="\n".join(command_outputs) if command_outputs else None,
             )
         except FileNotFoundError as e:
             logger.error("update-ca-certificates not found: %s", e)
-            return AddCertificateResponse(
+            return SystemAddCertResponse(
                 success=False,
                 message="update-ca-certificates command not found. Is ca-certificates package installed?",
                 error=str(e),
@@ -288,7 +258,7 @@ def add_certificate_to_system(
 
     except Exception as e:
         logger.error("Error adding certificate to system: %s", e)
-        return AddCertificateResponse(
+        return SystemAddCertResponse(
             success=False,
             message=f"Failed to add certificate to system: {e}",
             error=str(e),

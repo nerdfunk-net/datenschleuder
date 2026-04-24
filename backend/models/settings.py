@@ -247,3 +247,25 @@ class RedisServerResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ============================================================================
+# Celery Settings Models (from routers/jobs/celery_api.py)
+# ============================================================================
+
+
+class CeleryQueue(BaseModel):
+    """Celery queue configuration."""
+
+    name: str
+    description: str = ""
+    built_in: bool = False
+
+
+class CelerySettingsRequest(BaseModel):
+    max_workers: Optional[int] = None
+    cleanup_enabled: Optional[bool] = None
+    cleanup_interval_hours: Optional[int] = None
+    cleanup_age_hours: Optional[int] = None
+    result_expires_hours: Optional[int] = None
+    queues: Optional[List[CeleryQueue]] = None

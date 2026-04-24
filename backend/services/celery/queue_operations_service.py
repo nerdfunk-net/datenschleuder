@@ -56,14 +56,22 @@ class CeleryQueueOperationsService:
         with celery_app.connection_or_acquire() as conn:
             for queue_name in task_queues.keys():
                 try:
-                    queue_obj = self._construct_queue(queue_name, task_queues[queue_name])
+                    queue_obj = self._construct_queue(
+                        queue_name, task_queues[queue_name]
+                    )
                     purged_count = queue_obj(conn.channel()).purge() or 0
-                    purged_queues.append({"queue": queue_name, "purged_tasks": purged_count})
+                    purged_queues.append(
+                        {"queue": queue_name, "purged_tasks": purged_count}
+                    )
                     total_purged += purged_count
-                    logger.info("Purged %s task(s) from queue '%s'", purged_count, queue_name)
+                    logger.info(
+                        "Purged %s task(s) from queue '%s'", purged_count, queue_name
+                    )
                 except Exception as e:
                     logger.error("Error purging queue %s: %s", queue_name, e)
-                    purged_queues.append({"queue": queue_name, "purged_tasks": 0, "error": str(e)})
+                    purged_queues.append(
+                        {"queue": queue_name, "purged_tasks": 0, "error": str(e)}
+                    )
 
         return {"total_purged": total_purged, "queues": purged_queues}
 

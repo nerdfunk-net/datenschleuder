@@ -45,7 +45,7 @@ class GitDebugService:
 
     def test_read(self, repo_id: int) -> dict:
         """Test reading the debug test file from the repository."""
-        repository = self._get_repository(repo_id)
+        self._get_repository(repo_id)
         repo = get_git_repo_by_id(repo_id)
         repo_path = Path(repo.working_dir)
         test_file_path = repo_path / ".cockpit_debug_test.txt"
@@ -115,7 +115,9 @@ class GitDebugService:
                     repo_status = "modified (file created but not committed)"
                 return {
                     "success": success,
-                    "message": "File written successfully" if success else "File written but verification failed",
+                    "message": "File written successfully"
+                    if success
+                    else "File written but verification failed",
                     "details": {
                         "file_path": str(test_file_path),
                         "content_length": len(test_content),
@@ -237,7 +239,9 @@ class GitDebugService:
         repo_path = Path(repo.working_dir)
         test_file_path = repo_path / ".cockpit_debug_test.txt"
 
-        username, token, ssh_key_path = self.git_auth_service.resolve_credentials(repository)
+        username, token, ssh_key_path = self.git_auth_service.resolve_credentials(
+            repository
+        )
         auth_type = repository.get("auth_type", "token")
         has_token_auth = bool(username and token)
         has_ssh_auth = bool(ssh_key_path)
@@ -426,7 +430,9 @@ class GitDebugService:
         elif "could not resolve host" in error_message.lower():
             suggestion = "Network error: Cannot reach remote repository. Check network connectivity."
         elif "authentication failed" in error_message.lower():
-            suggestion = "Credentials are invalid. Update the token in credential settings."
+            suggestion = (
+                "Credentials are invalid. Update the token in credential settings."
+            )
         else:
             suggestion = "Check repository configuration and network connectivity"
 
@@ -481,18 +487,26 @@ class GitDebugService:
                     "path": str(repo_path),
                 }
             except Exception as e:
-                diagnostics["file_system"] = {"error": str(e), "error_type": type(e).__name__}
+                diagnostics["file_system"] = {
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
 
             try:
                 diagnostics["git_status"] = {
                     "is_dirty": repo.is_dirty(untracked_files=True),
                     "active_branch": repo.active_branch.name,
-                    "head_commit": repo.head.commit.hexsha[:8] if repo.head.is_valid() else "no commits",
+                    "head_commit": repo.head.commit.hexsha[:8]
+                    if repo.head.is_valid()
+                    else "no commits",
                     "remotes": [r.name for r in repo.remotes],
                     "has_origin": "origin" in [r.name for r in repo.remotes],
                 }
             except Exception as e:
-                diagnostics["git_status"] = {"error": str(e), "error_type": type(e).__name__}
+                diagnostics["git_status"] = {
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
 
         except HTTPException:
             raise
@@ -518,7 +532,9 @@ class GitDebugService:
             diagnostics["ssl_info"] = {"error": str(e), "error_type": type(e).__name__}
 
         try:
-            username, token, ssh_key_path = self.git_auth_service.resolve_credentials(repository)
+            username, token, ssh_key_path = self.git_auth_service.resolve_credentials(
+                repository
+            )
             auth_type = repository.get("auth_type", "token")
 
             diagnostics["credentials"] = {
@@ -528,7 +544,9 @@ class GitDebugService:
                 "has_token": bool(token),
                 "has_ssh_key": bool(ssh_key_path),
                 "token_length": len(token) if token else 0,
-                "authentication": "configured" if (username and token) or ssh_key_path else "none",
+                "authentication": "configured"
+                if (username and token) or ssh_key_path
+                else "none",
             }
 
             if auth_type == "ssh_key":
@@ -574,7 +592,10 @@ class GitDebugService:
         except HTTPException:
             raise
         except Exception as e:
-            diagnostics["credentials"] = {"error": str(e), "error_type": type(e).__name__}
+            diagnostics["credentials"] = {
+                "error": str(e),
+                "error_type": type(e).__name__,
+            }
             diagnostics["push_capability"] = {
                 "status": "error",
                 "message": f"Failed to assess push capability: {str(e)}",

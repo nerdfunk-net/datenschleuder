@@ -39,7 +39,9 @@ def _permission_to_dict(permission: Permission) -> Dict[str, Any]:
         "resource": permission.resource,
         "action": permission.action,
         "description": permission.description,
-        "created_at": permission.created_at.isoformat() if permission.created_at else None,
+        "created_at": permission.created_at.isoformat()
+        if permission.created_at
+        else None,
     }
 
 
@@ -50,7 +52,9 @@ class RBACService:
 
     # ── Permission Management ─────────────────────────────────────────────────
 
-    def create_permission(self, resource: str, action: str, description: str = "") -> Dict[str, Any]:
+    def create_permission(
+        self, resource: str, action: str, description: str = ""
+    ) -> Dict[str, Any]:
         existing = self.rbac_repo.get_permission(resource, action)
         if existing:
             raise ValueError(f"Permission {resource}:{action} already exists")
@@ -73,7 +77,9 @@ class RBACService:
 
     # ── Role Management ───────────────────────────────────────────────────────
 
-    def create_role(self, name: str, description: str = "", is_system: bool = False) -> Dict[str, Any]:
+    def create_role(
+        self, name: str, description: str = "", is_system: bool = False
+    ) -> Dict[str, Any]:
         if self.rbac_repo.role_name_exists(name):
             raise ValueError(f"Role '{name}' already exists")
         role = self.rbac_repo.create_role(name, description, is_system)
@@ -90,7 +96,12 @@ class RBACService:
     def list_roles(self) -> List[Dict[str, Any]]:
         return [_role_to_dict(r) for r in self.rbac_repo.list_roles()]
 
-    def update_role(self, role_id: int, name: Optional[str] = None, description: Optional[str] = None) -> Dict[str, Any]:
+    def update_role(
+        self,
+        role_id: int,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+    ) -> Dict[str, Any]:
         role = self.rbac_repo.get_role(role_id)
         if not role:
             raise ValueError(f"Role with id {role_id} not found")
@@ -112,14 +123,18 @@ class RBACService:
 
     # ── Role-Permission Assignment ────────────────────────────────────────────
 
-    def assign_permission_to_role(self, role_id: int, permission_id: int, granted: bool = True) -> None:
+    def assign_permission_to_role(
+        self, role_id: int, permission_id: int, granted: bool = True
+    ) -> None:
         self.rbac_repo.assign_permission_to_role(role_id, permission_id, granted)
 
     def remove_permission_from_role(self, role_id: int, permission_id: int) -> None:
         self.rbac_repo.remove_permission_from_role(role_id, permission_id)
 
     def get_role_permissions(self, role_id: int) -> List[Dict[str, Any]]:
-        return [_permission_to_dict(p) for p in self.rbac_repo.get_role_permissions(role_id)]
+        return [
+            _permission_to_dict(p) for p in self.rbac_repo.get_role_permissions(role_id)
+        ]
 
     # ── User-Role Assignment ──────────────────────────────────────────────────
 
@@ -137,7 +152,9 @@ class RBACService:
 
     # ── User-Permission Overrides ─────────────────────────────────────────────
 
-    def assign_permission_to_user(self, user_id: int, permission_id: int, granted: bool = True) -> None:
+    def assign_permission_to_user(
+        self, user_id: int, permission_id: int, granted: bool = True
+    ) -> None:
         self.rbac_repo.assign_permission_to_user(user_id, permission_id, granted)
 
     def remove_permission_from_user(self, user_id: int, permission_id: int) -> None:
@@ -192,16 +209,19 @@ class RBACService:
         granted_perms.sort(key=lambda x: (x["resource"], x["action"]))
         return granted_perms
 
-    def check_any_permission(self, user_id: int, resource: str, actions: List[str]) -> bool:
+    def check_any_permission(
+        self, user_id: int, resource: str, actions: List[str]
+    ) -> bool:
         return any(self.has_permission(user_id, resource, action) for action in actions)
 
-    def check_all_permissions(self, user_id: int, resource: str, actions: List[str]) -> bool:
+    def check_all_permissions(
+        self, user_id: int, resource: str, actions: List[str]
+    ) -> bool:
         return all(self.has_permission(user_id, resource, action) for action in actions)
 
     # ── Compound User+RBAC Operations ────────────────────────────────────────
 
     def _user_to_dict(self, user) -> Dict[str, Any]:
-        from core.auth import get_password_hash
         return {
             "id": user.id,
             "username": user.username,
@@ -225,6 +245,7 @@ class RBACService:
         is_active: bool = True,
     ) -> Dict[str, Any]:
         from services.auth.user_service import UserService
+
         user_svc = UserService()
         user = user_svc.create_user(
             username=username,
@@ -244,8 +265,11 @@ class RBACService:
                 self.assign_role_to_user(user["id"], role_id)
         return user
 
-    def get_user_with_rbac(self, user_id: int, include_inactive: bool = False) -> Optional[Dict[str, Any]]:
+    def get_user_with_rbac(
+        self, user_id: int, include_inactive: bool = False
+    ) -> Optional[Dict[str, Any]]:
         from services.auth.user_service import UserService
+
         user_svc = UserService()
         user = user_svc.get_user_by_id(user_id, include_inactive=include_inactive)
         if not user:
@@ -254,8 +278,11 @@ class RBACService:
         user["permissions"] = self.get_user_permissions(user_id)
         return user
 
-    def list_users_with_rbac(self, include_inactive: bool = True) -> List[Dict[str, Any]]:
+    def list_users_with_rbac(
+        self, include_inactive: bool = True
+    ) -> List[Dict[str, Any]]:
         from services.auth.user_service import UserService
+
         user_svc = UserService()
         users = user_svc.get_all_users(include_inactive=include_inactive)
         for user in users:
@@ -272,6 +299,7 @@ class RBACService:
         is_active: Optional[bool] = None,
     ) -> Optional[Dict[str, Any]]:
         from services.auth.user_service import UserService
+
         return UserService().update_user(
             user_id=user_id,
             realname=realname,
@@ -284,6 +312,7 @@ class RBACService:
 
     def delete_user_with_rbac(self, user_id: int) -> bool:
         from services.auth.user_service import UserService
+
         user_svc = UserService()
         user = user_svc.get_user_by_id(user_id, include_inactive=True)
         if not user:
@@ -298,12 +327,22 @@ class RBACService:
         if username:
             try:
                 from services.settings.credentials_service import CredentialsService
-                deleted_count = CredentialsService().delete_credentials_by_owner(username)
-                logger.info("Deleted %s private credentials for user %s", deleted_count, username)
+
+                deleted_count = CredentialsService().delete_credentials_by_owner(
+                    username
+                )
+                logger.info(
+                    "Deleted %s private credentials for user %s",
+                    deleted_count,
+                    username,
+                )
             except Exception as e:
-                logger.warning("Failed to delete credentials for user %s: %s", username, e)
+                logger.warning(
+                    "Failed to delete credentials for user %s: %s", username, e
+                )
             try:
                 from services.auth.profile_service import ProfileService
+
                 ProfileService().delete_user_profile(username)
                 logger.info("Deleted profile for user %s", username)
             except Exception as e:
@@ -325,6 +364,7 @@ class RBACService:
 
     def toggle_user_activation(self, user_id: int) -> Optional[Dict[str, Any]]:
         from services.auth.user_service import UserService
+
         user_svc = UserService()
         user = user_svc.get_user_by_id(user_id, include_inactive=True)
         if not user:
@@ -333,6 +373,7 @@ class RBACService:
 
     def toggle_user_debug(self, user_id: int) -> Optional[Dict[str, Any]]:
         from services.auth.user_service import UserService
+
         user_svc = UserService()
         user = user_svc.get_user_by_id(user_id)
         if not user:

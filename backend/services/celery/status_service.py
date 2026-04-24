@@ -63,7 +63,9 @@ class CeleryStatusService:
             if ping:
                 r.ping()
             redis_connected = True
-            beat_running = bool(r.exists(_BEAT_LOCK_KEY) or r.exists(_BEAT_SCHEDULE_KEY))
+            beat_running = bool(
+                r.exists(_BEAT_LOCK_KEY) or r.exists(_BEAT_SCHEDULE_KEY)
+            )
             return redis_connected, beat_running
         except Exception:
             return False, False

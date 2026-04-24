@@ -129,11 +129,13 @@ def execute_export_flows(
     filters: dict = (
         params.get("export_flows_filters") or tmpl.get("export_flows_filters") or {}
     )
-    git_repo_id: Optional[int] = (
-        params.get("export_flows_git_repo_id") or tmpl.get("export_flows_git_repo_id")
+    git_repo_id: Optional[int] = params.get("export_flows_git_repo_id") or tmpl.get(
+        "export_flows_git_repo_id"
     )
     filename_raw: str = (
-        params.get("export_flows_filename") or tmpl.get("export_flows_filename") or "nifi_flows"
+        params.get("export_flows_filename")
+        or tmpl.get("export_flows_filename")
+        or "nifi_flows"
     )
     export_type: str = (
         params.get("export_flows_export_type")
@@ -141,9 +143,8 @@ def execute_export_flows(
         or "json"
     ).lower()
 
-    nifi_cluster_ids = (
-        params.get("export_flows_nifi_cluster_ids")
-        or tmpl.get("export_flows_nifi_cluster_ids")
+    nifi_cluster_ids = params.get("export_flows_nifi_cluster_ids") or tmpl.get(
+        "export_flows_nifi_cluster_ids"
     )
 
     push_to_git: bool = bool(
@@ -159,6 +160,7 @@ def execute_export_flows(
     if nifi_cluster_ids:
         try:
             from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
+
             cluster_repo = NifiClusterRepository()
             labels = []
             for cid in nifi_cluster_ids:
@@ -204,7 +206,8 @@ def execute_export_flows(
         meta={
             "current": 30,
             "total": 100,
-            "status": "Serialising %d flow(s) as %s…" % (len(flows), export_type.upper()),
+            "status": "Serialising %d flow(s) as %s…"
+            % (len(flows), export_type.upper()),
         },
     )
 
@@ -268,7 +271,9 @@ def execute_export_flows(
         }
         git_repo_name = git_repo_model.name
     except Exception as exc:
-        logger.error("export_flows: failed to load git repository: %s", exc, exc_info=True)
+        logger.error(
+            "export_flows: failed to load git repository: %s", exc, exc_info=True
+        )
         return {
             "success": False,
             "exported_count": len(flows),
@@ -345,12 +350,20 @@ def execute_export_flows(
         )
         task_context.update_state(
             state="PROGRESS",
-            meta={"current": 100, "total": 100, "status": "Done – %d flow(s) exported (not pushed)" % len(flows)},
+            meta={
+                "current": 100,
+                "total": 100,
+                "status": "Done – %d flow(s) exported (not pushed)" % len(flows),
+            },
         )
     else:
         task_context.update_state(
             state="PROGRESS",
-            meta={"current": 80, "total": 100, "status": "Committing and pushing to remote…"},
+            meta={
+                "current": 80,
+                "total": 100,
+                "status": "Committing and pushing to remote…",
+            },
         )
 
         # Warn if repo already had uncommitted changes before we add ours
@@ -405,7 +418,11 @@ def execute_export_flows(
         commit_sha = push_result.commit_sha
         task_context.update_state(
             state="PROGRESS",
-            meta={"current": 100, "total": 100, "status": "Done – %d flow(s) exported" % len(flows)},
+            meta={
+                "current": 100,
+                "total": 100,
+                "status": "Done – %d flow(s) exported" % len(flows),
+            },
         )
 
     logger.info(

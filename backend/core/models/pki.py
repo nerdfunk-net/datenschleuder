@@ -1,6 +1,17 @@
 """PKI models: PKIAuthority, PKICertificate."""
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Index, LargeBinary, JSON
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    LargeBinary,
+    JSON,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from core.database import Base

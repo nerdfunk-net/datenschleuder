@@ -158,3 +158,67 @@ class NifiPasswordsResponse(BaseModel):
     instance_id: int
     file_path: str
     passwords: List[NifiPasswordEntry]
+
+
+# ============================================================================
+# System CA Certificate Models (from routers/certificates.py)
+# ============================================================================
+
+
+class SystemCertificateInfo(BaseModel):
+    """Certificate file information for the system CA store."""
+
+    filename: str
+    path: str
+    size: int
+    exists_in_system: bool
+
+
+class SystemCertScanResponse(BaseModel):
+    """Response for certificate scan operation."""
+
+    success: bool
+    certificates: List[SystemCertificateInfo]
+    certs_directory: str
+    message: Optional[str] = None
+
+
+class SystemAddCertRequest(BaseModel):
+    """Request to add a certificate to the system CA store."""
+
+    filename: str
+
+
+class SystemAddCertResponse(BaseModel):
+    """Response from adding a certificate to the system CA store."""
+
+    success: bool
+    message: str
+    output: Optional[str] = None
+    error: Optional[str] = None
+    command_output: Optional[str] = None
+
+
+# ============================================================================
+# NiPyAPI Certificate Models (from routers/tools.py and services/nifi/certificate_manager.py)
+# ============================================================================
+
+
+class CertificateEntry(BaseModel):
+    """Certificate entry for NiPyAPI configuration."""
+
+    name: str
+    ca_cert_content: Optional[str] = None
+    cert_content: Optional[str] = None
+    key_content: Optional[str] = None
+    password: str = ""
+
+
+class CertificateConfig(BaseModel):
+    """Certificate configuration entry loaded from YAML."""
+
+    name: str
+    ca_cert_file: str
+    cert_file: str
+    key_file: str
+    password: str

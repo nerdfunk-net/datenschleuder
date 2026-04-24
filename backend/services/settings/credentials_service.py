@@ -17,6 +17,7 @@ from core.models import Credential
 def _build_key(secret: str) -> bytes:
     from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     from cryptography.hazmat.primitives import hashes
+
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
@@ -85,7 +86,9 @@ class CredentialsService:
             self._enc = EncryptionService()
         return self._enc
 
-    def list_credentials(self, include_expired: bool = False, source: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_credentials(
+        self, include_expired: bool = False, source: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         if source:
             creds = self.creds_repo.get_by_source(source)
         else:
@@ -114,8 +117,12 @@ class CredentialsService:
     ) -> Dict[str, Any]:
         now = datetime.utcnow()
         encrypted_password = self._get_enc().encrypt(password) if password else None
-        encrypted_ssh_key = self._get_enc().encrypt(ssh_private_key) if ssh_private_key else None
-        encrypted_ssh_passphrase = self._get_enc().encrypt(ssh_passphrase) if ssh_passphrase else None
+        encrypted_ssh_key = (
+            self._get_enc().encrypt(ssh_private_key) if ssh_private_key else None
+        )
+        encrypted_ssh_passphrase = (
+            self._get_enc().encrypt(ssh_passphrase) if ssh_passphrase else None
+        )
         new_cred = self.creds_repo.create(
             name=name,
             username=username,
@@ -133,6 +140,7 @@ class CredentialsService:
         )
         if cred_type == "ssh_key" and ssh_private_key:
             from services.settings.ssh_key_service import SSHKeyService
+
             SSHKeyService().export_single_ssh_key(new_cred.id)
         return _credential_to_dict(new_cred)
 
@@ -169,9 +177,13 @@ class CredentialsService:
         if password is not None:
             update_kwargs["password_encrypted"] = self._get_enc().encrypt(password)
         if ssh_private_key is not None:
-            update_kwargs["ssh_key_encrypted"] = self._get_enc().encrypt(ssh_private_key)
+            update_kwargs["ssh_key_encrypted"] = self._get_enc().encrypt(
+                ssh_private_key
+            )
         if ssh_passphrase is not None:
-            update_kwargs["ssh_passphrase_encrypted"] = self._get_enc().encrypt(ssh_passphrase)
+            update_kwargs["ssh_passphrase_encrypted"] = self._get_enc().encrypt(
+                ssh_passphrase
+            )
         if ssh_keyfile_path is not None:
             update_kwargs["ssh_keyfile_path"] = ssh_keyfile_path or None
         update_kwargs["updated_at"] = datetime.utcnow()
@@ -179,6 +191,7 @@ class CredentialsService:
         final_type = cred_type if cred_type is not None else existing.type
         if final_type == "ssh_key" and ssh_private_key is not None:
             from services.settings.ssh_key_service import SSHKeyService
+
             SSHKeyService().export_single_ssh_key(cred_id)
         return _credential_to_dict(updated)
 
@@ -186,6 +199,7 @@ class CredentialsService:
         cred = self.creds_repo.get_by_id(cred_id)
         if cred and cred.type == "ssh_key":
             from services.settings.ssh_key_service import SSHKeyService
+
             SSHKeyService()._delete_ssh_key_file(cred.name, cred.source, cred.owner)
         self.creds_repo.delete(cred_id)
 
@@ -227,12 +241,14 @@ class CredentialsService:
 
     def get_ssh_key_path(self, cred_id: int) -> Optional[str]:
         import re
+
         cred = self.creds_repo.get_by_id(cred_id)
         if not cred:
             return None
         if cred.type != "ssh_key" or not cred.ssh_key_encrypted:
             return None
         from services.settings.ssh_key_service import SSHKeyService
+
         ssh_svc = SSHKeyService()
         output_dir = ssh_svc._get_ssh_keys_directory()
         prefix = ssh_svc._get_ssh_key_filename_prefix(cred.source, cred.owner)

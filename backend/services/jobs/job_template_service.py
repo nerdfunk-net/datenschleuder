@@ -44,14 +44,18 @@ class JobTemplateService:
     ) -> Dict[str, Any]:
         if self.repo.check_name_exists(name, user_id if not is_global else None):
             raise ValueError(f"A job template with name '{name}' already exists")
-        nifi_cluster_ids_json = json.dumps(nifi_cluster_ids) if nifi_cluster_ids is not None else None
+        nifi_cluster_ids_json = (
+            json.dumps(nifi_cluster_ids) if nifi_cluster_ids is not None else None
+        )
         export_flows_nifi_cluster_ids_json = (
             json.dumps(export_flows_nifi_cluster_ids)
             if export_flows_nifi_cluster_ids is not None
             else None
         )
         export_flows_filters_json = (
-            json.dumps(export_flows_filters) if export_flows_filters is not None else None
+            json.dumps(export_flows_filters)
+            if export_flows_filters is not None
+            else None
         )
         template = self.repo.create(
             name=name,
@@ -85,18 +89,24 @@ class JobTemplateService:
         template = self.repo.get_by_id(template_id)
         return self._model_to_dict(template) if template else None
 
-    def get_job_template_by_name(self, name: str, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    def get_job_template_by_name(
+        self, name: str, user_id: Optional[int] = None
+    ) -> Optional[Dict[str, Any]]:
         template = self.repo.get_by_name(name, user_id)
         return self._model_to_dict(template) if template else None
 
-    def list_job_templates(self, user_id: Optional[int] = None, job_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_job_templates(
+        self, user_id: Optional[int] = None, job_type: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         if user_id is not None:
             templates = self.repo.get_user_templates(user_id, job_type)
         else:
             templates = self.repo.get_global_templates(job_type)
         return [self._model_to_dict(t) for t in templates]
 
-    def get_user_job_templates(self, user_id: int, job_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_user_job_templates(
+        self, user_id: int, job_type: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         templates = self.repo.get_user_templates(user_id, job_type)
         return [self._model_to_dict(t) for t in templates]
 
@@ -146,15 +156,25 @@ class JobTemplateService:
         if check_queues_bytes_red is not None:
             update_data["check_queues_bytes_red"] = check_queues_bytes_red
         if check_progress_group_nifi_cluster_id is not None:
-            update_data["check_progress_group_nifi_cluster_id"] = check_progress_group_nifi_cluster_id
+            update_data["check_progress_group_nifi_cluster_id"] = (
+                check_progress_group_nifi_cluster_id
+            )
         if check_progress_group_process_group_id is not None:
-            update_data["check_progress_group_process_group_id"] = check_progress_group_process_group_id
+            update_data["check_progress_group_process_group_id"] = (
+                check_progress_group_process_group_id
+            )
         if check_progress_group_process_group_path is not None:
-            update_data["check_progress_group_process_group_path"] = check_progress_group_process_group_path
+            update_data["check_progress_group_process_group_path"] = (
+                check_progress_group_process_group_path
+            )
         if check_progress_group_check_children is not None:
-            update_data["check_progress_group_check_children"] = check_progress_group_check_children
+            update_data["check_progress_group_check_children"] = (
+                check_progress_group_check_children
+            )
         if check_progress_group_expected_status is not None:
-            update_data["check_progress_group_expected_status"] = check_progress_group_expected_status
+            update_data["check_progress_group_expected_status"] = (
+                check_progress_group_expected_status
+            )
         if export_flows_nifi_cluster_ids is not None:
             update_data["export_flows_nifi_cluster_ids"] = json.dumps(
                 export_flows_nifi_cluster_ids
@@ -216,7 +236,9 @@ class JobTemplateService:
             "name": template.name,
             "job_type": template.job_type,
             "description": template.description,
-            "nifi_cluster_ids": json.loads(template.nifi_cluster_ids) if template.nifi_cluster_ids else None,
+            "nifi_cluster_ids": json.loads(template.nifi_cluster_ids)
+            if template.nifi_cluster_ids
+            else None,
             "check_queues_mode": template.check_queues_mode,
             "check_queues_count_yellow": template.check_queues_count_yellow,
             "check_queues_count_red": template.check_queues_count_red,
@@ -238,9 +260,13 @@ class JobTemplateService:
                 if getattr(template, "export_flows_filters", None)
                 else None
             ),
-            "export_flows_git_repo_id": getattr(template, "export_flows_git_repo_id", None),
+            "export_flows_git_repo_id": getattr(
+                template, "export_flows_git_repo_id", None
+            ),
             "export_flows_filename": getattr(template, "export_flows_filename", None),
-            "export_flows_export_type": getattr(template, "export_flows_export_type", "json"),
+            "export_flows_export_type": getattr(
+                template, "export_flows_export_type", "json"
+            ),
             "is_global": template.is_global,
             "user_id": template.user_id,
             "created_by": template.created_by,

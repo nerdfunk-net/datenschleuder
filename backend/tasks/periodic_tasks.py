@@ -115,6 +115,7 @@ def cleanup_celery_data_task() -> dict:
         removed_job_runs = 0
         try:
             from services.jobs.job_run_service import JobRunService as _JRS
+
             job_run_manager = _JRS()
 
             # Use the hours-based cleanup function

@@ -76,6 +76,7 @@ class ProfileService:
 
     def update_user_password(self, username: str, new_password: str) -> bool:
         from services.settings.credentials_service import CredentialsService
+
         cred_svc = CredentialsService()
         try:
             credentials = cred_svc.list_credentials(include_expired=False)
@@ -85,7 +86,9 @@ class ProfileService:
                     user_cred = cred
                     break
             if user_cred:
-                cred_svc.update_credential(cred_id=user_cred["id"], password=new_password)
+                cred_svc.update_credential(
+                    cred_id=user_cred["id"], password=new_password
+                )
                 return True
             else:
                 cred_svc.create_credential(
@@ -98,7 +101,10 @@ class ProfileService:
                 return True
         except Exception as e:
             import logging
-            logging.getLogger(__name__).error("Error updating password for %s: %s", username, e)
+
+            logging.getLogger(__name__).error(
+                "Error updating password for %s: %s", username, e
+            )
             return False
 
     def delete_user_profile(self, username: str) -> bool:
@@ -106,5 +112,8 @@ class ProfileService:
             return self.profile_repo.delete_by_username(username)
         except Exception as e:
             import logging
-            logging.getLogger(__name__).error("Error deleting profile for %s: %s", username, e)
+
+            logging.getLogger(__name__).error(
+                "Error deleting profile for %s: %s", username, e
+            )
             return False

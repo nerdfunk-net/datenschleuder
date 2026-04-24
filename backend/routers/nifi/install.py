@@ -1,30 +1,17 @@
 """NiFi install endpoints - check process group paths for managed flows."""
 
 import logging
-from typing import List, Literal
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
 
 from core.auth import require_permission
+from models.nifi import PathStatus, CheckPathResponse
 from services.nifi import install_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/nifi/install", tags=["nifi-install"])
-
-
-class PathStatus(BaseModel):
-    """Status of a single process group path."""
-
-    path: str
-    exists: bool
-
-
-class CheckPathResponse(BaseModel):
-    """Response for the check-path endpoint."""
-
-    status: List[PathStatus]
 
 
 @router.get("/check-path", response_model=CheckPathResponse)

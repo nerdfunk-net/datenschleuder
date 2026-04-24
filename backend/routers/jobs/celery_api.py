@@ -3,16 +3,27 @@ Celery task management API endpoints.
 All Celery-related endpoints are under /api/celery/*
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from core.auth import require_permission
-from core.celery_error_handler import handle_celery_errors
-from celery_app import celery_app
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
 import logging
 import os
+from typing import Dict, Any
+
+import redis
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from celery_app import celery_app
+from core.auth import require_permission
+from core.celery_error_handler import handle_celery_errors
 
 from config import settings
+from models.jobs import (
+    TestTaskRequest,
+    ProgressTaskRequest,
+    TaskResponse,
+    TaskStatusResponse,
+    CheckQueuesRequest,
+    CheckProcessGroupRequest,
+)
+from models.settings import CelerySettingsRequest
 from services.celery.queue_metrics_service import CeleryQueueMetricsService
 from services.celery.queue_operations_service import CeleryQueueOperationsService
 from services.celery.settings_service import CelerySettingsService
@@ -20,38 +31,6 @@ from services.celery.status_service import CeleryStatusService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/celery", tags=["celery"])
-
-
-# Request/Response Models
-class TestTaskRequest(BaseModel):
-    message: str = "Hello from Celery!"
-
-
-class ProgressTaskRequest(BaseModel):
-    duration: int = 10
-
-
-class TaskResponse(BaseModel):
-    task_id: str
-    status: str
-    message: str
-
-
-class TaskWithJobResponse(BaseModel):
-    """Response model for tasks that are tracked in the job database."""
-
-    task_id: str
-    job_id: Optional[str] = None
-    status: str
-    message: str
-
-
-class TaskStatusResponse(BaseModel):
-    task_id: str
-    status: str
-    result: Optional[dict] = None
-    error: Optional[str] = None
-    progress: Optional[dict] = None
 
 
 @router.post("/test", response_model=TaskResponse)
@@ -138,10 +117,14 @@ def purge_queue(
 ):
     """Purge all pending tasks from a specific queue."""
     try:
-        purged_count = CeleryQueueOperationsService().purge_queue(celery_app, queue_name)
+        purged_count = CeleryQueueOperationsService().purge_queue(
+            celery_app, queue_name
+        )
         logger.info(
             "Purged %s task(s) from queue '%s' by user %s",
-            purged_count, queue_name, current_user.get("username"),
+            purged_count,
+            queue_name,
+            current_user.get("username"),
         )
         return {
             "success": True,
@@ -169,7 +152,8 @@ def purge_all_queues(
         result = CeleryQueueOperationsService().purge_all_queues(celery_app)
         logger.info(
             "Purged total of %s task(s) from all queues by user %s",
-            result["total_purged"], current_user.get("username"),
+            result["total_purged"],
+            current_user.get("username"),
         )
         return {
             "success": True,
@@ -223,7 +207,10 @@ def celery_status(
     current_user: dict = Depends(require_permission("settings.celery", "read")),
 ):
     """Get overall Celery system status."""
-    return {"success": True, "status": CeleryStatusService().get_system_status(celery_app)}
+    return {
+        "success": True,
+        "status": CeleryStatusService().get_system_status(celery_app),
+    }
 
 
 @router.get("/config")
@@ -300,27 +287,6 @@ async def trigger_cache_demo(
 # ---------------------------------------------------------------------------
 
 
-class CheckQueuesRequest(BaseModel):
-    """Request body for the NiFi queue-check task endpoint.
-
-    Fields:
-        cluster_ids:         NiFi cluster IDs to check.  ``None`` or an empty list
-                             means *all* configured clusters.
-        check_queues_mode:   Metric to evaluate – ``'count'``, ``'bytes'``, or ``'both'``.
-        count_yellow:        Flow-file count threshold for yellow status (default 1 000).
-        count_red:           Flow-file count threshold for red status (default 10 000).
-        bytes_yellow:        Queue size in MB for yellow status (default 10 MB).
-        bytes_red:           Queue size in MB for red status (default 100 MB).
-    """
-
-    cluster_ids: Optional[List[int]] = None
-    check_queues_mode: str = "count"
-    count_yellow: int = 1_000
-    count_red: int = 10_000
-    bytes_yellow: int = 10
-    bytes_red: int = 100
-
-
 @router.post("/tasks/check-queues", response_model=TaskResponse)
 @handle_celery_errors("trigger NiFi check-queues task")
 async def trigger_check_queues(
@@ -383,31 +349,6 @@ async def trigger_check_queues(
 # ---------------------------------------------------------------------------
 # NiFi check-process-group task
 # ---------------------------------------------------------------------------
-
-
-class CheckProcessGroupRequest(BaseModel):
-    """Request body for the NiFi check-process-group task endpoint.
-
-    Fields:
-        nifi_cluster_id:    ID of the NiFi cluster to connect to (primary instance is resolved).
-        process_group_id:   UUID of the process group to inspect.
-        process_group_path: Human-readable path (used in logs/results only).
-        check_children:     When ``True``, each direct child process group is
-                            also evaluated individually. Defaults to ``True``.
-        expected_status:    One of ``"Running"``, ``"Stopped"``, ``"Disabled"``,
-                            ``"Enabled"``.  Evaluation logic:
-
-                            - ``"Running"``  → stale_count, stopped_count, disabled_count must all be 0.
-                            - ``"Stopped"``  → running_count, stale_count, disabled_count must all be 0.
-                            - ``"Disabled"`` → running_count, stale_count, stopped_count must all be 0.
-                            - ``"Enabled"``  → disabled_count must be 0.
-    """
-
-    nifi_cluster_id: int
-    process_group_id: str
-    process_group_path: Optional[str] = None
-    check_children: bool = True
-    expected_status: str = "Running"
 
 
 @router.post("/tasks/check-process-group", response_model=TaskResponse)
@@ -481,30 +422,6 @@ async def trigger_check_process_group(
 # ============================================================================
 
 
-class CeleryQueue(BaseModel):
-    """
-    Celery queue configuration.
-
-    Fields:
-        name: Queue name (e.g., "default", "backup", "network", "heavy")
-        description: Human-readable description of queue purpose
-        built_in: True for hardcoded queues (cannot be deleted), False for custom queues
-    """
-
-    name: str
-    description: str = ""
-    built_in: bool = False
-
-
-class CelerySettingsRequest(BaseModel):
-    max_workers: Optional[int] = None
-    cleanup_enabled: Optional[bool] = None
-    cleanup_interval_hours: Optional[int] = None
-    cleanup_age_hours: Optional[int] = None
-    result_expires_hours: Optional[int] = None
-    queues: Optional[List[CeleryQueue]] = None
-
-
 @router.get("/settings")
 @handle_celery_errors("get celery settings")
 def get_celery_settings(
@@ -561,6 +478,7 @@ def get_cleanup_stats(
 ):
     """Get statistics about data that would be cleaned up."""
     from services.settings.settings_service import SettingsService
+
     settings_manager = SettingsService()
     from datetime import datetime, timezone, timedelta
 

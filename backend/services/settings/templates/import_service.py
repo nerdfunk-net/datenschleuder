@@ -31,6 +31,7 @@ class TemplateImportService:
     def __init__(self, template_manager=None):
         if template_manager is None:
             from services.settings.template_service import template_service
+
             template_manager = template_service
         self.template_manager = template_manager
 
@@ -68,11 +69,15 @@ class TemplateImportService:
                     props = data["properties"]
                     template_info = ImportableTemplateInfo(
                         name=props.get("name", yaml_file.stem),
-                        description=props.get("description", "No description available"),
+                        description=props.get(
+                            "description", "No description available"
+                        ),
                         category=props.get("category", "default"),
                         source=props.get("source", "file"),
                         file_path=str(yaml_file.absolute()),
-                        template_type=props.get("type", props.get("template_type", "jinja2")),
+                        template_type=props.get(
+                            "type", props.get("template_type", "jinja2")
+                        ),
                     )
                 else:
                     template_info = ImportableTemplateInfo(
@@ -146,7 +151,9 @@ class TemplateImportService:
                     "name": template_name,
                     "source": properties.get("source", "file"),
                     "template_type": properties.get("type", "jinja2"),
-                    "category": properties.get("category", default_category or "uncategorized"),
+                    "category": properties.get(
+                        "category", default_category or "uncategorized"
+                    ),
                     "content": template_content,
                     "description": properties.get("description", ""),
                     "filename": template_path.name,
@@ -169,7 +176,12 @@ class TemplateImportService:
                 errors[yaml_path] = str(e)
                 logger.error("Error processing %s: %s", yaml_path, e)
 
-        return {"imported": imported, "skipped": skipped, "failed": failed, "errors": errors}
+        return {
+            "imported": imported,
+            "skipped": skipped,
+            "failed": failed,
+            "errors": errors,
+        }
 
     def import_from_file_bulk(
         self,
@@ -228,7 +240,12 @@ class TemplateImportService:
                 failed.append(file_data.get("filename", "unknown"))
                 errors[file_data.get("filename", "unknown")] = str(e)
 
-        return {"imported": imported, "skipped": skipped, "failed": failed, "errors": errors}
+        return {
+            "imported": imported,
+            "skipped": skipped,
+            "failed": failed,
+            "errors": errors,
+        }
 
     def _template_exists(self, name: str) -> bool:
         """Return True if a template with the given name already exists."""

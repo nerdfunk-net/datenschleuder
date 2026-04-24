@@ -12,7 +12,15 @@ New code can import from specific domain modules:
 from core.database import Base
 
 # Auth
-from .auth import User, UserProfile, Role, Permission, RolePermission, UserRole, UserPermission
+from .auth import (
+    User,
+    UserProfile,
+    Role,
+    Permission,
+    RolePermission,
+    UserRole,
+    UserPermission,
+)
 
 # Credentials
 from .credentials import Credential, LoginCredential
@@ -27,7 +35,14 @@ from .jobs import Job, JobTemplate, JobSchedule, JobRun
 from .templates import Template, TemplateVersion
 
 # Settings
-from .settings import Setting, GitSetting, CacheSetting, CelerySetting, SettingsMetadata, RedisServer
+from .settings import (
+    Setting,
+    GitSetting,
+    CacheSetting,
+    CelerySetting,
+    SettingsMetadata,
+    RedisServer,
+)
 
 # Audit
 from .audit import AuditLog

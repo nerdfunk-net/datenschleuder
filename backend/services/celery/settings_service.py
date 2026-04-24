@@ -22,6 +22,7 @@ class CelerySettingsService:
     def __init__(self, settings_manager=None):
         if settings_manager is None:
             from services.settings.settings_service import SettingsService
+
             settings_manager = SettingsService()
         self.settings_manager = settings_manager
 

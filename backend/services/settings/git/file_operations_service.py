@@ -31,7 +31,10 @@ def resolve_safe_file_path(repo_path: str, path: str) -> str:
     file_path = os.path.join(repo_path, path)
     file_path_resolved = os.path.realpath(file_path)
     repo_path_resolved = os.path.realpath(repo_path)
-    if not file_path_resolved.startswith(repo_path_resolved + os.sep) and file_path_resolved != repo_path_resolved:
+    if (
+        not file_path_resolved.startswith(repo_path_resolved + os.sep)
+        and file_path_resolved != repo_path_resolved
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: file path is outside repository",
@@ -68,7 +71,9 @@ class GitFileOperationsService:
         """
         repository = git_repo_manager.get_repository(repo_id)
         if not repository:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found"
+            )
 
         repo_path = str(git_repo_path(repository))
         file_path_resolved = resolve_safe_file_path(repo_path, path)
@@ -82,7 +87,9 @@ class GitFileOperationsService:
                 detail=f"File is not a text file: {path}",
             )
 
-    def read_file_content_parsed(self, repo_id: int, path: str, git_repo_manager) -> dict:
+    def read_file_content_parsed(
+        self, repo_id: int, path: str, git_repo_manager
+    ) -> dict:
         """Read a YAML file from the repository working tree and return parsed data.
 
         Args:
@@ -98,7 +105,9 @@ class GitFileOperationsService:
         """
         repository = git_repo_manager.get_repository(repo_id)
         if not repository:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found"
+            )
 
         repo_path = str(git_repo_path(repository))
         file_path_resolved = resolve_safe_file_path(repo_path, path)
@@ -149,7 +158,9 @@ class GitFileOperationsService:
         """
         repository = git_repo_manager.get_repository(repo_id)
         if not repository:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found"
+            )
 
         repo_path = str(git_repo_path(repository))
         if not os.path.exists(repo_path):
@@ -161,7 +172,10 @@ class GitFileOperationsService:
         file_path = os.path.join(repo_path, path)
         file_path_resolved = os.path.realpath(file_path)
         repo_path_resolved = os.path.realpath(repo_path)
-        if not file_path_resolved.startswith(repo_path_resolved + os.sep) and file_path_resolved != repo_path_resolved:
+        if (
+            not file_path_resolved.startswith(repo_path_resolved + os.sep)
+            and file_path_resolved != repo_path_resolved
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied: file path is outside repository",

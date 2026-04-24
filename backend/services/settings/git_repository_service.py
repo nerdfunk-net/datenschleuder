@@ -20,7 +20,9 @@ class GitRepositoryService:
     def create_repository(self, repo_data: Dict[str, Any]) -> int:
         try:
             if self.repo.name_exists(repo_data["name"]):
-                raise ValueError(f"Repository with name '{repo_data['name']}' already exists")
+                raise ValueError(
+                    f"Repository with name '{repo_data['name']}' already exists"
+                )
             new_repo = self.repo.create(
                 name=repo_data["name"],
                 category=repo_data["category"],
@@ -34,7 +36,9 @@ class GitRepositoryService:
                 description=repo_data.get("description"),
                 is_active=repo_data.get("is_active", True),
             )
-            logger.info("Created git repository: %s (ID: %s)", repo_data["name"], new_repo.id)
+            logger.info(
+                "Created git repository: %s (ID: %s)", repo_data["name"], new_repo.id
+            )
             return new_repo.id
         except ValueError:
             raise
@@ -50,7 +54,9 @@ class GitRepositoryService:
             logger.error("Error getting git repository %s: %s", repo_id, e)
             raise
 
-    def get_repositories(self, category: Optional[str] = None, active_only: bool = False) -> List[Dict[str, Any]]:
+    def get_repositories(
+        self, category: Optional[str] = None, active_only: bool = False
+    ) -> List[Dict[str, Any]]:
         try:
             if category:
                 repos = self.repo.get_by_category(category, active_only)
@@ -66,8 +72,20 @@ class GitRepositoryService:
     def update_repository(self, repo_id: int, repo_data: Dict[str, Any]) -> bool:
         try:
             update_kwargs = {}
-            for field in ["name", "category", "url", "branch", "auth_type", "credential_name",
-                          "path", "verify_ssl", "git_author_name", "git_author_email", "description", "is_active"]:
+            for field in [
+                "name",
+                "category",
+                "url",
+                "branch",
+                "auth_type",
+                "credential_name",
+                "path",
+                "verify_ssl",
+                "git_author_name",
+                "git_author_email",
+                "description",
+                "is_active",
+            ]:
                 if field in repo_data:
                     update_kwargs[field] = repo_data[field]
             if not update_kwargs:
@@ -75,7 +93,9 @@ class GitRepositoryService:
             if "name" in update_kwargs:
                 existing = self.repo.get_by_name(update_kwargs["name"])
                 if existing and existing.id != repo_id:
-                    raise ValueError(f"Repository with name '{update_kwargs['name']}' already exists")
+                    raise ValueError(
+                        f"Repository with name '{update_kwargs['name']}' already exists"
+                    )
             update_kwargs["updated_at"] = datetime.utcnow()
             self.repo.update(repo_id, **update_kwargs)
             logger.info("Updated git repository ID: %s", repo_id)
@@ -100,11 +120,18 @@ class GitRepositoryService:
             logger.error("Error deleting git repository %s: %s", repo_id, e)
             raise
 
-    def update_sync_status(self, repo_id: int, status: str, last_sync: Optional[datetime] = None) -> bool:
+    def update_sync_status(
+        self, repo_id: int, status: str, last_sync: Optional[datetime] = None
+    ) -> bool:
         try:
             if last_sync is None:
                 last_sync = datetime.utcnow()
-            self.repo.update(repo_id, sync_status=status, last_sync=last_sync, updated_at=datetime.utcnow())
+            self.repo.update(
+                repo_id,
+                sync_status=status,
+                last_sync=last_sync,
+                updated_at=datetime.utcnow(),
+            )
             return True
         except Exception as e:
             logger.error("Error updating sync status for repository %s: %s", repo_id, e)
@@ -119,7 +146,9 @@ class GitRepositoryService:
             active_repos = [r for r in all_repos if r.is_active]
             category_counts = {}
             for repo in all_repos:
-                category_counts[repo.category] = category_counts.get(repo.category, 0) + 1
+                category_counts[repo.category] = (
+                    category_counts.get(repo.category, 0) + 1
+                )
             return {
                 "status": "healthy",
                 "total_repositories": len(all_repos),

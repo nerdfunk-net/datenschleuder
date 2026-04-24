@@ -57,7 +57,11 @@ class TemplateRenderService:
         if category == "netmiko":
             context["pre_run"] = {"raw": "", "parsed": []}
             if pre_run_command and pre_run_command.strip():
-                pre_run_output, pre_run_parsed, pre_run_warnings = await self._execute_pre_run(
+                (
+                    pre_run_output,
+                    pre_run_parsed,
+                    pre_run_warnings,
+                ) = await self._execute_pre_run(
                     pre_run_command.strip(), device_id, credential_id
                 )
                 context["pre_run"] = {"raw": pre_run_output, "parsed": pre_run_parsed}

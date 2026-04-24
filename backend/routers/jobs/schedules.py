@@ -25,7 +25,9 @@ jobs_manager = _JobScheduleService()
 _auth_service = JobScheduleAuthorizationService()
 
 
-@router.post("", response_model=JobScheduleResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=JobScheduleResponse, status_code=status.HTTP_201_CREATED
+)
 def create_job_schedule(
     job_data: JobScheduleCreate,
     current_user: dict = Depends(verify_token),
@@ -94,7 +96,9 @@ def get_job_schedule(
     try:
         job = jobs_manager.get_job_schedule(job_id)
         if not job:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found"
+            )
         _auth_service.check_access_permission(current_user, job)
         return JobScheduleResponse(**job)
     except HTTPException:
@@ -117,7 +121,9 @@ def update_job_schedule(
     try:
         job = jobs_manager.get_job_schedule(job_id)
         if not job:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found"
+            )
 
         _auth_service.check_update_permission(current_user, job)
 
@@ -154,7 +160,9 @@ def delete_job_schedule(
     try:
         job = jobs_manager.get_job_schedule(job_id)
         if not job:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found"
+            )
 
         _auth_service.check_delete_permission(current_user, job)
 
@@ -184,7 +192,9 @@ def execute_job(
     try:
         job = jobs_manager.get_job_schedule(execution_request.job_schedule_id)
         if not job:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found"
+            )
 
         _auth_service.check_access_permission(current_user, job)
 
@@ -196,7 +206,9 @@ def execute_job(
 
         logger.info(
             "Job execution started: %s (task_id=%s) by user %s",
-            result["job_name"], result["celery_task_id"], current_user["username"],
+            result["job_name"],
+            result["celery_task_id"],
+            current_user["username"],
         )
         return {
             "message": "Job execution started",

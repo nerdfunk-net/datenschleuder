@@ -49,10 +49,26 @@ class CelerySettings:
     result_expires_hours: int = 24
     queues: List[Dict[str, Any]] = field(
         default_factory=lambda: [
-            {"name": "default", "description": "Default queue for general tasks", "built_in": True},
-            {"name": "backup", "description": "Queue for device backup operations", "built_in": True},
-            {"name": "network", "description": "Queue for network scanning and discovery tasks", "built_in": True},
-            {"name": "heavy", "description": "Queue for bulk operations and heavy processing tasks", "built_in": True},
+            {
+                "name": "default",
+                "description": "Default queue for general tasks",
+                "built_in": True,
+            },
+            {
+                "name": "backup",
+                "description": "Queue for device backup operations",
+                "built_in": True,
+            },
+            {
+                "name": "network",
+                "description": "Queue for network scanning and discovery tasks",
+                "built_in": True,
+            },
+            {
+                "name": "heavy",
+                "description": "Queue for bulk operations and heavy processing tasks",
+                "built_in": True,
+            },
         ]
     )
 
@@ -124,13 +140,23 @@ class SettingsService:
             )
             update_kwargs = {
                 "enabled": settings.get("enabled", self.default_cache.enabled),
-                "ttl_seconds": settings.get("ttl_seconds", self.default_cache.ttl_seconds),
-                "prefetch_on_startup": settings.get("prefetch_on_startup", self.default_cache.prefetch_on_startup),
-                "refresh_interval_minutes": settings.get("refresh_interval_minutes", self.default_cache.refresh_interval_minutes),
-                "max_commits": settings.get("max_commits", self.default_cache.max_commits),
+                "ttl_seconds": settings.get(
+                    "ttl_seconds", self.default_cache.ttl_seconds
+                ),
+                "prefetch_on_startup": settings.get(
+                    "prefetch_on_startup", self.default_cache.prefetch_on_startup
+                ),
+                "refresh_interval_minutes": settings.get(
+                    "refresh_interval_minutes",
+                    self.default_cache.refresh_interval_minutes,
+                ),
+                "max_commits": settings.get(
+                    "max_commits", self.default_cache.max_commits
+                ),
                 "prefetch_items": prefetch_items_json,
                 "git_commits_cache_interval_minutes": settings.get(
-                    "git_commits_cache_interval_minutes", self.default_cache.git_commits_cache_interval_minutes
+                    "git_commits_cache_interval_minutes",
+                    self.default_cache.git_commits_cache_interval_minutes,
                 ),
             }
             if existing:
@@ -177,11 +203,21 @@ class SettingsService:
                 if queues:
                     queues_json = json.dumps(queues)
             update_kwargs = {
-                "max_workers": settings.get("max_workers", self.default_celery.max_workers),
-                "cleanup_enabled": settings.get("cleanup_enabled", self.default_celery.cleanup_enabled),
-                "cleanup_interval_hours": settings.get("cleanup_interval_hours", self.default_celery.cleanup_interval_hours),
-                "cleanup_age_hours": settings.get("cleanup_age_hours", self.default_celery.cleanup_age_hours),
-                "result_expires_hours": settings.get("result_expires_hours", self.default_celery.result_expires_hours),
+                "max_workers": settings.get(
+                    "max_workers", self.default_celery.max_workers
+                ),
+                "cleanup_enabled": settings.get(
+                    "cleanup_enabled", self.default_celery.cleanup_enabled
+                ),
+                "cleanup_interval_hours": settings.get(
+                    "cleanup_interval_hours", self.default_celery.cleanup_interval_hours
+                ),
+                "cleanup_age_hours": settings.get(
+                    "cleanup_age_hours", self.default_celery.cleanup_age_hours
+                ),
+                "result_expires_hours": settings.get(
+                    "result_expires_hours", self.default_celery.result_expires_hours
+                ),
                 "queues": queues_json,
             }
             if existing:
@@ -196,10 +232,26 @@ class SettingsService:
 
     def ensure_builtin_queues(self) -> bool:
         BUILTIN_QUEUES = [
-            {"name": "default", "description": "Default queue for general tasks", "built_in": True},
-            {"name": "backup", "description": "Queue for device backup operations", "built_in": True},
-            {"name": "network", "description": "Queue for network scanning and discovery tasks", "built_in": True},
-            {"name": "heavy", "description": "Queue for bulk operations and heavy processing tasks", "built_in": True},
+            {
+                "name": "default",
+                "description": "Default queue for general tasks",
+                "built_in": True,
+            },
+            {
+                "name": "backup",
+                "description": "Queue for device backup operations",
+                "built_in": True,
+            },
+            {
+                "name": "network",
+                "description": "Queue for network scanning and discovery tasks",
+                "built_in": True,
+            },
+            {
+                "name": "heavy",
+                "description": "Queue for bulk operations and heavy processing tasks",
+                "built_in": True,
+            },
         ]
         try:
             current = self.get_celery_settings()
@@ -210,12 +262,16 @@ class SettingsService:
                 if builtin_queue["name"] not in existing_names:
                     current_queues.append(builtin_queue)
                     queues_added.append(builtin_queue["name"])
-                    logger.info("Restored missing built-in queue: %s", builtin_queue["name"])
+                    logger.info(
+                        "Restored missing built-in queue: %s", builtin_queue["name"]
+                    )
                 else:
                     for q in current_queues:
                         if q["name"] == builtin_queue["name"] and not q.get("built_in"):
                             q["built_in"] = True
-                            logger.info("Set built_in flag for queue: %s", builtin_queue["name"])
+                            logger.info(
+                                "Set built_in flag for queue: %s", builtin_queue["name"]
+                            )
             if queues_added or any(
                 not q.get("built_in")
                 for q in current_queues
@@ -224,7 +280,11 @@ class SettingsService:
                 current["queues"] = current_queues
                 success = self.update_celery_settings(current)
                 if success and queues_added:
-                    logger.info("Restored %s built-in queue(s): %s", len(queues_added), ", ".join(queues_added))
+                    logger.info(
+                        "Restored %s built-in queue(s): %s",
+                        len(queues_added),
+                        ", ".join(queues_added),
+                    )
                 return success
             logger.debug("All built-in queues present and configured correctly")
             return True
@@ -241,8 +301,12 @@ class SettingsService:
                 "branch": settings.get("branch", self.default_git.branch),
                 "username": settings.get("username", self.default_git.username),
                 "token": settings.get("token", self.default_git.token),
-                "config_path": settings.get("config_path", self.default_git.config_path),
-                "sync_interval": settings.get("sync_interval", self.default_git.sync_interval),
+                "config_path": settings.get(
+                    "config_path", self.default_git.config_path
+                ),
+                "sync_interval": settings.get(
+                    "sync_interval", self.default_git.sync_interval
+                ),
                 "verify_ssl": settings.get("verify_ssl", self.default_git.verify_ssl),
             }
             if existing:

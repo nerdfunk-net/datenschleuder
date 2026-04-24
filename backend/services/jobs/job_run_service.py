@@ -34,7 +34,12 @@ class JobRunService:
             target_devices=json.dumps(target_devices) if target_devices else None,
             executed_by=executed_by,
         )
-        logger.info("Created job run: %s (ID: %s, triggered_by: %s)", job_name, job_run_data.get("id"), triggered_by)
+        logger.info(
+            "Created job run: %s (ID: %s, triggered_by: %s)",
+            job_name,
+            job_run_data.get("id"),
+            triggered_by,
+        )
         return self._model_to_dict(job_run_data)
 
     def get_job_run(self, run_id: int) -> Optional[Dict[str, Any]]:
@@ -45,8 +50,13 @@ class JobRunService:
         job_run = repo.get_by_celery_task_id(celery_task_id)
         return self._model_to_dict(job_run) if job_run else None
 
-    def get_job_runs_by_celery_ids(self, celery_task_ids: List[str]) -> List[Dict[str, Any]]:
-        return [self._model_to_dict(jr) for jr in repo.get_by_celery_task_ids(celery_task_ids)]
+    def get_job_runs_by_celery_ids(
+        self, celery_task_ids: List[str]
+    ) -> List[Dict[str, Any]]:
+        return [
+            self._model_to_dict(jr)
+            for jr in repo.get_by_celery_task_ids(celery_task_ids)
+        ]
 
     def list_job_runs(
         self,
@@ -76,23 +86,48 @@ class JobRunService:
             "total_pages": total_pages,
         }
 
-    def get_recent_runs(self, limit: int = 50, status: Optional[str] = None, job_type: Optional[str] = None) -> List[Dict[str, Any]]:
-        return [self._model_to_dict(r) for r in repo.get_recent_runs(limit=limit, status=status, job_type=job_type)]
+    def get_recent_runs(
+        self,
+        limit: int = 50,
+        status: Optional[str] = None,
+        job_type: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        return [
+            self._model_to_dict(r)
+            for r in repo.get_recent_runs(limit=limit, status=status, job_type=job_type)
+        ]
 
-    def get_runs_since(self, since: datetime, status: Optional[str] = None, job_type: Optional[str] = None) -> List[Dict[str, Any]]:
-        return [self._model_to_dict(r) for r in repo.get_runs_since(since=since, status=status, job_type=job_type)]
+    def get_runs_since(
+        self,
+        since: datetime,
+        status: Optional[str] = None,
+        job_type: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        return [
+            self._model_to_dict(r)
+            for r in repo.get_runs_since(since=since, status=status, job_type=job_type)
+        ]
 
-    def get_schedule_runs(self, schedule_id: int, limit: int = 50) -> List[Dict[str, Any]]:
-        return [self._model_to_dict(r) for r in repo.get_by_schedule(schedule_id, limit=limit)]
+    def get_schedule_runs(
+        self, schedule_id: int, limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        return [
+            self._model_to_dict(r)
+            for r in repo.get_by_schedule(schedule_id, limit=limit)
+        ]
 
-    def mark_started(self, run_id: int, celery_task_id: str) -> Optional[Dict[str, Any]]:
+    def mark_started(
+        self, run_id: int, celery_task_id: str
+    ) -> Optional[Dict[str, Any]]:
         job_run = repo.mark_started(run_id, celery_task_id)
         if job_run:
             logger.info("Job run %s started (task: %s)", run_id, celery_task_id)
             return self._model_to_dict(job_run)
         return None
 
-    def mark_completed(self, run_id: int, result: Optional[Dict] = None) -> Optional[Dict[str, Any]]:
+    def mark_completed(
+        self, run_id: int, result: Optional[Dict] = None
+    ) -> Optional[Dict[str, Any]]:
         result_json = json.dumps(result) if result else None
         job_run = repo.mark_completed(run_id, result=result_json)
         if job_run:
@@ -121,7 +156,10 @@ class JobRunService:
         return repo.get_pending_count()
 
     def get_queue_stats(self) -> Dict[str, Any]:
-        return {"running": repo.get_running_count(), "pending": repo.get_pending_count()}
+        return {
+            "running": repo.get_running_count(),
+            "pending": repo.get_pending_count(),
+        }
 
     def get_dashboard_stats(self) -> Dict[str, Any]:
         job_stats = repo.get_aggregate_stats()
@@ -167,7 +205,12 @@ class JobRunService:
         triggered_by: Optional[List[str]] = None,
         template_id: Optional[List[int]] = None,
     ) -> int:
-        count = repo.clear_filtered(status=status, job_type=job_type, triggered_by=triggered_by, template_id=template_id)
+        count = repo.clear_filtered(
+            status=status,
+            job_type=job_type,
+            triggered_by=triggered_by,
+            template_id=template_id,
+        )
         filters = []
         if status:
             filters.append(f"status={','.join(status)}")
@@ -238,6 +281,7 @@ class JobRunService:
         if job_template_id:
             try:
                 from services.jobs.job_template_service import JobTemplateService
+
                 template = JobTemplateService().get_job_template(job_template_id)
                 if template:
                     template_name = template.get("name")

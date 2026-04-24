@@ -11,7 +11,7 @@ Organized by domain:
   - Deployment & Operations Models
 """
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 from typing import Optional, Union, List, Dict, Any
 from datetime import datetime
 
@@ -704,3 +704,64 @@ class FlowFilterRequest(BaseModel):
     """Request body for POST /api/nifi/flows/filtered."""
 
     filters: Dict[str, Any]
+
+
+# ============================================================================
+# NiFi Certificate Store Models (from routers/nifi/certificates.py)
+# ============================================================================
+
+
+class NifiCertificateInfo(BaseModel):
+    """NiFi client certificate name."""
+
+    name: str
+
+
+class NifiCertificatesResponse(BaseModel):
+    certificates: List[NifiCertificateInfo]
+
+
+class ReadStoreRequest(BaseModel):
+    """Request to read a PKCS12 keystore or truststore from a git repository."""
+
+    git_repo_id: int
+    filename: str
+    password: str
+
+
+class ReadStoreResponse(BaseModel):
+    """Certificate subject info extracted from a PKCS12 store."""
+
+    subject: str
+    issuer: str
+    is_expired: bool
+    fingerprint_sha256: str
+
+
+class UploadStoreResponse(BaseModel):
+    """Result of uploading a keystore or truststore to a git repository."""
+
+    filename: str
+    subject: str
+    issuer: str
+    is_expired: bool
+    fingerprint_sha256: str
+    commit_sha: str
+
+
+# ============================================================================
+# NiFi Install Models (from routers/nifi/install.py)
+# ============================================================================
+
+
+class PathStatus(BaseModel):
+    """Status of a single process group path."""
+
+    path: str
+    exists: bool
+
+
+class CheckPathResponse(BaseModel):
+    """Response for the check-path endpoint."""
+
+    status: List[PathStatus]

@@ -50,6 +50,7 @@ def dispatch_job(
     """
     from services.jobs.job_run_service import JobRunService as _JRS
     from services.jobs.job_template_service import JobTemplateService as _JTS
+
     job_run_manager = _JRS()
     job_template_manager = _JTS()
     from tasks.utils.device_helpers import get_target_devices

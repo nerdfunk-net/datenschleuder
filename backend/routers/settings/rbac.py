@@ -11,11 +11,9 @@ This router provides endpoints for managing:
 import logging
 from typing import List
 
-from services.auth.rbac_service import RBACService as _RBACService
-rbac = _RBACService()
-from core.auth import require_role, verify_token
-from services.auth.rbac_helpers import verify_user_access, check_permission_with_source
 from fastapi import APIRouter, Depends, HTTPException, status
+
+from core.auth import require_role, verify_token
 from models.rbac import (
     BulkPermissionAssignment,
     BulkRoleAssignment,
@@ -38,6 +36,10 @@ from models.rbac import (
     UserRoleAssignment,
     UserUpdate,
 )
+from services.auth.rbac_helpers import verify_user_access, check_permission_with_source
+from services.auth.rbac_service import RBACService as _RBACService
+
+rbac = _RBACService()
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +77,7 @@ def create_permission(
 
 
 @router.get("/permissions/{permission_id}", response_model=Permission)
-def get_permission(
-    permission_id: int, current_user: dict = Depends(verify_token)
-):
+def get_permission(permission_id: int, current_user: dict = Depends(verify_token)):
     """Get a specific permission by ID."""
     permission = rbac.get_permission_by_id(permission_id)
     if not permission:
@@ -111,9 +111,7 @@ def list_roles(current_user: dict = Depends(verify_token)):
 
 
 @router.post("/roles", response_model=Role, status_code=status.HTTP_201_CREATED)
-def create_role(
-    role: RoleCreate, current_user: dict = Depends(require_role("admin"))
-):
+def create_role(role: RoleCreate, current_user: dict = Depends(require_role("admin"))):
     """Create a new role (admin only)."""
     try:
         created = rbac.create_role(
@@ -160,9 +158,7 @@ def update_role(
 
 
 @router.delete("/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_role(
-    role_id: int, current_user: dict = Depends(require_role("admin"))
-):
+def delete_role(role_id: int, current_user: dict = Depends(require_role("admin"))):
     """Delete a role (admin only, cannot delete system roles)."""
     try:
         rbac.delete_role(role_id)
@@ -171,9 +167,7 @@ def delete_role(
 
 
 @router.get("/roles/{role_id}/permissions", response_model=List[PermissionWithGrant])
-def get_role_permissions(
-    role_id: int, current_user: dict = Depends(verify_token)
-):
+def get_role_permissions(role_id: int, current_user: dict = Depends(verify_token)):
     """Get all permissions for a role."""
     role = rbac.get_role(role_id)
     if not role:
@@ -257,7 +251,9 @@ def remove_permission_from_role(
 @router.get("/users/{user_id}/roles", response_model=List[Role])
 def get_user_roles(user_id: int, current_user: dict = Depends(verify_token)):
     """Get all roles assigned to a user."""
-    verify_user_access(current_user, user_id, rbac, detail="Can only view your own roles")
+    verify_user_access(
+        current_user, user_id, rbac, detail="Can only view your own roles"
+    )
     roles = rbac.get_user_roles(user_id)
     return roles
 
@@ -306,11 +302,11 @@ def remove_role_from_user(
 
 
 @router.get("/users/{user_id}/permissions", response_model=UserPermissions)
-def get_user_permissions(
-    user_id: int, current_user: dict = Depends(verify_token)
-):
+def get_user_permissions(user_id: int, current_user: dict = Depends(verify_token)):
     """Get all effective permissions for a user (from roles + overrides)."""
-    verify_user_access(current_user, user_id, rbac, detail="Can only view your own permissions")
+    verify_user_access(
+        current_user, user_id, rbac, detail="Can only view your own permissions"
+    )
     roles = rbac.get_user_roles(user_id)
     permissions = rbac.get_user_permissions(user_id)
     overrides = rbac.get_user_permission_overrides(user_id)
@@ -330,7 +326,12 @@ def get_user_permission_overrides(
     user_id: int, current_user: dict = Depends(verify_token)
 ):
     """Get permission overrides for a user (direct assignments)."""
-    verify_user_access(current_user, user_id, rbac, detail="Can only view your own permission overrides")
+    verify_user_access(
+        current_user,
+        user_id,
+        rbac,
+        detail="Can only view your own permission overrides",
+    )
     overrides = rbac.get_user_permission_overrides(user_id)
     return overrides
 
@@ -384,7 +385,9 @@ def check_user_permission(
     user_id: int, check: PermissionCheck, current_user: dict = Depends(verify_token)
 ):
     """Check if a user has a specific permission."""
-    verify_user_access(current_user, user_id, rbac, detail="Can only check your own permissions")
+    verify_user_access(
+        current_user, user_id, rbac, detail="Can only check your own permissions"
+    )
     return check_permission_with_source(rbac, user_id, check.resource, check.action)
 
 
@@ -410,7 +413,9 @@ def check_my_permission(
     check: PermissionCheck, current_user: dict = Depends(verify_token)
 ):
     """Check if current user has a specific permission (convenience endpoint)."""
-    return check_permission_with_source(rbac, current_user["user_id"], check.resource, check.action)
+    return check_permission_with_source(
+        rbac, current_user["user_id"], check.resource, check.action
+    )
 
 
 # ============================================================================
@@ -525,9 +530,7 @@ def update_user(
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(
-    user_id: int, current_user: dict = Depends(require_role("admin"))
-):
+def delete_user(user_id: int, current_user: dict = Depends(require_role("admin"))):
     """Delete a user and all RBAC associations (admin only)."""
     try:
         success = rbac.delete_user_with_rbac(user_id)

@@ -1,6 +1,15 @@
 """Template models: Template, TemplateVersion."""
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Index
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from core.database import Base

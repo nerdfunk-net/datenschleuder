@@ -1,6 +1,14 @@
 """Settings models: Setting, GitSetting, CacheSetting, CelerySetting, SettingsMetadata."""
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, UniqueConstraint
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    Boolean,
+    DateTime,
+    UniqueConstraint,
+)
 from sqlalchemy.sql import func
 from core.database import Base
 

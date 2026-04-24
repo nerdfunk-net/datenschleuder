@@ -48,7 +48,9 @@ class JobSchedulerDebugService:
                 "schedule_type": schedule["schedule_type"],
                 "start_time": schedule.get("start_time"),
                 "next_run": schedule.get("next_run"),
-                "next_run_local": next_run_dt.astimezone().isoformat() if next_run_dt else None,
+                "next_run_local": next_run_dt.astimezone().isoformat()
+                if next_run_dt
+                else None,
                 "last_run": schedule.get("last_run"),
                 "seconds_until_next_run": int(time_diff),
                 "is_due": is_due,
@@ -112,6 +114,7 @@ class JobSchedulerDebugService:
         """Return a human-readable Celery Beat status string."""
         try:
             from celery_app import celery_app
+
             inspect = celery_app.control.inspect()
             active_workers = inspect.active()
             return "workers_active" if active_workers else "no_workers_detected"

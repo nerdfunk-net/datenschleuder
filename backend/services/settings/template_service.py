@@ -9,7 +9,10 @@ import logging
 import json
 import hashlib
 from typing import Any, Dict, List, Optional
-from repositories.settings.template_repository import TemplateRepository, TemplateVersionRepository
+from repositories.settings.template_repository import (
+    TemplateRepository,
+    TemplateVersionRepository,
+)
 from core.models import Template, TemplateVersion
 
 logger = logging.getLogger(__name__)
@@ -29,11 +32,15 @@ class TemplateService:
                 raise ValueError("Template source is required")
             existing = repo.get_by_name(template_data["name"], active_only=True)
             if existing:
-                raise ValueError(f"Template with name '{template_data['name']}' already exists")
+                raise ValueError(
+                    f"Template with name '{template_data['name']}' already exists"
+                )
             variables_json = json.dumps(template_data.get("variables", {}))
             tags_json = json.dumps(template_data.get("tags", []))
             content = template_data.get("content", "")
-            content_hash = hashlib.sha256(content.encode()).hexdigest() if content else None
+            content_hash = (
+                hashlib.sha256(content.encode()).hexdigest() if content else None
+            )
             template = repo.create(
                 name=template_data["name"],
                 source=template_data["source"],
@@ -57,8 +64,12 @@ class TemplateService:
             )
             template_id = template.id
             if content:
-                self._create_template_version_obj(version_repo, template_id, content, content_hash, "Initial version")
-            logger.info("Template '%s' created with ID %s", template_data["name"], template_id)
+                self._create_template_version_obj(
+                    version_repo, template_id, content, content_hash, "Initial version"
+                )
+            logger.info(
+                "Template '%s' created with ID %s", template_data["name"], template_id
+            )
             return template_id
         except ValueError:
             raise
@@ -72,7 +83,12 @@ class TemplateService:
             template = repo.get_by_id(template_id)
             if template:
                 result = self._model_to_dict(template)
-                logger.info("DEBUG: get_template(%s) - scope=%s, created_by=%s", template_id, result.get("scope"), result.get("created_by"))
+                logger.info(
+                    "DEBUG: get_template(%s) - scope=%s, created_by=%s",
+                    template_id,
+                    result.get("scope"),
+                    result.get("created_by"),
+                )
                 return result
             return None
         except Exception as e:
@@ -98,7 +114,12 @@ class TemplateService:
         try:
             repo = TemplateRepository()
             logger.info("DEBUG: list_templates - filtering for username=%s", username)
-            templates = repo.list_templates(category=category, source=source, active_only=active_only, username=username)
+            templates = repo.list_templates(
+                category=category,
+                source=source,
+                active_only=active_only,
+                username=username,
+            )
             results = [self._model_to_dict(t) for t in templates]
             logger.info("DEBUG: list_templates - found %s templates", len(results))
             return results
@@ -117,12 +138,16 @@ class TemplateService:
             variables_json = json.dumps(template_data.get("variables", {}))
             tags_json = json.dumps(template_data.get("tags", []))
             content = template_data.get("content", current.get("content", ""))
-            content_hash = hashlib.sha256(content.encode()).hexdigest() if content else None
+            content_hash = (
+                hashlib.sha256(content.encode()).hexdigest() if content else None
+            )
             content_changed = content_hash != current.get("content_hash")
             new_scope = template_data.get("scope", current.get("scope", "global"))
             update_kwargs = {
                 "name": template_data.get("name", current["name"]),
-                "template_type": template_data.get("template_type", current["template_type"]),
+                "template_type": template_data.get(
+                    "template_type", current["template_type"]
+                ),
                 "category": template_data.get("category", current["category"]),
                 "description": template_data.get("description", current["description"]),
                 "content": content,
@@ -130,19 +155,32 @@ class TemplateService:
                 "content_hash": content_hash,
                 "variables": variables_json,
                 "tags": tags_json,
-                "pass_snmp_mapping": template_data.get("pass_snmp_mapping", current.get("pass_snmp_mapping", False)),
-                "inventory_id": template_data.get("inventory_id", current.get("inventory_id")),
-                "pre_run_command": template_data.get("pre_run_command", current.get("pre_run_command")),
-                "credential_id": template_data.get("credential_id", current.get("credential_id")),
-                "execution_mode": template_data.get("execution_mode", current.get("execution_mode", "run_on_device")),
+                "pass_snmp_mapping": template_data.get(
+                    "pass_snmp_mapping", current.get("pass_snmp_mapping", False)
+                ),
+                "inventory_id": template_data.get(
+                    "inventory_id", current.get("inventory_id")
+                ),
+                "pre_run_command": template_data.get(
+                    "pre_run_command", current.get("pre_run_command")
+                ),
+                "credential_id": template_data.get(
+                    "credential_id", current.get("credential_id")
+                ),
+                "execution_mode": template_data.get(
+                    "execution_mode", current.get("execution_mode", "run_on_device")
+                ),
                 "file_path": template_data.get("file_path", current.get("file_path")),
                 "scope": new_scope,
             }
             repo.update(template_id, **update_kwargs)
             if content_changed and content:
                 self._create_template_version_obj(
-                    version_repo, template_id, content, content_hash,
-                    template_data.get("change_notes", "Template updated")
+                    version_repo,
+                    template_id,
+                    content,
+                    content_hash,
+                    template_data.get("change_notes", "Template updated"),
                 )
             logger.info("Template %s updated", template_id)
             return True
@@ -157,7 +195,11 @@ class TemplateService:
                 repo.delete(template_id)
             else:
                 repo.update(template_id, is_active=False)
-            logger.info("Template %s %s", template_id, "deleted" if hard_delete else "deactivated")
+            logger.info(
+                "Template %s %s",
+                template_id,
+                "deleted" if hard_delete else "deactivated",
+            )
             return True
         except Exception as e:
             logger.error("Error deleting template %s: %s", template_id, e)
@@ -171,9 +213,12 @@ class TemplateService:
             logger.error("Error getting template content for %s: %s", template_id, e)
             return None
 
-    def render_template(self, template_name: str, category: str, data: Dict[str, Any]) -> str:
+    def render_template(
+        self, template_name: str, category: str, data: Dict[str, Any]
+    ) -> str:
         try:
             from jinja2 import Environment, BaseLoader
+
             template = self.get_template_by_name(template_name)
             if not template:
                 templates = self.list_templates(category=category if category else None)
@@ -181,17 +226,28 @@ class TemplateService:
                 if matching:
                     template = matching[0]
                 else:
-                    raise ValueError(f"Template '{template_name}' not found in category '{category}'")
+                    raise ValueError(
+                        f"Template '{template_name}' not found in category '{category}'"
+                    )
             content = self.get_template_content(template["id"])
             if not content:
                 raise ValueError(f"Template content not found for '{template_name}'")
             env = Environment(loader=BaseLoader())
             jinja_template = env.from_string(content)
             rendered = jinja_template.render(**data)
-            logger.info("Successfully rendered template '%s' from category '%s'", template_name, category)
+            logger.info(
+                "Successfully rendered template '%s' from category '%s'",
+                template_name,
+                category,
+            )
             return rendered
         except Exception as e:
-            logger.error("Error rendering template '%s' in category '%s': %s", template_name, category, e)
+            logger.error(
+                "Error rendering template '%s' in category '%s': %s",
+                template_name,
+                category,
+                e,
+            )
             raise
 
     def get_template_versions(self, template_id: int) -> List[Dict[str, Any]]:
@@ -203,10 +259,14 @@ class TemplateService:
             logger.error("Error getting template versions for %s: %s", template_id, e)
             return []
 
-    def search_templates(self, query: str, search_content: bool = False, username: str = None) -> List[Dict[str, Any]]:
+    def search_templates(
+        self, query: str, search_content: bool = False, username: str = None
+    ) -> List[Dict[str, Any]]:
         try:
             repo = TemplateRepository()
-            templates = repo.search_templates(query_text=query, search_content=search_content, username=username)
+            templates = repo.search_templates(
+                query_text=query, search_content=search_content, username=username
+            )
             return [self._model_to_dict(t) for t in templates]
         except Exception as e:
             logger.error("Error searching templates: %s", e)
@@ -255,10 +315,16 @@ class TemplateService:
             "file_path": template.file_path,
             "last_sync": template.last_sync.isoformat() if template.last_sync else None,
             "sync_status": template.sync_status,
-            "created_at": template.created_at.isoformat() if template.created_at else None,
-            "updated_at": template.updated_at.isoformat() if template.updated_at else None,
+            "created_at": template.created_at.isoformat()
+            if template.created_at
+            else None,
+            "updated_at": template.updated_at.isoformat()
+            if template.updated_at
+            else None,
         }
-        result["variables"] = json.loads(template.variables) if template.variables else {}
+        result["variables"] = (
+            json.loads(template.variables) if template.variables else {}
+        )
         result["tags"] = json.loads(template.tags) if template.tags else []
         return result
 
@@ -269,12 +335,16 @@ class TemplateService:
             "version_number": version.version_number,
             "content": version.content,
             "content_hash": version.content_hash,
-            "created_at": version.created_at.isoformat() if version.created_at else None,
+            "created_at": version.created_at.isoformat()
+            if version.created_at
+            else None,
             "created_by": version.created_by,
             "change_notes": version.change_notes,
         }
 
-    def _create_template_version_obj(self, version_repo, template_id, content, content_hash, notes=""):
+    def _create_template_version_obj(
+        self, version_repo, template_id, content, content_hash, notes=""
+    ):
         try:
             version_number = version_repo.get_max_version_number(template_id) + 1
             version_repo.create(

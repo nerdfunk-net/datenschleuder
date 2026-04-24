@@ -32,7 +32,9 @@ def list_job_runs(
 ):
     """List job runs with pagination and optional filters."""
     try:
-        filters = parse_comma_separated_filters(status, job_type, triggered_by, template_id)
+        filters = parse_comma_separated_filters(
+            status, job_type, triggered_by, template_id
+        )
         return job_run_manager.list_job_runs(
             page=page,
             page_size=page_size,
@@ -68,7 +70,9 @@ def get_recent_runs(
 ):
     """Get recent job runs (simplified endpoint for dashboard)."""
     try:
-        return job_run_manager.get_recent_runs(limit=limit, status=status, job_type=job_type)
+        return job_run_manager.get_recent_runs(
+            limit=limit, status=status, job_type=job_type
+        )
     except Exception as e:
         logger.error("Error getting recent runs: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -127,7 +131,9 @@ def get_job_progress(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error getting progress for job run %s: %s", run_id, e, exc_info=True)
+        logger.error(
+            "Error getting progress for job run %s: %s", run_id, e, exc_info=True
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -141,7 +147,9 @@ def get_schedule_runs(
     try:
         return job_run_manager.get_schedule_runs(schedule_id, limit=limit)
     except Exception as e:
-        logger.error("Error getting runs for schedule %s: %s", schedule_id, e, exc_info=True)
+        logger.error(
+            "Error getting runs for schedule %s: %s", schedule_id, e, exc_info=True
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -197,7 +205,9 @@ def clear_filtered_runs(
 ):
     """Clear job runs matching the specified filters."""
     try:
-        filters = parse_comma_separated_filters(status, job_type, triggered_by, template_id)
+        filters = parse_comma_separated_filters(
+            status, job_type, triggered_by, template_id
+        )
         count = job_run_manager.clear_filtered_runs(
             status=filters["status_list"],
             job_type=filters["job_type_list"],
@@ -217,7 +227,12 @@ def clear_filtered_runs(
         return {
             "message": f"Cleared {count} job runs ({filter_desc})",
             "deleted_count": count,
-            "filters": {"status": status, "job_type": job_type, "triggered_by": triggered_by, "template_id": template_id},
+            "filters": {
+                "status": status,
+                "job_type": job_type,
+                "triggered_by": triggered_by,
+                "template_id": template_id,
+            },
         }
     except Exception as e:
         logger.error("Error clearing filtered job runs: %s", e, exc_info=True)

@@ -24,7 +24,6 @@ class AgentRegistry:
             data = self.redis_client.hgetall(f"{_AGENT_REGISTRY_PREFIX}{agent_id}")
             if not data:
                 return None
-            raw_capabilities = data.get("capabilities", "")
             return {
                 "agent_id": agent_id,
                 "status": data.get("status", "offline"),
@@ -44,7 +43,7 @@ class AgentRegistry:
         try:
             agents = []
             for key in self.redis_client.keys(f"{_AGENT_REGISTRY_PREFIX}*"):
-                agent_id = key[len(_AGENT_REGISTRY_PREFIX):]
+                agent_id = key[len(_AGENT_REGISTRY_PREFIX) :]
                 status = self.get_agent_status(agent_id)
                 if status:
                     agents.append(status)
@@ -93,7 +92,13 @@ class AgentRegistry:
             parsed = json.loads(raw)
             if not isinstance(parsed, list):
                 return []
-            return [{"id": item["id"]} for item in parsed if isinstance(item, dict) and "id" in item]
+            return [
+                {"id": item["id"]}
+                for item in parsed
+                if isinstance(item, dict) and "id" in item
+            ]
         except (json.JSONDecodeError, redis.RedisError) as exc:
-            logger.warning("Could not read repositories for agent %s: %s", agent_id, exc)
+            logger.warning(
+                "Could not read repositories for agent %s: %s", agent_id, exc
+            )
             return []

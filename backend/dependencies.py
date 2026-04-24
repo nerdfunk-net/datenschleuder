@@ -119,6 +119,7 @@ def get_settings_manager(request: Request):
 def get_oidc_config_service():
     """Return a stateless OIDCConfigService instance."""
     from services.auth.oidc_config_service import OIDCConfigService
+
     return OIDCConfigService()
 
 

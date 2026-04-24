@@ -35,8 +35,12 @@ class Migration(BaseMigration):
                 )
                 conn.commit()
                 stats["columns_added"] += 1
-                self.log_info("Added column 'export_flows_push_to_git' to job_templates")
+                self.log_info(
+                    "Added column 'export_flows_push_to_git' to job_templates"
+                )
             else:
-                self.log_info("Column 'export_flows_push_to_git' already exists, skipping")
+                self.log_info(
+                    "Column 'export_flows_push_to_git' already exists, skipping"
+                )
 
         return stats

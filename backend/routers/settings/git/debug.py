@@ -29,7 +29,15 @@ def debug_read_test(
         raise
     except Exception as e:
         logger.error("Debug read test failed for repo %s: %s", repo_id, e)
-        return {"success": False, "message": f"Debug test failed: {str(e)}", "details": {"error": str(e), "error_type": type(e).__name__, "stage": "repository_access"}}
+        return {
+            "success": False,
+            "message": f"Debug test failed: {str(e)}",
+            "details": {
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "stage": "repository_access",
+            },
+        }
 
 
 @router.post("/{repo_id}/debug/write")
@@ -46,7 +54,15 @@ def debug_write_test(
         raise
     except Exception as e:
         logger.error("Debug write test failed for repo %s: %s", repo_id, e)
-        return {"success": False, "message": f"Debug test failed: {str(e)}", "details": {"error": str(e), "error_type": type(e).__name__, "stage": "repository_access"}}
+        return {
+            "success": False,
+            "message": f"Debug test failed: {str(e)}",
+            "details": {
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "stage": "repository_access",
+            },
+        }
 
 
 @router.post("/{repo_id}/debug/delete")
@@ -63,7 +79,15 @@ def debug_delete_test(
         raise
     except Exception as e:
         logger.error("Debug delete test failed for repo %s: %s", repo_id, e)
-        return {"success": False, "message": f"Debug test failed: {str(e)}", "details": {"error": str(e), "error_type": type(e).__name__, "stage": "repository_access"}}
+        return {
+            "success": False,
+            "message": f"Debug test failed: {str(e)}",
+            "details": {
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "stage": "repository_access",
+            },
+        }
 
 
 @router.post("/{repo_id}/debug/push")
@@ -81,7 +105,15 @@ def debug_push_test(
         raise
     except Exception as e:
         logger.error("Debug push test failed for repo %s: %s", repo_id, e)
-        return {"success": False, "message": f"Debug test failed: {str(e)}", "details": {"error": str(e), "error_type": type(e).__name__, "stage": "repository_access"}}
+        return {
+            "success": False,
+            "message": f"Debug test failed: {str(e)}",
+            "details": {
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "stage": "repository_access",
+            },
+        }
 
 
 @router.get("/{repo_id}/debug/diagnostics")

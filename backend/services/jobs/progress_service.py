@@ -68,10 +68,13 @@ class JobProgressService:
             "completed": completed,
             "total": total,
             "percentage": percentage,
-            "message": f"Backed up {completed} devices" + (f" of {total}" if total else ""),
+            "message": f"Backed up {completed} devices"
+            + (f" of {total}" if total else ""),
         }
 
-    def _calculate_percentage(self, completed: int, total: Optional[int]) -> Optional[int]:
+    def _calculate_percentage(
+        self, completed: int, total: Optional[int]
+    ) -> Optional[int]:
         if total and total > 0:
             return int((completed / total) * 100)
         return None

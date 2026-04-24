@@ -7,19 +7,12 @@ with modern permission handling and secure password management.
 from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 import logging
+from models.user_management import UserRole
 from services.auth.user_service import (
     UserService as _UserService,
-    PERMISSION_READ,
-    PERMISSION_WRITE,
-    PERMISSION_ADMIN,
-    PERMISSION_DELETE,
-    PERMISSION_USER_MANAGE,
-    PERMISSIONS_VIEWER,
-    PERMISSIONS_USER,
-    PERMISSIONS_ADMIN,
 )
+
 user_db = _UserService()
-from models.user_management import UserRole
 
 logger = logging.getLogger(__name__)
 
