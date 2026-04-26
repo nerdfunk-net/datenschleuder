@@ -128,7 +128,7 @@ class GitRepositoryService:
                 last_sync = datetime.utcnow()
             self.repo.update(
                 repo_id,
-                sync_status=status,
+                sync_status=status[:2000],
                 last_sync=last_sync,
                 updated_at=datetime.utcnow(),
             )

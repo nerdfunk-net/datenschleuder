@@ -26,7 +26,7 @@ class GitRepository(Base):
     description = Column(Text)
     is_active = Column(Boolean, nullable=False, default=True)
     last_sync = Column(DateTime(timezone=True))
-    sync_status = Column(String(255))
+    sync_status = Column(Text)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
