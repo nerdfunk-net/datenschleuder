@@ -10,6 +10,8 @@ import type {
   CreateCARequest,
   CreateCertificateRequest,
   RevocationReason,
+  TestNifiRequest,
+  TestNifiResponse,
 } from '../types'
 
 export function usePKIMutations() {
@@ -153,6 +155,14 @@ export function usePKIMutations() {
     },
   })
 
+  const testNifi = useMutation({
+    mutationFn: ({ certId, request }: { certId: number; request: TestNifiRequest }) =>
+      apiCall<TestNifiResponse>(`pki/certificates/${certId}/test-nifi`, {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }),
+  })
+
   const exportCAPKCS12WithKey = useMutation({
     mutationFn: (password: string) =>
       _fetchFile('pki/ca/export/pkcs12/withkey', 'POST', { password }),
@@ -176,7 +186,8 @@ export function usePKIMutations() {
       exportPKCS12,
       exportPrivateKey,
       exportCAPKCS12WithKey,
+      testNifi,
     }),
-    [createCA, deleteCA, createCertificate, revokeCertificate, exportCert, exportPEM, exportPKCS12, exportPrivateKey, exportCAPKCS12WithKey],
+    [createCA, deleteCA, createCertificate, revokeCertificate, exportCert, exportPEM, exportPKCS12, exportPrivateKey, exportCAPKCS12WithKey, testNifi],
   )
 }

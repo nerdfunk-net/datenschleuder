@@ -12,7 +12,7 @@ from models.nifi import (
     NifiInstanceTestConnection,
 )
 from services.nifi import instance_service
-from dependencies import get_settings_manager
+from dependencies import get_oidc_config_service
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +22,10 @@ router = APIRouter(prefix="/api/nifi/instances", tags=["nifi-instances"])
 @router.get("/oidc-providers")
 def list_nifi_oidc_providers(
     current_user: dict = Depends(require_permission("nifi", "read")),
-    settings_manager=Depends(get_settings_manager),
+    oidc_config_service=Depends(get_oidc_config_service),
 ):
     """Get OIDC providers available for NiFi backend authentication (backend: true only)."""
-    providers = settings_manager.get_nifi_oidc_providers()
+    providers = oidc_config_service.get_nifi_oidc_providers()
     return {
         "providers": [
             {

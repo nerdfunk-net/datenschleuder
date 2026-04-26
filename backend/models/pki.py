@@ -116,3 +116,23 @@ class ExportPrivateKeyRequest(BaseModel):
 
 class ExportCAPKCS12WithKeyRequest(BaseModel):
     password: str = Field(min_length=1)
+
+
+class TestNifiRequest(BaseModel):
+    nifi_url: str
+    verify_ssl: bool = True
+    check_hostname: bool = True
+
+
+class DiagnosticStep(BaseModel):
+    step: int
+    name: str
+    status: Literal["success", "error", "warning", "skipped"]
+    message: str
+    details: dict = Field(default_factory=dict)
+
+
+class TestNifiResponse(BaseModel):
+    status: Literal["success", "error"]
+    steps: List[DiagnosticStep]
+    summary: dict

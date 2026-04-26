@@ -70,6 +70,31 @@ export interface CreateCARequest {
   key_size?: 2048 | 4096
 }
 
+export interface TestNifiRequest {
+  nifi_url: string
+  verify_ssl?: boolean
+  check_hostname?: boolean
+}
+
+export interface DiagnosticStep {
+  step: number
+  name: string
+  status: 'success' | 'error' | 'warning' | 'skipped'
+  message: string
+  details: Record<string, unknown>
+}
+
+export interface TestNifiResponse {
+  status: 'success' | 'error'
+  steps: DiagnosticStep[]
+  summary: {
+    all_passed: boolean
+    error_count: number
+    warning_count: number
+    nifi_version: string | null
+  }
+}
+
 export interface CreateCertificateRequest {
   common_name: string
   organization?: string

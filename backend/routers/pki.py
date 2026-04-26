@@ -16,6 +16,8 @@ from models.pki import (
     ExportPKCS12Request,
     ExportPrivateKeyRequest,
     RevokeCertificateRequest,
+    TestNifiRequest,
+    TestNifiResponse,
 )
 from services.pki_service import PKIService
 
@@ -222,6 +224,31 @@ def export_private_key(
         content=key_pem,
         media_type="application/x-pem-file",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ----------------------------------------------------------------- NiFi Test
+
+
+@router.post(
+    "/certificates/{cert_id}/test-nifi",
+    response_model=TestNifiResponse,
+)
+def test_certificate_nifi(
+    cert_id: int,
+    request: TestNifiRequest,
+    user: dict = Depends(verify_token),
+    encryption_service=Depends(get_encryption_service),
+):
+    cert = _get_cert_or_404(cert_id)
+    ca = _get_ca_or_404()
+    return _pki_service.test_nifi_connection(
+        cert,
+        ca,
+        encryption_service,
+        nifi_url=request.nifi_url,
+        verify_ssl=request.verify_ssl,
+        check_hostname=request.check_hostname,
     )
 
 

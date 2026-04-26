@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ShieldAlert } from 'lucide-react'
 import { CAPanel } from './components/ca-panel'
 import { CertificateTable } from './components/certificate-table'
+import { CertificateTestPanel } from './components/certificate-test-panel'
 
 export function PKIPage() {
   const router = useRouter()
@@ -42,12 +43,16 @@ export function PKIPage() {
           <TabsList>
             <TabsTrigger value="ca">Certificate Authority</TabsTrigger>
             <TabsTrigger value="certificates">Certificates</TabsTrigger>
+            <TabsTrigger value="test">Test Connection</TabsTrigger>
           </TabsList>
           <TabsContent value="ca" className="mt-4">
             <CAPanel />
           </TabsContent>
           <TabsContent value="certificates" className="mt-4">
             <CertificateTable />
+          </TabsContent>
+          <TabsContent value="test" className="mt-4">
+            <CertificateTestPanel />
           </TabsContent>
         </Tabs>
       </div>
