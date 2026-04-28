@@ -78,6 +78,7 @@ const navigationSections: NavSection[] = [
     title: 'Agents',
     items: [
       { label: 'Operating', href: '/agents/operating', icon: Activity },
+      { label: 'Deploy NiFi', href: '/agents/deploy-nifi', icon: Rocket },
     ],
   },
   {

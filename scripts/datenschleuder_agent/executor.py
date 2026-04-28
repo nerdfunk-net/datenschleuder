@@ -7,8 +7,10 @@ import asyncio
 import json
 import logging
 import os
+import tempfile
 import time
 from typing import Callable, Dict, List, Optional
+from urllib.parse import urlparse, urlunparse
 
 from config import config
 
@@ -31,6 +33,7 @@ class CommandExecutor:
         self.register("list_repositories", self._execute_list_repositories)
 
         self.register("fetch_nifi_properties", self._execute_fetch_nifi_properties)
+        self.register("deploy_nifi", self._execute_deploy_nifi)
 
         if config.mode == "bare":
             self.register("nifi_restart", self._execute_nifi_restart)
@@ -845,6 +848,147 @@ class CommandExecutor:
         """Start all NiFi services defined in bare.yaml"""
         logger.info("NiFi start request - params: %s", params)
         return await self._execute_bare_action_by_type("start", "nifi", params)
+
+    async def _execute_deploy_nifi(self, params: dict) -> dict:
+        """
+        Deploy NiFi by:
+        1. Writing docker-compose.yml to target_directory
+        2. Optionally creating NiFi volume directories
+        3. Cloning (or pulling) git repository into the conf directory
+        """
+        target_directory: str = params.get("target_directory", "")
+        compose_content: str = params.get("compose_content", "")
+        create_directories: bool = params.get("create_directories", False)
+        volume_dirs: Dict[str, str] = params.get("volume_dirs", {})
+        conf_dir: Optional[str] = params.get("conf_dir")
+        git_repo_url: Optional[str] = params.get("git_repo_url")
+        git_branch: str = params.get("git_branch", "main")
+        git_username: Optional[str] = params.get("git_username")
+        git_password: Optional[str] = params.get("git_password")
+        git_ssh_key: Optional[str] = params.get("git_ssh_key")
+
+        if not target_directory:
+            return {"status": "error", "error": "target_directory is required", "output": None}
+        if not compose_content:
+            return {"status": "error", "error": "compose_content is required", "output": None}
+
+        results: List[str] = []
+        logger.info("deploy_nifi: target_directory=%s create_directories=%s", target_directory, create_directories)
+
+        # Step 1: Write docker-compose.yml
+        try:
+            os.makedirs(target_directory, exist_ok=True)
+            compose_path = os.path.join(target_directory, "docker-compose.yml")
+            with open(compose_path, "w", encoding="utf-8") as fh:
+                fh.write(compose_content)
+            results.append(f"Written docker-compose.yml to {compose_path}")
+            logger.info("deploy_nifi: wrote docker-compose.yml to %s", compose_path)
+        except OSError as exc:
+            logger.error("deploy_nifi: failed to write docker-compose.yml: %s", exc)
+            return {"status": "error", "error": f"Failed to write docker-compose.yml: {exc}", "output": None}
+
+        # Step 2: Create volume directories
+        if create_directories:
+            for dir_key, rel_dir in volume_dirs.items():
+                if not rel_dir:
+                    continue
+                abs_dir = os.path.join(target_directory, rel_dir) if not os.path.isabs(rel_dir) else rel_dir
+                try:
+                    os.makedirs(abs_dir, exist_ok=True)
+                    results.append(f"Created/verified directory: {abs_dir}")
+                    logger.info("deploy_nifi: created directory %s (%s)", abs_dir, dir_key)
+                except OSError as exc:
+                    logger.error("deploy_nifi: failed to create directory %s: %s", abs_dir, exc)
+                    results.append(f"ERROR creating {abs_dir}: {exc}")
+
+        # Step 3: Git clone / pull into conf_dir
+        if git_repo_url and conf_dir:
+            abs_conf_dir = os.path.join(target_directory, conf_dir) if not os.path.isabs(conf_dir) else conf_dir
+            ssh_key_file: Optional[str] = None
+            env: Optional[Dict[str, str]] = None
+
+            try:
+                # Build authenticated URL or SSH env
+                if git_ssh_key:
+                    tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False)
+                    tmp.write(git_ssh_key)
+                    tmp.flush()
+                    tmp.close()
+                    os.chmod(tmp.name, 0o600)
+                    ssh_key_file = tmp.name
+                    env = {
+                        **os.environ,
+                        "GIT_SSH_COMMAND": f"ssh -i {ssh_key_file} -o StrictHostKeyChecking=no",
+                    }
+                    auth_url = git_repo_url
+                elif git_username and git_password:
+                    parsed = urlparse(git_repo_url)
+                    netloc_with_auth = f"{git_username}:{git_password}@{parsed.hostname}"
+                    if parsed.port:
+                        netloc_with_auth = f"{netloc_with_auth}:{parsed.port}"
+                    auth_url = urlunparse(parsed._replace(netloc=netloc_with_auth))
+                else:
+                    auth_url = git_repo_url
+
+                git_dot = os.path.join(abs_conf_dir, ".git")
+                if os.path.isdir(abs_conf_dir) and os.path.isdir(git_dot):
+                    # Directory is already a git repo — pull
+                    logger.info("deploy_nifi: conf_dir exists with .git, running git pull on %s", abs_conf_dir)
+                    process = await asyncio.create_subprocess_exec(
+                        "git", "-C", abs_conf_dir, "pull", "origin", git_branch,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        env=env,
+                    )
+                    action_label = "git pull"
+                elif os.path.isdir(abs_conf_dir) and os.listdir(abs_conf_dir):
+                    return {
+                        "status": "error",
+                        "error": f"conf_dir {abs_conf_dir} exists but is not a git repository",
+                        "output": "\n".join(results) or None,
+                    }
+                else:
+                    # Clone fresh
+                    logger.info("deploy_nifi: cloning %s → %s (branch %s)", git_repo_url, abs_conf_dir, git_branch)
+                    process = await asyncio.create_subprocess_exec(
+                        "git", "clone", "--branch", git_branch, auth_url, abs_conf_dir,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        env=env,
+                    )
+                    action_label = "git clone"
+
+                try:
+                    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=60)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
+                    return {
+                        "status": "error",
+                        "error": f"{action_label} timed out after 60s",
+                        "output": "\n".join(results) or None,
+                    }
+
+                stdout_text = stdout.decode("utf-8").strip()
+                stderr_text = stderr.decode("utf-8").strip()
+
+                if process.returncode == 0:
+                    results.append(f"{action_label} → {abs_conf_dir}: OK")
+                    logger.info("deploy_nifi: %s succeeded for %s", action_label, abs_conf_dir)
+                else:
+                    error_detail = stderr_text or stdout_text or f"{action_label} failed"
+                    logger.error("deploy_nifi: %s failed (rc=%s): %s", action_label, process.returncode, error_detail)
+                    return {
+                        "status": "error",
+                        "error": error_detail,
+                        "output": "\n".join(results) or None,
+                    }
+
+            finally:
+                if ssh_key_file and os.path.exists(ssh_key_file):
+                    os.unlink(ssh_key_file)
+
+        return {"status": "success", "output": "\n".join(results), "error": None}
 
 
 # Example of how to add custom commands:

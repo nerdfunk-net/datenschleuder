@@ -20,8 +20,10 @@ from models.agent import (
     CommandResponse,
     ContainerInfo,
     GitRepoInfo,
+    NifiDeployRequest,
 )
 from services.agent import AgentService
+from services.settings.credentials_service import CredentialsService
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +196,65 @@ def docker_restart(
         raise
     except Exception as exc:
         logger.error("Docker restart failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post(
+    "/{agent_id}/deploy-nifi",
+    response_model=CommandResponse,
+    dependencies=[Depends(require_permission("agents", "execute"))],
+)
+def deploy_nifi(
+    agent_id: str,
+    request: NifiDeployRequest,
+    user: dict = Depends(verify_token),
+    db: Session = Depends(get_db),
+):
+    """Write docker-compose.yml and initialise the NiFi conf git repo via the agent."""
+    try:
+        creds_service = CredentialsService()
+
+        credential_params: dict = {}
+        if request.credential_id is not None:
+            cred = creds_service.get_credential_by_id(request.credential_id)
+            if cred is None:
+                raise HTTPException(status_code=404, detail=f"Credential {request.credential_id} not found")
+            if cred.get("type") == "ssh_key":
+                credential_params["git_ssh_key"] = creds_service.get_decrypted_ssh_key(request.credential_id)
+                credential_params["git_username"] = cred.get("username")
+            else:
+                credential_params["git_username"] = cred.get("username")
+                credential_params["git_password"] = creds_service.get_decrypted_password(request.credential_id)
+
+        params = {
+            "target_directory": request.target_directory,
+            "compose_content": request.compose_content,
+            "create_directories": request.create_directories,
+            "volume_dirs": request.volume_dirs,
+            "conf_dir": request.conf_dir,
+            "git_repo_url": request.git_repo_url,
+            "git_branch": request.git_branch,
+            **credential_params,
+        }
+
+        service = AgentService(db)
+        result = service.send_command_and_wait(
+            agent_id=agent_id,
+            command="deploy_nifi",
+            params=params,
+            sent_by=user.get("sub", "system"),
+            timeout=120,
+        )
+
+        if result["status"] in ("error", "timeout"):
+            status_code = 504 if result["status"] == "timeout" else 500
+            raise HTTPException(status_code=status_code, detail=result.get("error"))
+
+        return CommandResponse(**result)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("NiFi deploy failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
