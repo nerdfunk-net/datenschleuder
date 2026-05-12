@@ -44,8 +44,29 @@ Network management dashboard for NetDevOps with Nautobot & CheckMK integration, 
   ├── types/          # TypeScript types
   └── utils/          # Utility functions
 
-/app/(dashboard)/{feature}/page.tsx  # Route pages
+/app/(dashboard)/{feature}/page.tsx  # Route pages — stubs only (see rule below)
 ```
+
+### Route File Rule — Stubs Only
+
+`/app/(dashboard)/*/page.tsx` files MUST be pure route stubs.
+
+**CORRECT:**
+```tsx
+import { MyFeaturePage } from '@/components/features/domain/my-feature-page'
+
+export default function MyFeatureRoute() {
+  return <MyFeaturePage />
+}
+```
+
+**Rules:**
+- ❌ No logic, state, or hooks in route files
+- ❌ No `'use client'` directive on route files (add it to the feature component instead)
+- ❌ No `components/` or `dialogs/` subdirectories inside route directories
+- ✅ Optional: `export const metadata: Metadata = { title: '...' }` is allowed
+- ✅ Optional: `export const dynamic = 'force-dynamic'` and similar Next.js segment config is allowed
+- ✅ All feature logic lives in `components/features/{domain}/`
 
 ### Naming Conventions
 - **Database**: `snake_case` (tables: `job_templates`, columns: `created_at`)
