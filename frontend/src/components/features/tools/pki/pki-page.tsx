@@ -2,9 +2,11 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuthStore } from '@/lib/auth-store'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ShieldAlert } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { ArrowLeft, ShieldAlert } from 'lucide-react'
 import { CAPanel } from './components/ca-panel'
 import { CertificateTable } from './components/certificate-table'
 import { CertificateTestPanel } from './components/certificate-test-panel'
@@ -28,6 +30,11 @@ export function PKIPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
+          <Link href="/tools">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </Link>
           <div className="bg-purple-100 p-2 rounded-lg">
             <ShieldAlert className="h-6 w-6 text-purple-600" />
           </div>
