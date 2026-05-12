@@ -25,37 +25,37 @@ export function PKIPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-      <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-purple-500 text-white shadow-lg">
-            <ShieldAlert className="w-6 h-6" />
+          <div className="bg-purple-100 p-2 rounded-lg">
+            <ShieldAlert className="h-6 w-6 text-purple-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">PKI Manager</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-3xl font-bold text-slate-900">PKI Manager</h1>
+            <p className="text-muted-foreground mt-2">
               Manage your private Certificate Authority and issue certificates
             </p>
           </div>
         </div>
-
-        <Tabs defaultValue="ca">
-          <TabsList>
-            <TabsTrigger value="ca">Certificate Authority</TabsTrigger>
-            <TabsTrigger value="certificates">Certificates</TabsTrigger>
-            <TabsTrigger value="test">Test Connection</TabsTrigger>
-          </TabsList>
-          <TabsContent value="ca" className="mt-4">
-            <CAPanel />
-          </TabsContent>
-          <TabsContent value="certificates" className="mt-4">
-            <CertificateTable />
-          </TabsContent>
-          <TabsContent value="test" className="mt-4">
-            <CertificateTestPanel />
-          </TabsContent>
-        </Tabs>
       </div>
+
+      <Tabs defaultValue="ca" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="ca">Certificate Authority</TabsTrigger>
+          <TabsTrigger value="certificates">Certificates</TabsTrigger>
+          <TabsTrigger value="test">Test Connection</TabsTrigger>
+        </TabsList>
+        <TabsContent value="ca" className="space-y-6">
+          <CAPanel />
+        </TabsContent>
+        <TabsContent value="certificates" className="space-y-6">
+          <CertificateTable />
+        </TabsContent>
+        <TabsContent value="test" className="space-y-6">
+          <CertificateTestPanel />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

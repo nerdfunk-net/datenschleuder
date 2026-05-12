@@ -65,11 +65,11 @@ class PKICertificate(Base):
         index=True,
     )
     common_name = Column(String(255), nullable=False)
-    organization = Column(String(255), nullable=True)
+    organization = Column(JSON, nullable=True)
     country = Column(String(2), nullable=True)
     state = Column(String(255), nullable=True)
     city = Column(String(255), nullable=True)
-    org_unit = Column(String(255), nullable=True)
+    org_unit = Column(JSON, nullable=True)
     email = Column(String(255), nullable=True)
     cert_type = Column(String(20), nullable=False, default="server")
     san_dns = Column(JSON, nullable=True)

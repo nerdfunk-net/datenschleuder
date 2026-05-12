@@ -30,11 +30,11 @@ export interface CertificateResponse {
   id: number
   ca_id: number
   common_name: string
-  organization: string | null
+  organization: string[] | null
   country: string | null
   state: string | null
   city: string | null
-  org_unit: string | null
+  org_unit: string[] | null
   email: string | null
   cert_type: CertType
   san_dns: string[] | null
@@ -97,11 +97,11 @@ export interface TestNifiResponse {
 
 export interface CreateCertificateRequest {
   common_name: string
-  organization?: string
+  organization?: string | string[]
   country?: string
   state?: string
   city?: string
-  org_unit?: string
+  org_unit?: string | string[]
   email?: string
   cert_type?: CertType
   validity_days?: number

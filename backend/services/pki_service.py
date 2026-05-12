@@ -39,24 +39,24 @@ _REASON_FLAG_MAP = {
 
 def _build_name(
     common_name: str,
-    organization: Optional[str],
+    organization: Optional[List[str]],
     country: Optional[str],
     state: Optional[str],
     city: Optional[str],
-    org_unit: Optional[str],
+    org_unit: Optional[List[str]],
     email: Optional[str],
 ) -> x509.Name:
     attrs = [x509.NameAttribute(NameOID.COMMON_NAME, common_name)]
-    if organization:
-        attrs.append(x509.NameAttribute(NameOID.ORGANIZATION_NAME, organization))
+    for org in organization or []:
+        attrs.append(x509.NameAttribute(NameOID.ORGANIZATION_NAME, org))
     if country:
         attrs.append(x509.NameAttribute(NameOID.COUNTRY_NAME, country))
     if state:
         attrs.append(x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, state))
     if city:
         attrs.append(x509.NameAttribute(NameOID.LOCALITY_NAME, city))
-    if org_unit:
-        attrs.append(x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, org_unit))
+    for ou in org_unit or []:
+        attrs.append(x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, ou))
     if email:
         attrs.append(x509.NameAttribute(NameOID.EMAIL_ADDRESS, email))
     return x509.Name(attrs)

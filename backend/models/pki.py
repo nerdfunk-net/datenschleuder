@@ -54,11 +54,11 @@ class CAResponse(BaseModel):
 
 class CreateCertificateRequest(BaseModel):
     common_name: str = Field(min_length=1, max_length=255)
-    organization: Optional[str] = None
+    organization: Optional[List[str]] = None
     country: Optional[str] = Field(default=None, max_length=2)
     state: Optional[str] = None
     city: Optional[str] = None
-    org_unit: Optional[str] = None
+    org_unit: Optional[List[str]] = None
     email: Optional[str] = None
     cert_type: CertType = "server"
     validity_days: int = Field(default=365, ge=1, le=36500)
@@ -71,11 +71,11 @@ class CertificateResponse(BaseModel):
     id: int
     ca_id: int
     common_name: str
-    organization: Optional[str]
+    organization: Optional[List[str]]
     country: Optional[str]
     state: Optional[str]
     city: Optional[str]
-    org_unit: Optional[str]
+    org_unit: Optional[List[str]]
     email: Optional[str]
     cert_type: str
     san_dns: Optional[List[str]]

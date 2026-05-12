@@ -13,11 +13,11 @@ interface Props {
 function buildNifiIdentity(cert: CertificateResponse): string {
   const parts: string[] = []
   parts.push(`CN=${cert.common_name}`)
-  if (cert.organization) parts.push(`O=${cert.organization}`)
+  cert.organization?.forEach(o => parts.push(`O=${o}`))
   if (cert.country) parts.push(`C=${cert.country}`)
   if (cert.state) parts.push(`ST=${cert.state}`)
   if (cert.city) parts.push(`L=${cert.city}`)
-  if (cert.org_unit) parts.push(`OU=${cert.org_unit}`)
+  cert.org_unit?.forEach(ou => parts.push(`OU=${ou}`))
   return parts.join(', ')
 }
 
@@ -40,11 +40,11 @@ export function CertificateDetail({ cert }: Props) {
       <div className="grid grid-cols-2 gap-x-6 gap-y-2">
         <div><span className="text-muted-foreground">Common Name</span><p className="font-medium">{cert.common_name}</p></div>
         <div><span className="text-muted-foreground">Type</span><p><Badge variant="outline" className="capitalize">{cert.cert_type}</Badge></p></div>
-        {cert.organization && <div><span className="text-muted-foreground">Organization</span><p>{cert.organization}</p></div>}
+        {cert.organization && cert.organization.length > 0 && <div><span className="text-muted-foreground">Organization</span><p>{cert.organization.join(', ')}</p></div>}
         {cert.country && <div><span className="text-muted-foreground">Country</span><p>{cert.country}</p></div>}
         {cert.state && <div><span className="text-muted-foreground">State</span><p>{cert.state}</p></div>}
         {cert.city && <div><span className="text-muted-foreground">City</span><p>{cert.city}</p></div>}
-        {cert.org_unit && <div><span className="text-muted-foreground">Org Unit</span><p>{cert.org_unit}</p></div>}
+        {cert.org_unit && cert.org_unit.length > 0 && <div><span className="text-muted-foreground">Org Unit</span><p>{cert.org_unit.join(', ')}</p></div>}
         {cert.email && <div><span className="text-muted-foreground">Email</span><p>{cert.email}</p></div>}
         <div><span className="text-muted-foreground">Serial</span><p className="font-mono text-xs truncate">{cert.serial_number}</p></div>
         <div><span className="text-muted-foreground">Key Size</span><p>{cert.key_size} bit</p></div>
