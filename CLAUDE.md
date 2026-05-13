@@ -1,11 +1,11 @@
-# Cockpit-NG - Technical Reference
+# Datenschleuder - Technical Reference
 
 ## Overview
-Network management dashboard for NetDevOps with Nautobot & CheckMK integration, RBAC, OIDC/SSO, and network automation.
+Datenschleuder is a network management dashboard for NetDevOps with Nautobot & CheckMK integration, RBAC, OIDC/SSO, and network automation.
 
 ## Tech Stack
 
-**Frontend:** Next.js 15.4.7 (App Router), React 19, TypeScript 5, Tailwind CSS 4, Shadcn UI, TanStack Query v5, Zustand, Lucide Icons
+**Frontend:** Next.js 15.5.14 (App Router), React 19, TypeScript 5, Tailwind CSS 4, Shadcn UI, TanStack Query v5, Zustand, Lucide Icons
 **Backend:** FastAPI, Python 3.9+, PostgreSQL, SQLAlchemy, JWT auth, Celery/Beat, Netmiko, Ansible, GitPython
 **Integrations:** Nautobot API, CheckMK, OIDC multi-provider
 
@@ -14,7 +14,7 @@ Network management dashboard for NetDevOps with Nautobot & CheckMK integration, 
 ### Core Principles
 - **Complete separation**: Frontend (port 3000) ↔ Backend (port 8000)
 - **API proxy pattern**: Frontend → Next.js `/api/proxy/*` → Backend (NEVER direct backend calls)
-- **PostgreSQL single database** with 40+ tables (defined in `/backend/core/models.py`)
+- **PostgreSQL single database** with 40+ tables (defined in `/backend/core/models/`)
 - **Layered backend**: Model → Repository → Service → Router
 - **Feature-based organization**: Group by domain, not by technical role
 - **Server Components default**: Use `'use client'` only when necessary
@@ -25,7 +25,7 @@ Network management dashboard for NetDevOps with Nautobot & CheckMK integration, 
 
 ### Backend Layer Pattern
 ```
-1. SQLAlchemy Model    → /backend/core/models.py (tables, indexes, relationships)
+1. SQLAlchemy Model    → /backend/core/models/{domain}.py (tables, indexes, relationships)
 2. Pydantic Models     → /backend/models/{domain}.py (request/response schemas)
 3. Repository          → /backend/repositories/{domain}_repository.py (data access)
 4. Service             → /backend/services/{domain}_service.py (business logic)
@@ -71,20 +71,40 @@ export default function MyFeatureRoute() {
 ### Naming Conventions
 - **Database**: `snake_case` (tables: `job_templates`, columns: `created_at`)
 - **Backend**: `snake_case` (files: `user_repository.py`, functions: `create_user()`)
-- **Frontend**: `kebab-case` dirs, `PascalCase` components (`bulk-edit/`, `BulkEditDialog.tsx`)
+- **Frontend**: `kebab-case` dirs and component files (`bulk-edit/`, `bulk-edit-dialog.tsx`)
 - **Models**: `PascalCase` (`JobTemplate`, `UserProfile`)
 
 ### Database Requirements
-- ✅ Define tables as SQLAlchemy models in `/backend/core/models.py`
+- ✅ Define tables as SQLAlchemy models in `/backend/core/models/` (one file per domain)
+- ✅ Export all models from `/backend/core/models/__init__.py`
 - ✅ Add indexes, foreign keys, timestamps (`created_at`, `updated_at`)
 - ✅ Use repository pattern (BaseRepository in `/backend/repositories/base.py`)
-- ❌ NEVER use SQLite or raw SQL queries
+- ✅ Production database is PostgreSQL with SQLAlchemy ORM/Core (`./doc/MIGRATION_SYSTEM.md`). In-memory SQLite in **unit** tests is acceptable when queries do not rely on PostgreSQL-only features.
+- ✅ Prefer SQLAlchemy ORM/Core for all runtime application data access. Repository-layer `sqlalchemy.text()` is allowed only under the rules in `doc/refactoring/REFACTORING_RAW_SQL.md` §3 (bound parameters, named constants for non-trivial SQL, no string composition of values, PostgreSQL integration coverage for dialect-specific behaviour). Health checks (`SELECT 1` in `core/database.py`) and migration/schema tooling are exempt.
+- ❌ Never call `text()` from routers, services, or Celery tasks.
+- ❌ Never compose runtime values into raw SQL via f-strings or string concatenation.
 - ❌ NEVER bypass repository layer
 
 ## Key File Locations
 
 **Backend Core:**
-- `/backend/core/models.py` - All SQLAlchemy table definitions
+- `/backend/core/models/` - SQLAlchemy table definitions (one file per domain)
+  - `agent.py` - `DatenschleuderAgentCommand`
+  - `audit.py` - `AuditLog`
+  - `client_data.py` - `ClientHostname`, `ClientIpAddress`, `ClientMacAddress`
+  - `compliance.py` - `ComplianceCheck`, `ComplianceRule`, `RegexPattern`
+  - `credentials.py` - `Credential`, `LoginCredential`, `SNMPMapping`
+  - `git.py` - `GitRepository`
+  - `inventory.py` - `Inventory`
+  - `jobs.py` - `Job`, `JobRun`, `JobSchedule`, `JobTemplate`
+  - `nb2cmk.py` - `NB2CMKJob`, `NB2CMKJobResult`, `NB2CMKSync`
+  - `rack.py` - `RackDeviceMapping`
+  - `rbac.py` - `Permission`, `Role`, `RolePermission`, `UserPermission`, `UserRole`
+  - `settings.py` - `AgentsSetting`, `CacheSetting`, `CelerySetting`, `CheckMKSetting`, `GitSetting`, `NautobotDefault`, `NautobotSetting`, `Setting`, `SettingsMetadata`
+  - `snapshots.py` - `Snapshot`, `SnapshotCommand`, `SnapshotCommandTemplate`, `SnapshotResult`
+  - `templates.py` - `Template`, `TemplateVersion`
+  - `users.py` - `User`, `UserProfile`
+  - `__init__.py` - Re-exports all models
 - `/backend/core/database.py` - DB session, get_db() dependency
 - `/backend/core/auth.py` - verify_token, require_permission, verify_admin_token
 - `/backend/main.py` - FastAPI app, router registration
@@ -122,9 +142,13 @@ from core.auth import verify_token, require_permission, verify_admin_token
 async def get_data(user: dict = Depends(verify_token)):
     pass
 
-# Permission required
+# Permission required (format: "resource" or "resource.subresource", action)
 @router.post("/users", dependencies=[Depends(require_permission("users", "write"))])
 async def create_user():
+    pass
+
+@router.get("/devices", dependencies=[Depends(require_permission("nautobot.devices", "read"))])
+async def get_devices():
     pass
 
 # Admin only
@@ -147,14 +171,16 @@ fetch('/api/proxy/users', {
 
 ## Database Schema (Key Tables)
 
-**Users & RBAC:** `users`, `roles`, `permissions`, `role_permissions`, `user_roles`
-**Settings:** `settings`, `nautobot_settings`, `checkmk_settings`, `git_settings`, `celery_settings`
+**Users & RBAC:** `users`, `user_profiles`, `roles`, `permissions`, `role_permissions`, `user_roles`, `user_permissions`
+**Settings:** `settings`, `settings_metadata`, `nautobot_settings`, `nautobot_defaults`, `checkmk_settings`, `git_settings`, `celery_settings`, `agents_settings`, `cache_settings`
 **Credentials:** `credentials`, `login_credentials`, `snmp_mapping`
-**Jobs:** `job_templates`, `job_schedules`, `job_runs`
+**Jobs:** `jobs`, `job_templates`, `job_schedules`, `job_runs`
 **Git:** `git_repositories`, `templates`, `template_versions`
 **Compliance:** `compliance_rules`, `compliance_checks`, `regex_patterns`
 **Sync:** `nb2cmk_sync`, `nb2cmk_jobs`, `nb2cmk_job_results`
 **Inventory:** `inventories`
+**Snapshots:** `snapshots`, `snapshot_command_templates`, `snapshot_commands`, `snapshot_results`
+**Audit & Agents:** `audit_logs`, `datenschleuder_agent_commands`
 
 ## UI/UX Standards
 
@@ -389,7 +415,6 @@ const syncRepository = useMutation({
 ### Documentation:
 - **Best Practices**: `/frontend/src/hooks/queries/BEST_PRACTICES.md`
 - **Optimistic Updates**: `/frontend/src/hooks/queries/OPTIMISTIC_UPDATES.md`
-- **Migration Guide**: `/frontend/TANSTACK_QUERY_MIGRATION.md`
 
 ## React Best Practices (CRITICAL - Prevents Infinite Loops)
 
@@ -471,7 +496,7 @@ BACKEND_SERVER_HOST=127.0.0.1
 BACKEND_SERVER_PORT=8000
 DATABASE_HOST=localhost
 DATABASE_PORT=5432
-DATABASE_NAME=cockpit
+DATABASE_NAME=datenschleuder
 DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=password
 INITIAL_USERNAME=admin
@@ -487,7 +512,7 @@ PORT=3000
 ## Common Tasks
 
 ### Adding New Backend Endpoint
-1. Define SQLAlchemy model in `/backend/core/models.py`
+1. Define SQLAlchemy model in `/backend/core/models/{domain}.py` and export it from `/backend/core/models/__init__.py`
 2. Create Pydantic models in `/backend/models/{domain}.py`
 3. Create repository in `/backend/repositories/{domain}_repository.py`
 4. Create service in `/backend/services/{domain}_service.py`
@@ -514,6 +539,7 @@ PORT=3000
 - ✅ Check permissions with `require_permission()`
 - ✅ Use HTTPS in production
 - ✅ Never commit `.env` files
+- ✅ **5xx errors:** Never put raw exception text (`str(e)`, `{exc}`, etc.) in `HTTPException(detail=…)` for server errors. Use `core.safe_http_errors.raise_internal_server_error` (and optional `status_code` for sanitized non-500 5xx such as 502) so clients only see `{message, error_id}`; correlate via logs.
 
 ## Development Workflow
 ```bash
@@ -526,6 +552,12 @@ cd frontend && npm run dev
 # Default credentials: admin/admin
 # Frontend: http://localhost:3000
 # Backend: http://localhost:8000
+
+# Router regression guards (from backend/)
+python scripts/check_asyncio_run.py
+python scripts/check_http_500_leaks.py
+python scripts/check_router_repositories.py
+python scripts/check_text_sql.py
 ```
 
 When implementing configuration changes, include verification steps that confirm the change works (e.g., run a quick test, check logs, or validate config loads)
@@ -668,7 +700,7 @@ ip_id = await ip_manager.ensure_ip_address_exists(...)
 - Service layer for business logic
 - Thin routers that delegate to services
 - Dependency injection for auth/permissions
-- SQLAlchemy ORM (no raw SQL)
+- SQLAlchemy ORM/Core for runtime data access; repository `text()` only as documented in `doc/refactoring/REFACTORING_RAW_SQL.md` §3
 
 **Frontend:**
 - Feature-based organization
@@ -682,7 +714,7 @@ ip_id = await ip_manager.ensure_ip_address_exists(...)
 **Database:**
 - Single PostgreSQL database
 - use complete migration framework to migrate database (./doc/MIGRATION_SYSTEM.md)
-- All models in `/backend/core/models.py`
+- Models split by domain in `/backend/core/models/` (all exported from `__init__.py`)
 - Connection pooling + health checks
 
 **Authentication:**
@@ -694,13 +726,14 @@ ip_id = await ip_manager.ensure_ip_address_exists(...)
 ## INCORRECT Practices (NEVER DO)
 
 **Backend:**
-- ❌ Creating SQLite databases
-- ❌ Writing raw SQL instead of SQLAlchemy ORM
-- ❌ Bypassing repository pattern for local database
+- ❌ Creating SQLite databases for **production** (in-memory SQLite in unit tests is allowed; see Database Requirements above)
+- ❌ Calling `sqlalchemy.text()` from routers, services, or tasks, or composing runtime values into SQL via string concatenation / f-strings (repository policy: `doc/refactoring/REFACTORING_RAW_SQL.md` §3)
+- ❌ Bypassing repository pattern for local database access
 - ❌ Business logic in routers
 - ❌ Creating monolithic God Object services (note: DeviceCommonService is a facade, not a God Object)
 - ❌ Mixing validation/transformation logic with API calls
 - ❌ using f-string in Logging
+- ❌ Embedding raw exception text (`str(e)`, `{exc}`, f-strings interpolating exceptions, etc.) in `HTTPException(detail=…)` for any **5xx** response. Use `core.safe_http_errors.raise_internal_server_error` and let the client see only `{message, error_id}` (optionally pass `status_code` for sanitized 502/503 responses).
 
 **Frontend:**
 - ❌ Placing components at `/components/` root without feature grouping
