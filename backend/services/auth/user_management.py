@@ -5,8 +5,10 @@ with modern permission handling and secure password management.
 """
 
 from __future__ import annotations
-from typing import Any, Dict, List, Optional, Tuple
+
 import logging
+from typing import Any, Dict, List, Optional, Tuple
+
 from models.user_management import UserRole
 from services.auth.user_service import (
     UserService as _UserService,

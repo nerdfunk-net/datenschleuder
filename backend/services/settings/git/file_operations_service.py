@@ -79,7 +79,7 @@ class GitFileOperationsService:
         file_path_resolved = resolve_safe_file_path(repo_path, path)
 
         try:
-            with open(file_path_resolved, "r", encoding="utf-8") as f:
+            with open(file_path_resolved, encoding="utf-8") as f:
                 return f.read()
         except UnicodeDecodeError:
             raise HTTPException(
@@ -113,7 +113,7 @@ class GitFileOperationsService:
         file_path_resolved = resolve_safe_file_path(repo_path, path)
 
         try:
-            with open(file_path_resolved, "r", encoding="utf-8") as f:
+            with open(file_path_resolved, encoding="utf-8") as f:
                 content = f.read()
         except UnicodeDecodeError:
             raise HTTPException(

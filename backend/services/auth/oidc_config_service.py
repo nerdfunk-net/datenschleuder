@@ -5,10 +5,12 @@ No database dependency.
 """
 
 from __future__ import annotations
+
 import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -29,7 +31,7 @@ class OIDCConfigService:
             logger.warning("OIDC providers config not found at %s", config_path)
             return {"providers": {}, "global": {"allow_traditional_login": True}}
         try:
-            with open(config_path, "r") as f:
+            with open(config_path) as f:
                 config = yaml.safe_load(f)
             if not config:
                 logger.warning("OIDC providers config is empty")

@@ -1,9 +1,9 @@
 """Core NiFi flow deployment operations."""
 
 import logging
-from typing import Optional, Any, Tuple
+from typing import Any, Optional, Tuple
 
-from nipyapi import versioning, canvas
+from nipyapi import canvas, versioning
 from nipyapi.nifi import ProcessGroupsApi
 
 logger = logging.getLogger(__name__)

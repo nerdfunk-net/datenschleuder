@@ -1,7 +1,8 @@
 """Audit models: AuditLog."""
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Index
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.sql import func
+
 from core.database import Base
 
 

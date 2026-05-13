@@ -4,11 +4,13 @@ Manages git repositories stored in PostgreSQL.
 """
 
 from __future__ import annotations
+
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from repositories import GitRepositoryRepository
+
 from core.models import GitRepository
+from repositories import GitRepositoryRepository
 
 logger = logging.getLogger(__name__)
 

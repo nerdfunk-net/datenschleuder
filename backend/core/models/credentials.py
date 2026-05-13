@@ -1,17 +1,18 @@
 """Credential models: Credential, LoginCredential."""
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Column,
-    Integer,
-    String,
-    Boolean,
     DateTime,
     Index,
+    Integer,
     LargeBinary,
+    String,
     UniqueConstraint,
 )
 from sqlalchemy.sql import func
+
 from core.database import Base
 
 

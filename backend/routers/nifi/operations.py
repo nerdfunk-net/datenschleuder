@@ -4,33 +4,48 @@ import asyncio
 import logging
 from typing import Any, Callable
 
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
 
 from core.auth import require_permission
+from core.safe_http_errors import raise_internal_server_error
 from models.nifi import (
-    ParameterContextListResponse,
-    ParameterContextCreate,
-    ParameterContextUpdate,
-    ProcessorConfigurationResponse,
-    ProcessorConfigurationUpdate,
-    ProcessorConfigurationUpdateResponse,
     AssignParameterContextRequest,
     AssignParameterContextResponse,
     ConnectionRequest,
     ConnectionResponse,
+    ParameterContextCreate,
+    ParameterContextListResponse,
+    ParameterContextUpdate,
+    ProcessorConfigurationResponse,
+    ProcessorConfigurationUpdate,
+    ProcessorConfigurationUpdateResponse,
 )
 from services.nifi import instance_service
 from services.nifi.nifi_context import with_nifi_instance
 from services.nifi.operations import (
-    registries as reg_ops,
     flows as flow_ops,
-    parameters as param_ops,
-    process_groups as pg_ops,
-    processors as proc_ops,
-    versions as ver_ops,
+)
+from services.nifi.operations import (
     management as mgmt_ops,
+)
+from services.nifi.operations import (
+    parameters as param_ops,
+)
+from services.nifi.operations import (
+    process_groups as pg_ops,
+)
+from services.nifi.operations import (
+    processors as proc_ops,
+)
+from services.nifi.operations import (
     provenance as prov_ops,
+)
+from services.nifi.operations import (
+    registries as reg_ops,
+)
+from services.nifi.operations import (
+    versions as ver_ops,
 )
 
 logger = logging.getLogger(__name__)
@@ -168,8 +183,8 @@ async def get_registry_details(
             instance_id,
             lambda: reg_ops.get_registry_details(registry_id),
         )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registry not found")
     return {"status": "success", **result}
 
 
@@ -229,7 +244,8 @@ async def export_flow(
             ),
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("export_flow validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid flow export request")
     return Response(
         content=result["content"],
         media_type=result["content_type"],
@@ -268,7 +284,8 @@ async def import_flow(
             ),
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("import_flow validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid flow import request")
     return {
         "status": "success",
         "message": "Flow imported successfully",
@@ -309,8 +326,8 @@ async def get_parameter_context(
             instance_id,
             lambda: param_ops.get_parameter_context(context_id),
         )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parameter context not found")
     return {"status": "success", "parameter_context": context}
 
 
@@ -393,8 +410,8 @@ async def get_process_group(
             instance_id,
             lambda: pg_ops.get_process_group(identifier=id, name=name, greedy=greedy),
         )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Process group not found")
     return {"status": "success", **result}
 
 
@@ -548,8 +565,8 @@ async def get_processor_configuration(
             instance_id,
             lambda: proc_ops.get_processor_configuration(processor_id),
         )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Processor not found")
     return ProcessorConfigurationResponse(status="success", processor=config)
 
 
@@ -566,8 +583,8 @@ async def update_processor_configuration(
             instance_id,
             lambda: proc_ops.update_processor_configuration(processor_id, update_dict),
         )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Processor not found")
     return ProcessorConfigurationUpdateResponse(
         status="success", message="Configuration updated", **result
     )
@@ -611,8 +628,8 @@ async def stop_process_group_versioning(
             lambda: ver_ops.stop_version_control(pg_id),
             normalized_url=True,
         )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Process group not found")
     return {
         "status": "success",
         "message": "Version control stopped"
@@ -646,12 +663,10 @@ async def get_system_diagnostics(
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error(
-            "Error getting system diagnostics for instance %d: %s", instance_id, exc
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get system diagnostics: %s" % str(exc),
+        raise_internal_server_error(
+            log_message="Failed to get system diagnostics",
+            exc=exc,
+            operation="get_system_diagnostics",
         )
 
 
@@ -708,15 +723,10 @@ async def get_process_group_status(
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error(
-            "Error getting process group %s status for instance %d: %s",
-            pg_id,
-            instance_id,
-            exc,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get process group status: %s" % str(exc),
+        raise_internal_server_error(
+            log_message="Failed to get process group status",
+            exc=exc,
+            operation="get_process_group_status",
         )
 
 
@@ -767,15 +777,10 @@ async def get_process_group_status_canvas(
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error(
-            "Error getting canvas process group %s status for instance %d: %s",
-            pg_id,
-            instance_id,
-            exc,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get process group canvas status: %s" % str(exc),
+        raise_internal_server_error(
+            log_message="Failed to get process group canvas status",
+            exc=exc,
+            operation="get_process_group_status_canvas",
         )
 
 
@@ -811,10 +816,10 @@ async def list_components_by_kind(
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Failed to list components by kind '%s': %s", kind, exc)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list components by kind: %s" % str(exc),
+        raise_internal_server_error(
+            log_message="Failed to list components by kind",
+            exc=exc,
+            operation="list_components_by_kind",
         )
 
     components = [mgmt_ops.serialize_component_by_kind(item, kind) for item in raw_list]
@@ -862,9 +867,14 @@ async def get_component_provenance(
             ),
         )
     except TimeoutError as e:
-        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise_internal_server_error(
+            log_message="NiFi request timed out",
+            exc=e,
+            status_code=504,
+            operation="get_component_provenance",
+        )
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Component not found")
     return {
         "status": "success",
         "instance_id": instance_id,
@@ -897,9 +907,14 @@ async def get_flow_lineage(
             lambda: prov_ops.get_flow_lineage(flow_file_uuid, component_id),
         )
     except TimeoutError as e:
-        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise_internal_server_error(
+            log_message="NiFi request timed out",
+            exc=e,
+            status_code=504,
+            operation="get_flow_lineage",
+        )
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow file not found")
     return {"status": "success", "instance_id": instance_id, **result}
 
 
@@ -932,9 +947,14 @@ async def get_flow_lineage_by_filename(
             ),
         )
     except TimeoutError as e:
-        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise_internal_server_error(
+            log_message="NiFi request timed out",
+            exc=e,
+            status_code=504,
+            operation="get_flow_lineage_by_filename",
+        )
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow file not found")
     return {
         "status": "success",
         "instance_id": instance_id,

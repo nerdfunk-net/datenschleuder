@@ -9,10 +9,10 @@ This package contains routers for:
 """
 
 # Import all job routers
-from .templates import router as templates_router
-from .schedules import router as schedules_router
-from .runs import router as runs_router
 from .celery_api import router as celery_router
+from .runs import router as runs_router
+from .schedules import router as schedules_router
+from .templates import router as templates_router
 
 # Export all routers
 __all__ = [

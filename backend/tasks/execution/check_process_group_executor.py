@@ -4,7 +4,7 @@ Checks whether a NiFi process group's component counters match the expected stat
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +47,13 @@ def execute_check_process_group(
         ``violations``, ``children`` (when *check_children* is True),
         and ``instance_id``.
     """
+    from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
     from services.nifi.nifi_context import nifi_connection_scope
     from services.nifi.operations.process_groups import (
-        get_process_group_status_canvas,
         evaluate_process_group_status,
+        get_process_group_status_canvas,
         list_child_process_groups,
     )
-    from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
 
     params = job_parameters or {}
     tmpl = template or {}

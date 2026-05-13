@@ -2,11 +2,11 @@
 Pydantic models for the Cockpit application.
 """
 
-from .auth import UserLogin, UserCreate, Token, LoginResponse, TokenData
-from .git import GitCommitRequest, GitBranchRequest
+from .auth import LoginResponse, Token, TokenData, UserCreate, UserLogin
+from .git import GitBranchRequest, GitCommitRequest
 from .settings import (
-    GitSettingsRequest,
     AllSettingsRequest,
+    GitSettingsRequest,
     GitTestRequest,
 )
 

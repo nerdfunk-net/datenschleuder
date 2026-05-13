@@ -11,6 +11,8 @@ from typing import Optional
 
 from fastapi import HTTPException
 
+from core.safe_http_errors import raise_internal_server_error
+
 logger = logging.getLogger(__name__)
 
 
@@ -121,7 +123,10 @@ class JobExecutionService:
         if updated:
             return {"message": f"Job run {run_id} cancelled", "job_run": updated}
 
-        raise HTTPException(status_code=500, detail="Failed to cancel job run")
+        raise_internal_server_error(
+            log_message="Failed to cancel job run",
+            operation="cancel_job_run",
+        )
 
     def _revoke_celery_task(self, celery_task_id: Optional[str]) -> None:
         """Attempt to revoke a Celery task; log a warning on failure."""

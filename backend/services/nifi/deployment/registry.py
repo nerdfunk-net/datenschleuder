@@ -1,7 +1,7 @@
 """Registry lookups for NiFi flow deployment."""
 
 import logging
-from typing import Optional, Any, Tuple
+from typing import Any, Optional, Tuple
 
 from nipyapi import versioning
 

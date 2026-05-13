@@ -8,6 +8,7 @@ This script initializes the RBAC system with:
 
 import argparse
 import sys
+
 from services.auth.rbac_service import RBACService as _RBACService
 from services.auth.user_service import UserService as _UserService
 

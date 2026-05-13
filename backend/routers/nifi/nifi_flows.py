@@ -2,15 +2,17 @@
 
 import logging
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
+from core.safe_http_errors import raise_internal_server_error
 from models.nifi import (
-    NifiFlowCreate,
-    NifiFlowUpdate,
-    NifiFlowResponse,
-    FlowProcessGroupsResponse,
     FlowFilterRequest,
+    FlowProcessGroupsResponse,
+    NifiFlowCreate,
+    NifiFlowResponse,
+    NifiFlowUpdate,
 )
 from services.nifi import nifi_flow_service
 
@@ -55,7 +57,8 @@ def create_flow(
             creator_name=data.creator_name or current_user.get("username"),
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("create_flow validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid flow")
 
 
 @router.get("/hierarchy-attribute-values")
@@ -100,7 +103,8 @@ def update_flow(
             )
         return flow
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("update_flow validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid flow")
 
 
 @router.post("/{flow_id}/copy", response_model=NifiFlowResponse)
@@ -127,13 +131,13 @@ def get_flow_process_groups(
     try:
         result = nifi_flow_service.get_flow_process_groups(flow_id)
         return result
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
     except Exception as e:
-        logger.error("Failed to get process groups for flow %d: %s", flow_id, e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get process groups: %s" % str(e),
+        raise_internal_server_error(
+            log_message="Failed to get process groups",
+            exc=e,
+            operation="get_flow_process_groups",
         )
 
 

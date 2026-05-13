@@ -112,12 +112,12 @@ async def provision_or_get_user(
         True if auto_provision_config is None else bool(auto_provision_config)
     )
 
+    from models.user_management import UserRole
     from services.auth.user_management import (
         create_user,
         get_user_by_username,
         update_user,
     )
-    from models.user_management import UserRole
 
     username = user_data["username"]
     user = get_user_by_username(username)

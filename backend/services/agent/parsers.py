@@ -6,7 +6,6 @@ These functions have no external dependencies and are fully unit-testable.
 import json
 import re
 
-
 _GIT_DIFF_LABELS: dict[str, str] = {
     "M": "modified",
     "A": "added",

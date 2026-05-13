@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict, Any, List
+import logging
 from pathlib import Path
+from typing import Any, Dict, List
+
 import yaml
+from fastapi import APIRouter, Depends, HTTPException
+
 from core.auth import verify_admin_token
+from core.safe_http_errors import raise_internal_server_error
 from core.schema_manager import SchemaManager
 from dependencies import get_certificate_manager
 from models.cert_manager import CertificateEntry
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +21,7 @@ _CERTS_CONFIG = _CERTS_DIR / "certificates.yaml"
 def _load_cert_config() -> List[Dict]:
     if not _CERTS_CONFIG.exists():
         return []
-    with open(_CERTS_CONFIG, "r") as f:
+    with open(_CERTS_CONFIG) as f:
         data = yaml.safe_load(f) or {}
     return data.get("certificates", [])
 
@@ -84,9 +87,10 @@ def seed_rbac(remove_existing: bool = False) -> Dict[str, Any]:
                         WARNING: This removes all roles, permissions, and assignments!
     """
     try:
-        from tools import seed_rbac
-        from io import StringIO
         import sys
+        from io import StringIO
+
+        from tools import seed_rbac
 
         # Capture stdout to return to frontend
         captured_output = StringIO()
@@ -112,10 +116,7 @@ def seed_rbac(remove_existing: bool = False) -> Dict[str, Any]:
             sys.stdout = old_stdout
 
     except Exception as e:
-        logger.error("Error seeding RBAC: %s", e, exc_info=True)
-        raise HTTPException(
-            status_code=500, detail=f"Failed to seed RBAC system: {str(e)}"
-        )
+        raise_internal_server_error(log_message="Failed to seed RBAC system", exc=e, operation="seed_rbac")
 
 
 # ---------------------------------------------------------------------------
@@ -160,10 +161,7 @@ def list_certificates() -> Dict[str, Any]:
             "config_exists": _CERTS_CONFIG.exists(),
         }
     except Exception as e:
-        logger.error("Error listing certificates: %s", e, exc_info=True)
-        raise HTTPException(
-            status_code=500, detail=f"Failed to list certificates: {str(e)}"
-        )
+        raise_internal_server_error(log_message="Failed to list certificates", exc=e, operation="list_certificates")
 
 
 @router.post("/certificates", dependencies=[Depends(verify_admin_token)])
@@ -223,10 +221,7 @@ def add_certificate(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error adding certificate '%s': %s", entry.name, e, exc_info=True)
-        raise HTTPException(
-            status_code=500, detail=f"Failed to add certificate: {str(e)}"
-        )
+        raise_internal_server_error(log_message="Failed to add certificate", exc=e, operation="add_certificate")
 
 
 @router.delete("/certificates/{name}", dependencies=[Depends(verify_admin_token)])
@@ -272,7 +267,4 @@ def delete_certificate(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error deleting certificate '%s': %s", name, e, exc_info=True)
-        raise HTTPException(
-            status_code=500, detail=f"Failed to delete certificate: {str(e)}"
-        )
+        raise_internal_server_error(log_message="Failed to delete certificate", exc=e, operation="delete_certificate")

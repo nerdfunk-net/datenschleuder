@@ -4,7 +4,9 @@ Consolidates common functions to avoid duplication.
 """
 
 import logging
+
 from fastapi import HTTPException, status
+
 from services.settings.git_repository_service import (
     GitRepositoryService as GitRepositoryManager,
 )

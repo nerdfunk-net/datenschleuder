@@ -3,10 +3,12 @@ Periodic tasks executed by Celery Beat.
 These tasks run on a schedule defined in beat_schedule.py
 """
 
-from celery import shared_task
-from celery_app import celery_app
 import logging
 from datetime import datetime, timezone
+
+from celery import shared_task
+
+from celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -58,11 +60,13 @@ def cleanup_celery_data_task() -> dict:
         dict: Cleanup results with counts of removed items
     """
     try:
-        import service_factory
-        from datetime import datetime, timezone, timedelta
-        from config import settings
-        import redis
         import json
+        from datetime import datetime, timedelta, timezone
+
+        import redis
+
+        import service_factory
+        from config import settings
 
         # Get cleanup settings
         celery_settings = service_factory.build_settings_manager().get_celery_settings()
@@ -114,12 +118,15 @@ def cleanup_celery_data_task() -> dict:
         # Remove old job runs from database
         removed_job_runs = 0
         try:
+            from core.database import SessionLocal
             from services.jobs.job_run_service import JobRunService as _JRS
 
-            job_run_manager = _JRS()
-
-            # Use the hours-based cleanup function
-            removed_job_runs = job_run_manager.cleanup_old_runs_hours(cleanup_age_hours)
+            db = SessionLocal()
+            try:
+                job_run_manager = _JRS(db=db)
+                removed_job_runs = job_run_manager.cleanup_old_runs_hours(cleanup_age_hours)
+            finally:
+                db.close()
         except Exception as e:
             logger.warning("Error cleaning up job runs: %s", e)
 
@@ -155,11 +162,13 @@ def check_stale_jobs_task() -> dict:
 
     Runs every 10 minutes.
     """
-    try:
-        from services.jobs.job_run_service import JobRunService
-        from celery_app import celery_app
+    from celery_app import celery_app
+    from core.database import SessionLocal
+    from services.jobs.job_run_service import JobRunService
 
-        job_run_manager = JobRunService()
+    db = SessionLocal()
+    try:
+        job_run_manager = JobRunService(db=db)
 
         # Get all running/pending jobs
         running_jobs = job_run_manager.get_recent_runs(limit=500, status="running")
@@ -260,3 +269,5 @@ def check_stale_jobs_task() -> dict:
     except Exception as e:
         logger.error("Error checking stale jobs: %s", e, exc_info=True)
         return {"success": False, "error": str(e)}
+    finally:
+        db.close()

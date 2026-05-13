@@ -7,6 +7,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
+from core.safe_http_errors import raise_internal_server_error
 from dependencies import get_git_repo_manager
 from models.flow_import import FlowImportRequest, FlowImportResponse
 from services.nifi import flow_import_service
@@ -35,12 +36,13 @@ def import_flows(
             current_username=current_user.get("sub", "unknown"),
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        logger.warning("import_flows validation error: %s", exc)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid flow import")
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Unexpected error during flow import: %s", exc)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Import failed: {exc}",
+        raise_internal_server_error(
+            log_message="Unexpected error during flow import",
+            exc=exc,
+            operation="import_flows",
         )

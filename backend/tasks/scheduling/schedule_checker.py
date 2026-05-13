@@ -5,10 +5,11 @@ Runs every minute via Celery Beat.
 Moved from job_tasks.py to improve code organization.
 """
 
-from celery import shared_task
 import logging
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import Any, Dict
+
+from celery import shared_task
 
 logger = logging.getLogger(__name__)
 

@@ -2,17 +2,17 @@
 
 import logging
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from core.auth import require_permission
 from models.nifi import (
     RegistryFlowCreate,
-    RegistryFlowResponse,
     RegistryFlowMetadataResponse,
     RegistryFlowMetadataSetRequest,
+    RegistryFlowResponse,
 )
-from services.nifi import registry_flow_service
-from services.nifi import registry_flow_metadata_service
+from services.nifi import registry_flow_metadata_service, registry_flow_service
 
 logger = logging.getLogger(__name__)
 

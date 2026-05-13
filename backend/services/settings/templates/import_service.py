@@ -59,7 +59,7 @@ class TemplateImportService:
 
         for yaml_file in yaml_files:
             try:
-                with open(yaml_file, "r", encoding="utf-8") as f:
+                with open(yaml_file, encoding="utf-8") as f:
                     data = yaml.safe_load(f)
 
                 if not isinstance(data, dict):
@@ -119,7 +119,7 @@ class TemplateImportService:
 
         for yaml_path in yaml_file_paths:
             try:
-                with open(yaml_path, "r", encoding="utf-8") as f:
+                with open(yaml_path, encoding="utf-8") as f:
                     yaml_data = yaml.safe_load(f)
 
                 template_path_str = yaml_data.get("path", "")

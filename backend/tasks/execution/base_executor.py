@@ -4,7 +4,7 @@ Routes job execution to appropriate executor based on job type.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +37,8 @@ def execute_job_type(
     Returns:
         dict: Execution results
     """
-    from .check_queues_executor import execute_check_queues
     from .check_process_group_executor import execute_check_process_group
+    from .check_queues_executor import execute_check_queues
     from .export_flows_executor import execute_export_flows
 
     job_executors = {

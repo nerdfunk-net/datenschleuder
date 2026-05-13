@@ -1,17 +1,19 @@
 """NiFi parameter context operations - pure nipyapi logic."""
 
-import time
 import logging
-from typing import List, Dict, Any, Optional
+import time
+from typing import Any, Dict, List, Optional
 
 import nipyapi
 from nipyapi.nifi import FlowApi
 from nipyapi.nifi.apis.parameter_contexts_api import ParameterContextsApi
 from nipyapi.nifi.models import (
-    ParameterContextEntity,
     ParameterContextDTO,
-    ParameterEntity as NiFiParameterEntity,
+    ParameterContextEntity,
     ParameterDTO,
+)
+from nipyapi.nifi.models import (
+    ParameterEntity as NiFiParameterEntity,
 )
 
 logger = logging.getLogger(__name__)
@@ -237,8 +239,8 @@ def update_parameter_context(
             existing_context.component.inherited_parameter_contexts = []
         else:
             from nipyapi.nifi.models import (
-                ParameterContextReferenceEntity,
                 ParameterContextReferenceDTO,
+                ParameterContextReferenceEntity,
             )
 
             inherited_refs = []
@@ -272,7 +274,7 @@ def update_parameter_context(
     request_id = update_response.request.request_id
     max_attempts = 30
 
-    for attempt in range(max_attempts):
+    for _ in range(max_attempts):
         status_response = param_api.get_parameter_context_update(
             context_id=context_id, request_id=request_id
         )

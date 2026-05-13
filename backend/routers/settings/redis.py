@@ -5,6 +5,7 @@ Provides CRUD endpoints for managing Redis server connections.
 """
 
 from __future__ import annotations
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from core.auth import require_permission
@@ -79,8 +80,8 @@ def test_redis_connection(
     try:
         result = redis_service.test_connection(server_id)
         return {"success": True, "status": "connected", "details": result}
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Resource not found")
     except Exception as exc:
         raise HTTPException(
             status_code=502,

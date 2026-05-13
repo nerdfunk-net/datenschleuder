@@ -3,16 +3,19 @@ Settings router for application configuration management.
 """
 
 from __future__ import annotations
+
 import logging
 from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
+from core.safe_http_errors import raise_internal_server_error
 from models.settings import (
-    GitSettingsRequest,
     AllSettingsRequest,
-    GitTestRequest,
     CacheSettingsRequest,
+    GitSettingsRequest,
+    GitTestRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -45,11 +48,7 @@ def get_all_settings(
         return {"settings": settings_data}
 
     except Exception as e:
-        logger.error("Error getting settings: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve settings: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to retrieve settings", exc=e, operation="get_all_settings")
 
 
 @router.get("/git")
@@ -119,11 +118,7 @@ def update_cache_settings(
                 detail="Failed to update Cache settings",
             )
     except Exception as e:
-        logger.error("Error updating Cache settings: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update Cache settings: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to update Cache settings", exc=e, operation="update_cache_settings")
 
 
 @router.post("/cache")
@@ -187,11 +182,7 @@ def update_all_settings(
             )
 
     except Exception as e:
-        logger.error("Error updating settings: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update settings: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to update settings", exc=e, operation="update_all_settings")
 
 
 @router.put("/git")
@@ -219,11 +210,7 @@ def update_git_settings(
             )
 
     except Exception as e:
-        logger.error("Error updating Git settings: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update Git settings: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to update Git settings", exc=e, operation="update_git_settings")
 
 
 @router.post("/git")
@@ -309,11 +296,7 @@ def reset_settings_to_defaults(
             )
 
     except Exception as e:
-        logger.error("Error resetting settings: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to reset settings: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to reset settings", exc=e, operation="reset_settings")
 
 
 @router.get("/health")

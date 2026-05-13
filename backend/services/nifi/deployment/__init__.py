@@ -7,11 +7,11 @@ Public API
 """
 
 import logging
-from typing import Optional, Any, Tuple
+from typing import Any, Optional, Tuple
 
 from nipyapi import canvas
 
-from services.nifi.deployment import registry, core, port_connections, version_control
+from services.nifi.deployment import core, port_connections, registry, version_control
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +174,7 @@ def find_or_create_process_group_by_path(path: str) -> str:
         return parts
 
     logger.info("Searching for existing PG matching path: %s", path_parts)
-    for pg_id, pg_info in pg_map.items():
+    for pg_id, _ in pg_map.items():
         pg_path_parts = build_path_parts(pg_id)
         if pg_path_parts == path_parts:
             logger.info("✅ FOUND EXACT MATCH: PG ID=%s, Path=%s", pg_id, pg_path_parts)
@@ -189,7 +189,7 @@ def find_or_create_process_group_by_path(path: str) -> str:
     for i in range(len(path_parts)):
         partial_path = path_parts[: i + 1]
         found = False
-        for pg_id, pg_info in pg_map.items():
+        for pg_id, _ in pg_map.items():
             pg_path_parts = build_path_parts(pg_id)
             if pg_path_parts == partial_path:
                 current_parent_id = pg_id

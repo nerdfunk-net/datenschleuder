@@ -2,23 +2,24 @@
 
 import logging
 from typing import List, Optional
+
 from fastapi import HTTPException, status
 
-from repositories.nifi.nifi_server_repository import NifiServerRepository
+from models.nifi import (
+    NifiClusterCreate,
+    NifiClusterMemberResponse,
+    NifiClusterPrimaryResponse,
+    NifiClusterResponse,
+    NifiClusterUpdate,
+    NifiInstanceResponse,
+    NifiServerCreate,
+    NifiServerResponse,
+    NifiServerUpdate,
+)
 from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
 from repositories.nifi.nifi_instance_repository import NifiInstanceRepository
+from repositories.nifi.nifi_server_repository import NifiServerRepository
 from repositories.settings.credentials_repository import CredentialsRepository
-from models.nifi import (
-    NifiServerCreate,
-    NifiServerUpdate,
-    NifiServerResponse,
-    NifiInstanceResponse,
-    NifiClusterCreate,
-    NifiClusterUpdate,
-    NifiClusterMemberResponse,
-    NifiClusterResponse,
-    NifiClusterPrimaryResponse,
-)
 
 logger = logging.getLogger(__name__)
 

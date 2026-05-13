@@ -11,15 +11,21 @@ New code can import from specific domain modules:
 
 from core.database import Base
 
+# Agent
+from .agent import DatenschleuderAgentCommand
+
+# Audit
+from .audit import AuditLog
+
 # Auth
 from .auth import (
-    User,
-    UserProfile,
-    Role,
     Permission,
+    Role,
     RolePermission,
-    UserRole,
+    User,
     UserPermission,
+    UserProfile,
+    UserRole,
 )
 
 # Credentials
@@ -29,42 +35,36 @@ from .credentials import Credential, LoginCredential
 from .git import GitRepository
 
 # Jobs
-from .jobs import Job, JobTemplate, JobSchedule, JobRun
-
-# Templates
-from .templates import Template, TemplateVersion
-
-# Settings
-from .settings import (
-    Setting,
-    GitSetting,
-    CacheSetting,
-    CelerySetting,
-    SettingsMetadata,
-    RedisServer,
-)
-
-# Audit
-from .audit import AuditLog
+from .jobs import Job, JobRun, JobSchedule, JobTemplate
 
 # NiFi
 from .nifi import (
-    NifiServer,
-    NifiCluster,
-    NifiClusterServer,
-    NifiClusterInstance,
-    NifiInstance,
-    RegistryFlow,
-    RegistryFlowMetadata,
     FlowView,
     HierarchyValue,
+    NifiCluster,
+    NifiClusterInstance,
+    NifiClusterServer,
+    NifiInstance,
+    NifiServer,
+    RegistryFlow,
+    RegistryFlowMetadata,
 )
 
 # PKI
 from .pki import PKIAuthority, PKICertificate
 
-# Agent
-from .agent import DatenschleuderAgentCommand
+# Settings
+from .settings import (
+    CacheSetting,
+    CelerySetting,
+    GitSetting,
+    RedisServer,
+    Setting,
+    SettingsMetadata,
+)
+
+# Templates
+from .templates import Template, TemplateVersion
 
 __all__ = [
     "Base",

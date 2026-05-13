@@ -4,6 +4,7 @@ Handles syncing, status checking, and operational tasks for Git repositories.
 """
 
 from __future__ import annotations
+
 import logging
 import os
 import shutil
@@ -13,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from git import GitCommandError, Repo
 
 from core.auth import require_permission
+from core.safe_http_errors import raise_internal_server_error
 from dependencies import (
     get_git_auth_service,
     get_git_cache_service,
@@ -216,14 +218,14 @@ def sync_repository(
             return {"success": True, "message": message, "repository_path": repo_path}
         else:
             git_repo_manager.update_sync_status(repo_id, f"error: {message}")
-            raise HTTPException(status_code=500, detail=message)
+            raise_internal_server_error(log_message="Repository sync failed", operation="sync_repository")
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Error syncing repository %s: %s", repo_id, e)
         git_repo_manager.update_sync_status(repo_id, f"error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise_internal_server_error(log_message="Error syncing repository", exc=e, operation="sync_repository")
 
 
 @router.post("/remove-and-sync")
@@ -343,14 +345,14 @@ def remove_and_sync_repository(
             return {"success": True, "message": message, "repository_path": repo_path}
         else:
             git_repo_manager.update_sync_status(repo_id, f"error: {message}")
-            raise HTTPException(status_code=500, detail=message)
+            raise_internal_server_error(log_message="Repository remove-and-sync failed", operation="remove_and_sync_repository")
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Error removing and syncing repository %s: %s", repo_id, e)
         git_repo_manager.update_sync_status(repo_id, f"error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise_internal_server_error(log_message="Error removing and syncing repository", exc=e, operation="remove_and_sync_repository")
 
 
 @router.get("/info")
@@ -412,10 +414,7 @@ def get_repository_info(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get repository info: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to get repository info", exc=e, operation="get_repository_info")
 
 
 @router.get("/debug")

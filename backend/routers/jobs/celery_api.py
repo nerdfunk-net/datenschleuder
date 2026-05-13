@@ -5,23 +5,23 @@ All Celery-related endpoints are under /api/celery/*
 
 import logging
 import os
-from typing import Dict, Any
+from typing import Any, Dict
 
 import redis
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from celery_app import celery_app
+from config import settings
 from core.auth import require_permission
 from core.celery_error_handler import handle_celery_errors
-
-from config import settings
+from core.safe_http_errors import raise_internal_server_error
 from models.jobs import (
-    TestTaskRequest,
+    CheckProcessGroupRequest,
+    CheckQueuesRequest,
     ProgressTaskRequest,
     TaskResponse,
     TaskStatusResponse,
-    CheckQueuesRequest,
-    CheckProcessGroupRequest,
+    TestTaskRequest,
 )
 from models.settings import CelerySettingsRequest
 from services.celery.queue_metrics_service import CeleryQueueMetricsService
@@ -135,11 +135,7 @@ def purge_queue(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error purging queue %s: %s", queue_name, e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to purge queue: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to purge queue", exc=e, operation="purge_queue")
 
 
 @router.delete("/queues/purge-all")
@@ -162,11 +158,7 @@ def purge_all_queues(
             "message": f"Purged {result['total_purged']} pending task(s) from {len(result['queues'])} queue(s)",
         }
     except Exception as e:
-        logger.error("Error purging all queues: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to purge all queues: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to purge all queues", exc=e, operation="purge_all_queues")
 
 
 @router.get("/schedules")
@@ -480,7 +472,7 @@ def get_cleanup_stats(
     from services.settings.settings_service import SettingsService
 
     settings_manager = SettingsService()
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
 
     celery_settings = settings_manager.get_celery_settings()
     cleanup_age_hours = celery_settings.get("cleanup_age_hours", 24)

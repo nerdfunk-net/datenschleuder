@@ -23,8 +23,8 @@ Usage in a router::
 from __future__ import annotations
 
 from fastapi import Request
-import service_factory
 
+import service_factory
 
 # ---------------------------------------------------------------------------
 # App-scoped providers (read from app.state — set during lifespan in main.py)

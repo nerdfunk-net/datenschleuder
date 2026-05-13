@@ -1,7 +1,7 @@
 """NiFi connection testing operations - pure nipyapi logic."""
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 from nipyapi import config
 from nipyapi.nifi import FlowApi

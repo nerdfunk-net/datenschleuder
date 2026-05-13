@@ -2,7 +2,8 @@
 
 import logging
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
+
 import yaml
 
 from models.cert_manager import CertificateConfig
@@ -29,7 +30,7 @@ class CertificateManager:
             return []
 
         try:
-            with open(self.config_file, "r") as f:
+            with open(self.config_file) as f:
                 data = yaml.safe_load(f)
 
             if not data or "certificates" not in data:

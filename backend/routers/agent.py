@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from core.auth import require_permission, verify_token
 from core.database import get_db
+from core.safe_http_errors import raise_internal_server_error
 from models.agent import (
     AgentContainersResponse,
     AgentListResponse,
@@ -45,8 +46,7 @@ def list_agents(db: Session = Depends(get_db)):
         service = AgentService(db)
         return {"agents": service.list_agents()}
     except Exception as exc:
-        logger.error("Failed to list agents: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise_internal_server_error(log_message="Failed to list agents", exc=exc, operation="list_agents")
 
 
 @router.get(
@@ -65,8 +65,7 @@ def get_agent_status(agent_id: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Failed to get agent status: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise_internal_server_error(log_message="Failed to get agent status", exc=exc, operation="get_agent_status")
 
 
 @router.get(
@@ -89,8 +88,7 @@ def get_agent_repositories(agent_id: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Failed to get agent repositories: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise_internal_server_error(log_message="Failed to get agent repositories", exc=exc, operation="get_agent_repositories")
 
 
 @router.get(
@@ -113,8 +111,7 @@ def get_agent_containers(agent_id: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Failed to get agent containers: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise_internal_server_error(log_message="Failed to get agent containers", exc=exc, operation="get_agent_containers")
 
 
 @router.post(
@@ -138,13 +135,17 @@ def send_command(
         )
         if result["status"] in ("error", "timeout"):
             status_code = 504 if result["status"] == "timeout" else 500
-            raise HTTPException(status_code=status_code, detail=result.get("error"))
+            logger.error("Agent command failed with status %s: %s", result["status"], result.get("error"))
+            raise_internal_server_error(
+                log_message="Agent command failed",
+                status_code=status_code,
+                operation="send_command",
+            )
         return CommandResponse(**result)
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Failed to send command: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise_internal_server_error(log_message="Failed to send command", exc=exc, operation="send_command")
 
 
 @router.post(
@@ -163,13 +164,17 @@ def git_pull(
         result = service.send_git_pull(agent_id, sent_by=user.get("sub", "system"))
         if result["status"] in ("error", "timeout"):
             status_code = 504 if result["status"] == "timeout" else 500
-            raise HTTPException(status_code=status_code, detail=result.get("error"))
+            logger.error("Agent git pull failed with status %s: %s", result["status"], result.get("error"))
+            raise_internal_server_error(
+                log_message="Agent git pull failed",
+                status_code=status_code,
+                operation="git_pull",
+            )
         return result
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Git pull failed: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise_internal_server_error(log_message="Failed to send git pull command", exc=exc, operation="git_pull")
 
 
 @router.post(
@@ -190,13 +195,17 @@ def docker_restart(
         )
         if result["status"] in ("error", "timeout"):
             status_code = 504 if result["status"] == "timeout" else 500
-            raise HTTPException(status_code=status_code, detail=result.get("error"))
+            logger.error("Agent docker restart failed with status %s: %s", result["status"], result.get("error"))
+            raise_internal_server_error(
+                log_message="Agent docker restart failed",
+                status_code=status_code,
+                operation="docker_restart",
+            )
         return result
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Docker restart failed: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise_internal_server_error(log_message="Failed to send docker restart command", exc=exc, operation="docker_restart")
 
 
 @router.post(
@@ -248,14 +257,18 @@ def deploy_nifi(
 
         if result["status"] in ("error", "timeout"):
             status_code = 504 if result["status"] == "timeout" else 500
-            raise HTTPException(status_code=status_code, detail=result.get("error"))
+            logger.error("Agent NiFi deploy failed with status %s: %s", result["status"], result.get("error"))
+            raise_internal_server_error(
+                log_message="Agent NiFi deployment failed",
+                status_code=status_code,
+                operation="deploy_nifi",
+            )
 
         return CommandResponse(**result)
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("NiFi deploy failed: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise_internal_server_error(log_message="Failed to send NiFi deploy command", exc=exc, operation="deploy_nifi")
 
 
 @router.get(
@@ -278,8 +291,7 @@ def get_command_history(
             "total": total,
         }
     except Exception as exc:
-        logger.error("Failed to get command history: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise_internal_server_error(log_message="Failed to get command history", exc=exc, operation="get_command_history")
 
 
 @router.get(
@@ -298,5 +310,4 @@ def get_all_command_history(limit: int = 100, db: Session = Depends(get_db)):
             "total": total,
         }
     except Exception as exc:
-        logger.error("Failed to get all command history: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise_internal_server_error(log_message="Failed to get all command history", exc=exc, operation="get_all_command_history")

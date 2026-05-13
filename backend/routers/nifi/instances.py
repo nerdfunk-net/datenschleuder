@@ -2,17 +2,18 @@
 
 import logging
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
+from dependencies import get_oidc_config_service
 from models.nifi import (
     NifiInstanceCreate,
-    NifiInstanceUpdate,
     NifiInstanceResponse,
     NifiInstanceTestConnection,
+    NifiInstanceUpdate,
 )
 from services.nifi import instance_service
-from dependencies import get_oidc_config_service
 
 logger = logging.getLogger(__name__)
 
@@ -98,9 +99,10 @@ def create_nifi_instance(
             git_config_repo_id=data.git_config_repo_id,
         )
     except ValueError as e:
+        logger.warning("create_nifi_instance validation error: %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            detail="Invalid NiFi instance configuration",
         )
 
 
@@ -190,10 +192,10 @@ def test_instance_connection(
             "message": "Successfully connected to NiFi",
             "details": result,
         }
-    except ValueError as e:
+    except ValueError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
+            detail="NiFi instance not found",
         )
     except Exception as e:
         logger.error(

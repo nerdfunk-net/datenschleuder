@@ -4,19 +4,22 @@ Handles encrypted credential CRUD using Fernet encryption.
 """
 
 from __future__ import annotations
+
 import base64
 import os
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
+
 from cryptography.fernet import Fernet, InvalidToken
+
 from config import settings as config_settings
-from repositories import CredentialsRepository
 from core.models import Credential
+from repositories import CredentialsRepository
 
 
 def _build_key(secret: str) -> bytes:
-    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),

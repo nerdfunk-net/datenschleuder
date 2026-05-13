@@ -8,23 +8,24 @@ monolithic agent_service.py. Internal consumers can import sub-modules directly:
 """
 
 import logging
+
 from sqlalchemy.orm import Session
 
 from repositories.agent_repository import AgentRepository
-from services.agent.parsers import AgentCommandParser
-from services.agent.registry import AgentRegistry
 from services.agent.commands import AgentCommands
 from services.agent.history import AgentHistory
-from services.agent.redis_manager import MultiRedisManager
 
 # Re-export parsing functions for callers that import them directly
 from services.agent.parsers import (  # noqa: F401
-    parse_git_status,
-    parse_list_repositories,
-    parse_list_containers,
+    AgentCommandParser,
     parse_docker_ps,
     parse_docker_stats,
+    parse_git_status,
+    parse_list_containers,
+    parse_list_repositories,
 )
+from services.agent.redis_manager import MultiRedisManager
+from services.agent.registry import AgentRegistry
 
 logger = logging.getLogger(__name__)
 

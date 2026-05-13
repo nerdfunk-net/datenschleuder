@@ -11,14 +11,19 @@ from fastapi import HTTPException, status
 
 from models.auth import OIDCConfig
 from services.auth.oidc.discovery import build_ssl_context, fetch_oidc_config
-from services.auth.oidc.jwks import fetch_jwks, verify_id_token as _verify_id_token
+from services.auth.oidc.jwks import fetch_jwks
+from services.auth.oidc.jwks import verify_id_token as _verify_id_token
 from services.auth.oidc.token import (
     build_authorization_url,
-    exchange_code_for_tokens as _exchange_code,
     generate_state,
+)
+from services.auth.oidc.token import (
+    exchange_code_for_tokens as _exchange_code,
 )
 from services.auth.oidc.user_provisioning import (
     extract_user_data as _extract_user_data,
+)
+from services.auth.oidc.user_provisioning import (
     provision_or_get_user as _provision_or_get_user,
 )
 

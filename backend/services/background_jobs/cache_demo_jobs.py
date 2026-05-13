@@ -3,9 +3,10 @@ Simple cache demo Celery task.
 Placeholder for demonstrating where caching functionality would go.
 """
 
-import time
 import logging
-from typing import Dict, Any
+import time
+from typing import Any, Dict
+
 from celery import shared_task
 
 logger = logging.getLogger(__name__)

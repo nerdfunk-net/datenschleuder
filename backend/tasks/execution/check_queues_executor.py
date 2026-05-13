@@ -4,7 +4,7 @@ Evaluates queue depths across NiFi connections against configurable thresholds.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +40,9 @@ def execute_check_queues(
         dict with keys ``success``, ``instances``, ``overall_status``,
         ``summary``, and ``thresholds``.
     """
+    from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
     from services.nifi.nifi_context import nifi_connection_scope
     from services.nifi.operations import management as mgmt_ops
-    from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
 
     params = job_parameters or {}
     tmpl = template or {}

@@ -5,15 +5,17 @@ All templates are stored in PostgreSQL database.
 """
 
 from __future__ import annotations
-import logging
-import json
+
 import hashlib
+import json
+import logging
 from typing import Any, Dict, List, Optional
+
+from core.models import Template, TemplateVersion
 from repositories.settings.template_repository import (
     TemplateRepository,
     TemplateVersionRepository,
 )
-from core.models import Template, TemplateVersion
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +219,7 @@ class TemplateService:
         self, template_name: str, category: str, data: Dict[str, Any]
     ) -> str:
         try:
-            from jinja2 import Environment, BaseLoader
+            from jinja2 import BaseLoader, Environment
 
             template = self.get_template_by_name(template_name)
             if not template:

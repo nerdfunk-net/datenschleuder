@@ -61,7 +61,7 @@ class GitFileSearchService:
     def _enumerate_files(self, repo_path: str) -> list:
         """Walk the repository directory and collect file metadata."""
         structured_files = []
-        for root, dirs, files in os.walk(repo_path):
+        for root, _, files in os.walk(repo_path):
             if ".git" in root:
                 continue
             rel_root = os.path.relpath(root, repo_path)

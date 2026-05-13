@@ -6,67 +6,95 @@ for better code organization and maintainability.
 """
 
 from __future__ import annotations
+
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
+
 from fastapi import FastAPI
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.staticfiles import StaticFiles
-from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+
+# Health router
+from health import router as health_router
 from limiter import limiter
-import asyncio
+
+# Agent router
+from routers.agent import router as agent_router
 
 # Import routers
 # Auth routers
 from routers.auth import auth_router, oidc_router, profile_router
-
-# Settings routers
-from routers.settings import (
-    git_router,
-    common_router as settings_router,
-    cache_router,
-    credentials_router,
-    templates_router,
-    rbac_router,
-    redis_router,
+from routers.cert_manager import router as cert_manager_router
+from routers.certificates import router as certificates_router
+from routers.jobs import (
+    celery_router,
+)
+from routers.jobs import (
+    runs_router as job_runs_router,
+)
+from routers.jobs import (
+    schedules_router as job_schedules_router,
 )
 
 # Job routers
 from routers.jobs import (
     templates_router as job_templates_router,
-    schedules_router as job_schedules_router,
-    runs_router as job_runs_router,
-    celery_router,
+)
+from routers.nifi import (
+    certificates_router as nifi_certificates_router,
+)
+from routers.nifi import (
+    deploy_router as nifi_deploy_router,
+)
+from routers.nifi import (
+    flow_import_router as nifi_flow_import_router,
+)
+from routers.nifi import (
+    flow_views_router as nifi_flow_views_router,
+)
+from routers.nifi import (
+    hierarchy_router as nifi_hierarchy_router,
+)
+from routers.nifi import (
+    install_router as nifi_install_router,
 )
 
 # NiFi routers
 from routers.nifi import (
     instances_router as nifi_instances_router,
-    operations_router as nifi_operations_router,
-    deploy_router as nifi_deploy_router,
-    nifi_flows_router,
-    flow_views_router as nifi_flow_views_router,
-    registry_flows_router as nifi_registry_flows_router,
-    hierarchy_router as nifi_hierarchy_router,
-    certificates_router as nifi_certificates_router,
-    install_router as nifi_install_router,
-    nifi_config_router,
-    flow_import_router as nifi_flow_import_router,
 )
+from routers.nifi import (
+    nifi_config_router,
+    nifi_flows_router,
+)
+from routers.nifi import (
+    operations_router as nifi_operations_router,
+)
+from routers.nifi import (
+    registry_flows_router as nifi_registry_flows_router,
+)
+from routers.pki import router as pki_router
 
-# Agent router
-from routers.agent import router as agent_router
-
-# Health router
-from health import router as health_router
+# Settings routers
+from routers.settings import (
+    cache_router,
+    credentials_router,
+    git_router,
+    rbac_router,
+    redis_router,
+    templates_router,
+)
+from routers.settings import (
+    common_router as settings_router,
+)
 
 # Tools router
 from routers.tools import router as tools_router
-from routers.certificates import router as certificates_router
-from routers.cert_manager import router as cert_manager_router
-from routers.pki import router as pki_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -212,10 +240,10 @@ async def lifespan(app: FastAPI):
     try:
         logger.debug("Startup cache: hook invoked")
         # Local imports to avoid circular dependencies at import time
+        from services.settings.git.shared_utils import get_git_repo_by_id
         from services.settings.settings_service import (
             settings_service as settings_manager,
         )
-        from services.settings.git.shared_utils import get_git_repo_by_id
 
         cache_service = app.state.cache_service
         cache_cfg = settings_manager.get_cache_settings()
@@ -469,6 +497,7 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+
     from config import settings
 
     uvicorn.run("main:app", host="0.0.0.0", port=settings.port, reload=True)

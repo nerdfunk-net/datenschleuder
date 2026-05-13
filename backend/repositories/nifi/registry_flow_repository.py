@@ -1,6 +1,7 @@
 """Repository for registry flow data access."""
 
-from typing import Optional, List
+from typing import List, Optional
+
 from core.database import get_db_session
 from core.models import RegistryFlow
 from repositories.base import BaseRepository

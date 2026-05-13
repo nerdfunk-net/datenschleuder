@@ -2,10 +2,11 @@
 
 import logging
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
-from models.nifi import FlowViewCreate, FlowViewUpdate, FlowViewResponse
+from models.nifi import FlowViewCreate, FlowViewResponse, FlowViewUpdate
 from services.nifi import flow_view_service
 
 logger = logging.getLogger(__name__)
@@ -53,7 +54,8 @@ def create_flow_view(
         )
         return {"message": "Flow view created successfully", "id": view.id}
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("create_flow_view validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid flow view")
 
 
 @router.put("/{view_id}")
@@ -73,7 +75,8 @@ def update_flow_view(
             )
         return {"message": "Flow view updated successfully", "id": view.id}
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("update_flow_view validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid flow view")
 
 
 @router.delete("/{view_id}")

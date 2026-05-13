@@ -6,7 +6,8 @@ via OIDC providers defined in config/oidc_providers.yaml.
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
+
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class NifiOidcConfigManager:
             return
 
         try:
-            with open(self.config_path, "r", encoding="utf-8") as f:
+            with open(self.config_path, encoding="utf-8") as f:
                 self._config = yaml.safe_load(f) or {}
 
             if "providers" not in self._config:

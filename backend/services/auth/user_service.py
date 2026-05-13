@@ -4,10 +4,12 @@ Provides core user CRUD operations and authentication.
 """
 
 from __future__ import annotations
+
 from typing import Any, Dict, List, Optional, Tuple
+
 from core.auth import get_password_hash, verify_password
-from repositories.auth.user_repository import UserRepository
 from core.models import User
+from repositories.auth.user_repository import UserRepository
 
 # Permission bit flags (legacy bitmask system)
 PERMISSION_READ = 1

@@ -7,7 +7,6 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-
 CertType = Literal["server", "client", "user", "server+client"]
 RevocationReason = Literal[
     "unspecified",

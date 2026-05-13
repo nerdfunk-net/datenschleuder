@@ -4,7 +4,7 @@ Moved from job_tasks.py to improve code organization.
 """
 
 import logging
-from typing import Optional, List
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 

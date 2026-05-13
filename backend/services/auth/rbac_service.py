@@ -13,11 +13,13 @@ Permission Resolution:
 """
 
 from __future__ import annotations
+
 import logging
 from typing import Any, Dict, List, Optional, Tuple
+
+from core.models import Permission, Role
 from repositories.auth.rbac_repository import RBACRepository
 from repositories.auth.user_repository import UserRepository
-from core.models import Role, Permission
 
 logger = logging.getLogger(__name__)
 

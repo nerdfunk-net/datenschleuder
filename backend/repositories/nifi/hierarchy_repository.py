@@ -1,6 +1,7 @@
 """Repository for hierarchy value data access."""
 
 from typing import List
+
 from core.database import get_db_session
 from core.models import HierarchyValue
 from repositories.base import BaseRepository

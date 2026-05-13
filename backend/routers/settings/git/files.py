@@ -3,13 +3,15 @@ Git file operations router - File-specific operations like listing, search, and 
 """
 
 from __future__ import annotations
+
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import PlainTextResponse
-from git import InvalidGitRepositoryError, GitCommandError
+from git import GitCommandError, InvalidGitRepositoryError
 
 from core.auth import require_permission
+from core.safe_http_errors import raise_internal_server_error
 from dependencies import get_cache_service, get_git_repo_manager, get_git_service
 from models.files import WriteFileRequest
 from services.settings.git.directory_service import GitDirectoryService
@@ -55,10 +57,7 @@ def get_files(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get files: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to get files at commit", exc=e, operation="get_files_at_commit")
 
 
 @router.get("/files/{file_path:path}/history")
@@ -73,10 +72,7 @@ def get_file_history(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get file history: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to get file history", exc=e, operation="get_file_history")
 
 
 @router.get("/files/{file_path:path}/complete-history")
@@ -93,18 +89,15 @@ def get_file_complete_history(
         return service.get_complete_history(
             repo_id, file_path, from_commit, cache_service
         )
-    except (InvalidGitRepositoryError, GitCommandError) as e:
+    except (InvalidGitRepositoryError, GitCommandError):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Git repository not found or commit not found: {str(e)}",
+            detail="Git repository not found or commit not found",
         )
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Git file complete history error: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Git file complete history error", exc=e, operation="get_file_complete_history")
 
 
 @router.get("/file-content")
@@ -129,11 +122,7 @@ def get_file_content(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error reading file content: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error reading file content: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Error reading file content", exc=e, operation="get_file_content")
 
 
 @router.put("/file-content")
@@ -165,11 +154,7 @@ def write_file_content(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error writing file content: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error writing file content: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Error writing file content", exc=e, operation="write_file_content")
 
 
 @router.get("/file-content-parsed")
@@ -194,11 +179,7 @@ def get_file_content_parsed(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error parsing YAML file content: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error parsing file content: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Error parsing file content", exc=e, operation="get_file_content_parsed")
 
 
 @router.get("/tree")
@@ -215,11 +196,7 @@ def get_directory_tree(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error building directory tree: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error building directory tree: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Error building directory tree", exc=e, operation="get_directory_tree")
 
 
 @router.get("/directory")
@@ -236,8 +213,4 @@ def get_directory_files(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error listing directory files: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error listing directory files: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Error listing directory files", exc=e, operation="get_directory_files")

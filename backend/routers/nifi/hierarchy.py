@@ -1,6 +1,7 @@
 """NiFi hierarchy configuration endpoints."""
 
 import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
@@ -45,7 +46,8 @@ def save_hierarchy_config(
             "deleted_flows_count": deleted_flows_count,
         }
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("save_hierarchy_config validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid hierarchy configuration")
 
 
 @router.get("/values/{attribute_name}")

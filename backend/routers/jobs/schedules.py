@@ -3,26 +3,34 @@ Job Schedule Management Router
 API endpoints for managing scheduled jobs via Celery Beat.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
 from typing import List, Optional
-from core.auth import verify_token, require_permission
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from core.auth import require_permission, verify_token
+from core.safe_http_errors import raise_internal_server_error
 from models.jobs import (
-    JobScheduleCreate,
-    JobScheduleUpdate,
-    JobScheduleResponse,
     JobExecutionRequest,
+    JobScheduleCreate,
+    JobScheduleResponse,
+    JobScheduleUpdate,
 )
 from services.jobs.execution_service import JobExecutionService
-from services.jobs.job_schedule_service import JobScheduleService as _JobScheduleService
+from services.jobs.job_schedule_service import JobScheduleService
 from services.jobs.schedule_authorization_service import JobScheduleAuthorizationService
 from services.jobs.scheduler_debug_service import JobSchedulerDebugService
-import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/job-schedules", tags=["job-schedules"])
 
-jobs_manager = _JobScheduleService()
-_auth_service = JobScheduleAuthorizationService()
+
+def get_job_schedule_service() -> JobScheduleService:
+    return JobScheduleService()
+
+
+def get_schedule_auth_service() -> JobScheduleAuthorizationService:
+    return JobScheduleAuthorizationService()
 
 
 @router.post(
@@ -31,10 +39,12 @@ _auth_service = JobScheduleAuthorizationService()
 def create_job_schedule(
     job_data: JobScheduleCreate,
     current_user: dict = Depends(verify_token),
+    jobs_manager: JobScheduleService = Depends(get_job_schedule_service),
+    auth_service: JobScheduleAuthorizationService = Depends(get_schedule_auth_service),
 ):
     """Create a new job schedule."""
     try:
-        _auth_service.check_create_permission(current_user, job_data.is_global)
+        auth_service.check_create_permission(current_user, job_data.is_global)
 
         if not job_data.is_global:
             job_data.user_id = current_user["user_id"]
@@ -58,11 +68,7 @@ def create_job_schedule(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error creating job schedule: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create job schedule: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to create job schedule", exc=e, operation="create_job_schedule")
 
 
 @router.get("", response_model=List[JobScheduleResponse])
@@ -70,6 +76,7 @@ def list_job_schedules(
     is_global: Optional[bool] = None,
     is_active: Optional[bool] = None,
     current_user: dict = Depends(verify_token),
+    jobs_manager: JobScheduleService = Depends(get_job_schedule_service),
 ):
     """List all job schedules accessible to the current user."""
     try:
@@ -80,17 +87,15 @@ def list_job_schedules(
             jobs = [j for j in jobs if j.get("is_active") == is_active]
         return [JobScheduleResponse(**job) for job in jobs]
     except Exception as e:
-        logger.error("Error listing job schedules: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list job schedules: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to list job schedules", exc=e, operation="list_job_schedules")
 
 
 @router.get("/{job_id}", response_model=JobScheduleResponse)
 def get_job_schedule(
     job_id: int,
     current_user: dict = Depends(verify_token),
+    jobs_manager: JobScheduleService = Depends(get_job_schedule_service),
+    auth_service: JobScheduleAuthorizationService = Depends(get_schedule_auth_service),
 ):
     """Get a specific job schedule by ID."""
     try:
@@ -99,16 +104,12 @@ def get_job_schedule(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found"
             )
-        _auth_service.check_access_permission(current_user, job)
+        auth_service.check_access_permission(current_user, job)
         return JobScheduleResponse(**job)
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error getting job schedule: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get job schedule: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to get job schedule", exc=e, operation="get_job_schedule")
 
 
 @router.put("/{job_id}", response_model=JobScheduleResponse)
@@ -116,6 +117,8 @@ def update_job_schedule(
     job_id: int,
     job_update: JobScheduleUpdate,
     current_user: dict = Depends(verify_token),
+    jobs_manager: JobScheduleService = Depends(get_job_schedule_service),
+    auth_service: JobScheduleAuthorizationService = Depends(get_schedule_auth_service),
 ):
     """Update a job schedule."""
     try:
@@ -125,7 +128,7 @@ def update_job_schedule(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found"
             )
 
-        _auth_service.check_update_permission(current_user, job)
+        auth_service.check_update_permission(current_user, job)
 
         updated_job = jobs_manager.update_job_schedule(
             job_id=job_id,
@@ -144,17 +147,15 @@ def update_job_schedule(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error updating job schedule: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update job schedule: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to update job schedule", exc=e, operation="update_job_schedule")
 
 
 @router.delete("/{job_id}")
 def delete_job_schedule(
     job_id: int,
     current_user: dict = Depends(verify_token),
+    jobs_manager: JobScheduleService = Depends(get_job_schedule_service),
+    auth_service: JobScheduleAuthorizationService = Depends(get_schedule_auth_service),
 ):
     """Delete a job schedule."""
     try:
@@ -164,29 +165,24 @@ def delete_job_schedule(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found"
             )
 
-        _auth_service.check_delete_permission(current_user, job)
+        auth_service.check_delete_permission(current_user, job)
 
         if not jobs_manager.delete_job_schedule(job_id):
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to delete job schedule",
-            )
+            raise_internal_server_error(log_message="Failed to delete job schedule", operation="delete_job_schedule")
         return {"message": "Job schedule deleted successfully"}
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error deleting job schedule: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete job schedule: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to delete job schedule", exc=e, operation="delete_job_schedule")
 
 
 @router.post("/execute")
 def execute_job(
     execution_request: JobExecutionRequest,
     current_user: dict = Depends(verify_token),
+    jobs_manager: JobScheduleService = Depends(get_job_schedule_service),
+    auth_service: JobScheduleAuthorizationService = Depends(get_schedule_auth_service),
 ):
     """Execute a job immediately."""
     try:
@@ -196,7 +192,7 @@ def execute_job(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Job schedule not found"
             )
 
-        _auth_service.check_access_permission(current_user, job)
+        auth_service.check_access_permission(current_user, job)
 
         result = JobExecutionService().execute_schedule(
             schedule_id=execution_request.job_schedule_id,
@@ -221,29 +217,25 @@ def execute_job(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error executing job: %s", e, exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to execute job: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to execute job", exc=e, operation="execute_job")
 
 
 @router.get("/debug/scheduler-status")
-def get_scheduler_debug_status(current_user: dict = Depends(verify_token)):
+def get_scheduler_debug_status(
+    current_user: dict = Depends(verify_token),
+    jobs_manager: JobScheduleService = Depends(get_job_schedule_service),
+):
     """Get detailed scheduler debug information."""
     try:
         return JobSchedulerDebugService().get_scheduler_status(jobs_manager)
     except Exception as e:
-        logger.error("Error getting scheduler debug status: %s", e, exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get scheduler status: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to get scheduler status", exc=e, operation="get_scheduler_status")
 
 
 @router.post("/debug/recalculate-next-runs")
 def recalculate_all_next_runs(
     current_user: dict = Depends(require_permission("jobs", "write")),
+    jobs_manager: JobScheduleService = Depends(get_job_schedule_service),
 ):
     """Recalculate next_run for all active schedules."""
     try:
@@ -254,8 +246,4 @@ def recalculate_all_next_runs(
             "details": result,
         }
     except Exception as e:
-        logger.error("Error recalculating next runs: %s", e, exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to recalculate next runs: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to recalculate next runs", exc=e, operation="recalculate_next_runs")

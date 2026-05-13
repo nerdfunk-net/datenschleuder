@@ -8,8 +8,8 @@ Supports three authentication methods (in priority order):
 
 from __future__ import annotations
 
-import ssl
 import logging
+import ssl
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
@@ -17,8 +17,8 @@ import nipyapi
 from nipyapi import config, security
 
 if TYPE_CHECKING:
-    from services.nifi.encryption import EncryptionService
     from services.nifi.certificate_manager import CertificateManager
+    from services.nifi.encryption import EncryptionService
     from services.nifi.oidc_config import NifiOidcConfigManager
 
 logger = logging.getLogger(__name__)
@@ -29,9 +29,9 @@ class NifiConnectionService:
 
     def __init__(
         self,
-        encryption_service: "EncryptionService | None" = None,
-        certificate_manager: "CertificateManager | None" = None,
-        oidc_config: "NifiOidcConfigManager | None" = None,
+        encryption_service: EncryptionService | None = None,
+        certificate_manager: CertificateManager | None = None,
+        oidc_config: NifiOidcConfigManager | None = None,
     ) -> None:
         if encryption_service is None:
             from services.nifi.encryption import EncryptionService

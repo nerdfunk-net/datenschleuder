@@ -1,18 +1,19 @@
 """Job models: Job, JobSchedule, JobTemplate, JobRun."""
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Column,
-    Integer,
-    String,
-    Text,
-    Boolean,
     DateTime,
     ForeignKey,
     Index,
+    Integer,
+    String,
+    Text,
 )
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql import func
+
 from core.database import Base
 
 

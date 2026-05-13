@@ -9,28 +9,37 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import verify_token
+from core.safe_http_errors import raise_internal_server_error
 from models.jobs import (
     JobTemplateCreate,
     JobTemplateListResponse,
     JobTemplateResponse,
     JobTemplateUpdate,
 )
-from services.auth.rbac_service import RBACService as _RBACService
-from services.jobs.job_template_service import JobTemplateService as _JobTemplateService
-
-rbac_manager = _RBACService()
-job_template_manager = _JobTemplateService()
+from services.auth.rbac_service import RBACService
+from services.jobs.job_template_service import JobTemplateService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/job-templates", tags=["job-templates"])
 
 
+def get_job_template_service() -> JobTemplateService:
+    return JobTemplateService()
+
+
+def get_rbac_service() -> RBACService:
+    return RBACService()
+
+
 @router.post(
     "", response_model=JobTemplateResponse, status_code=status.HTTP_201_CREATED
 )
 def create_job_template(
-    template_data: JobTemplateCreate, current_user: dict = Depends(verify_token)
+    template_data: JobTemplateCreate,
+    current_user: dict = Depends(verify_token),
+    job_template_manager: JobTemplateService = Depends(get_job_template_service),
+    rbac_manager: RBACService = Depends(get_rbac_service),
 ):
     """
     Create a new job template
@@ -83,18 +92,17 @@ def create_job_template(
         return JobTemplateResponse(**template)
 
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("create_job_template validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid job template")
     except Exception as e:
-        logger.error("Error creating job template: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create job template: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to create job template", exc=e, operation="create_job_template")
 
 
 @router.get("", response_model=JobTemplateListResponse)
 def list_job_templates(
-    job_type: Optional[str] = None, current_user: dict = Depends(verify_token)
+    job_type: Optional[str] = None,
+    current_user: dict = Depends(verify_token),
+    job_template_manager: JobTemplateService = Depends(get_job_template_service),
 ):
     """
     List all job templates accessible to the current user
@@ -114,21 +122,24 @@ def list_job_templates(
         )
 
     except Exception as e:
-        logger.error("Error listing job templates: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list job templates: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to list job templates", exc=e, operation="list_job_templates")
 
 
 @router.get("/types")
-def get_job_types(current_user: dict = Depends(verify_token)):
+def get_job_types(
+    current_user: dict = Depends(verify_token),
+    job_template_manager: JobTemplateService = Depends(get_job_template_service),
+):
     """Get available job types"""
     return job_template_manager.get_job_types()
 
 
 @router.get("/{template_id}", response_model=JobTemplateResponse)
-def get_job_template(template_id: int, current_user: dict = Depends(verify_token)):
+def get_job_template(
+    template_id: int,
+    current_user: dict = Depends(verify_token),
+    job_template_manager: JobTemplateService = Depends(get_job_template_service),
+):
     """Get a specific job template by ID"""
     try:
         template = job_template_manager.get_job_template(template_id)
@@ -153,11 +164,7 @@ def get_job_template(template_id: int, current_user: dict = Depends(verify_token
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error getting job template: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get job template: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to get job template", exc=e, operation="get_job_template")
 
 
 @router.put("/{template_id}", response_model=JobTemplateResponse)
@@ -165,6 +172,8 @@ def update_job_template(
     template_id: int,
     update_data: JobTemplateUpdate,
     current_user: dict = Depends(verify_token),
+    job_template_manager: JobTemplateService = Depends(get_job_template_service),
+    rbac_manager: RBACService = Depends(get_rbac_service),
 ):
     """Update a job template"""
     try:
@@ -222,19 +231,21 @@ def update_job_template(
         return JobTemplateResponse(**updated_template)
 
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("update_job_template validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid job template")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error updating job template: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update job template: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to update job template", exc=e, operation="update_job_template")
 
 
 @router.delete("/{template_id}")
-def delete_job_template(template_id: int, current_user: dict = Depends(verify_token)):
+def delete_job_template(
+    template_id: int,
+    current_user: dict = Depends(verify_token),
+    job_template_manager: JobTemplateService = Depends(get_job_template_service),
+    rbac_manager: RBACService = Depends(get_rbac_service),
+):
     """Delete a job template"""
     try:
         template = job_template_manager.get_job_template(template_id)
@@ -269,8 +280,4 @@ def delete_job_template(template_id: int, current_user: dict = Depends(verify_to
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error deleting job template: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete job template: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to delete job template", exc=e, operation="delete_job_template")

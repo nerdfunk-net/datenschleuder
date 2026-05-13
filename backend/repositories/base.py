@@ -4,7 +4,8 @@ Base repository with common CRUD operations.
 This provides a generic base class that other repositories can extend.
 """
 
-from typing import Generic, TypeVar, Type, List, Optional
+from typing import Generic, List, Optional, Type, TypeVar
+
 from core.database import get_db_session
 
 T = TypeVar("T")

@@ -8,13 +8,15 @@ Environment Variables:
         config/oidc/ to the system CA store on startup (for Docker environments).
 """
 
+import logging
+import os
 import shutil
 import subprocess
-import uvicorn
-import os
 from pathlib import Path
+
+import uvicorn
+
 from config import settings
-import logging
 
 
 def install_certificates():

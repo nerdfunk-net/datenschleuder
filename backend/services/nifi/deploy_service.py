@@ -2,15 +2,16 @@
 
 import json
 import logging
+
 import urllib3
 
 from repositories.nifi.nifi_instance_repository import NifiInstanceRepository
 from repositories.nifi.registry_flow_repository import RegistryFlowRepository
-from services.nifi.nifi_context import nifi_connection_scope
 from services.nifi.deployment import (
     NiFiDeploymentService,
     find_or_create_process_group_by_path,
 )
+from services.nifi.nifi_context import nifi_connection_scope
 
 # Suppress InsecureRequestWarning for HTTPS requests
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

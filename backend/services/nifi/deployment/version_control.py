@@ -3,7 +3,7 @@
 import logging
 from typing import Optional
 
-from nipyapi import versioning, canvas
+from nipyapi import canvas, versioning
 
 logger = logging.getLogger(__name__)
 
@@ -57,12 +57,12 @@ def disable_process_group(pg_id: str) -> None:
     """Disable all components in a process group."""
     try:
         from nipyapi.nifi import (
-            ProcessorsApi,
-            ProcessorRunStatusEntity,
-            RevisionDTO,
             InputPortsApi,
             OutputPortsApi,
             PortRunStatusEntity,
+            ProcessorRunStatusEntity,
+            ProcessorsApi,
+            RevisionDTO,
         )
 
         processors = canvas.list_all_processors(pg_id)

@@ -4,10 +4,12 @@ Extends the user system with profile information (API keys, realname, email).
 """
 
 from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Dict, Optional
-from repositories import ProfileRepository
+
 from core.models import UserProfile
+from repositories import ProfileRepository
 
 
 def _profile_to_dict(profile: UserProfile) -> Dict[str, Any]:

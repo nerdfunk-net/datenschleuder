@@ -1,6 +1,7 @@
 """Repository for NiFi cluster data access."""
 
-from typing import Optional, List
+from typing import List, Optional
+
 from core.database import get_db_session
 from core.models import NifiCluster, NifiClusterInstance
 from repositories.base import BaseRepository

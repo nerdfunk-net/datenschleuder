@@ -6,7 +6,8 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from core.auth import require_permission
-from models.nifi import PathStatus, CheckPathResponse
+from core.safe_http_errors import raise_internal_server_error
+from models.nifi import CheckPathResponse, PathStatus
 from services.nifi import install_service
 
 logger = logging.getLogger(__name__)
@@ -31,15 +32,14 @@ def check_path(
         items = install_service.check_path(cluster_id, path_type)
         return CheckPathResponse(status=[PathStatus(**item) for item in items])
     except ValueError as exc:
+        logger.warning("check_path validation error: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
+            detail="Invalid path configuration",
         )
     except Exception as exc:
-        logger.error(
-            "Error checking %s paths for cluster %d: %s", path_type, cluster_id, exc
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+        raise_internal_server_error(
+            log_message="Error checking NiFi paths",
+            exc=exc,
+            operation="check_path",
         )

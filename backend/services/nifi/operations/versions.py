@@ -3,7 +3,7 @@
 import logging
 from typing import Optional
 
-from nipyapi import versioning, canvas
+from nipyapi import canvas, versioning
 from nipyapi.nifi import ProcessGroupsApi
 
 logger = logging.getLogger(__name__)

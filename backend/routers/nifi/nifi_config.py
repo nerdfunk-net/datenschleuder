@@ -4,26 +4,27 @@ import logging
 import os
 import shutil
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import PlainTextResponse
 
-from dependencies import get_git_repo_manager, get_git_service
-from services.settings.git.paths import repo_path as git_repo_path
-
 from core.auth import require_permission
+from core.safe_http_errors import raise_internal_server_error
+from dependencies import get_git_repo_manager, get_git_service
 from models.nifi import (
-    NifiServerCreate,
-    NifiServerUpdate,
-    NifiServerResponse,
     NifiClusterCreate,
-    NifiClusterUpdate,
-    NifiClusterResponse,
     NifiClusterPrimaryResponse,
+    NifiClusterResponse,
+    NifiClusterUpdate,
+    NifiServerCreate,
+    NifiServerResponse,
+    NifiServerUpdate,
 )
+from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
 from services.nifi import nifi_config_service
 from services.nifi.nifi_context import with_nifi_instance
 from services.nifi.operations import process_groups as pg_ops
-from repositories.nifi.nifi_cluster_repository import NifiClusterRepository
+from services.settings.git.paths import repo_path as git_repo_path
 
 _cluster_repo = NifiClusterRepository()
 
@@ -166,15 +167,11 @@ async def get_cluster_process_group_paths(
             lambda: pg_ops.get_all_process_group_paths(start_pg_id),
         )
     except Exception as exc:
-        logger.error(
-            "Failed to fetch process groups for cluster %d via primary instance %d: %s",
-            cluster_id,
-            primary_instance.id,
-            exc,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Failed to connect to NiFi cluster primary instance: %s" % str(exc),
+        raise_internal_server_error(
+            log_message="Failed to connect to NiFi cluster primary instance",
+            exc=exc,
+            status_code=503,
+            operation="get_cluster_process_groups",
         )
 
     pgs = result["process_groups"]
@@ -272,10 +269,10 @@ def ensure_static_nifi_files(
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("ensure_static_nifi_files failed for repo %d: %s", repo_id, exc)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error ensuring static files: %s" % str(exc),
+        raise_internal_server_error(
+            log_message="Error ensuring static NiFi files",
+            exc=exc,
+            operation="ensure_static_nifi_files",
         )
 
 
@@ -306,5 +303,5 @@ def get_fresh_nifi_properties(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Fresh nifi.properties template not found on server",
         )
-    with open(_FRESH_PROPERTIES_PATH, "r", encoding="utf-8") as fh:
+    with open(_FRESH_PROPERTIES_PATH, encoding="utf-8") as fh:
         return fh.read()

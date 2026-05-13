@@ -3,8 +3,10 @@ Settings-related Pydantic models.
 """
 
 from __future__ import annotations
+
+from typing import Dict, List, Literal, Optional
+
 from pydantic import BaseModel
-from typing import Optional, Dict, List, Literal
 
 
 class GitSettingsRequest(BaseModel):
@@ -23,7 +25,7 @@ class AllSettingsRequest(BaseModel):
     """All settings request model."""
 
     git: GitSettingsRequest
-    cache: Optional["CacheSettingsRequest"] = None
+    cache: Optional[CacheSettingsRequest] = None
 
 
 class CacheSettingsRequest(BaseModel):

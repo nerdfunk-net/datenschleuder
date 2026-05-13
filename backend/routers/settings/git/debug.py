@@ -3,6 +3,7 @@ Git repository debug operations router - Debug and diagnostic endpoints.
 """
 
 from __future__ import annotations
+
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException

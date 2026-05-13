@@ -3,8 +3,11 @@ User profile management router.
 """
 
 from __future__ import annotations
+
 import logging
-from fastapi import APIRouter, HTTPException, status, Depends
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
 from core.auth import get_current_username
 from models.auth import PersonalCredentialData, ProfileResponse, ProfileUpdateRequest
 from services.auth.profile_service import ProfileService as _ProfileService

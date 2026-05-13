@@ -3,24 +3,26 @@ Template router for template management operations.
 """
 
 from __future__ import annotations
-import logging
-from typing import List, Dict, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+import logging
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 
 from core.auth import require_permission
+from core.safe_http_errors import raise_internal_server_error
 from models.templates import (
-    TemplateRequest,
-    TemplateResponse,
-    TemplateListResponse,
-    TemplateGitTestRequest,
-    TemplateSyncRequest,
-    TemplateSyncResponse,
-    TemplateImportRequest,
-    TemplateImportResponse,
-    TemplateUpdateRequest,
     AdvancedTemplateRenderRequest,
     AdvancedTemplateRenderResponse,
+    TemplateGitTestRequest,
+    TemplateImportRequest,
+    TemplateImportResponse,
+    TemplateListResponse,
+    TemplateRequest,
+    TemplateResponse,
+    TemplateSyncRequest,
+    TemplateSyncResponse,
+    TemplateUpdateRequest,
 )
 from services.settings.templates.authorization_service import (
     TemplateAuthorizationService,
@@ -73,11 +75,7 @@ def list_templates(
         )
 
     except Exception as e:
-        logger.error("Error listing templates: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list templates: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to list templates", exc=e, operation="list_templates")
 
 
 @router.get("/categories")
@@ -88,11 +86,7 @@ def get_template_categories(
     try:
         return _get_template_manager().get_categories()
     except Exception as e:
-        logger.error("Error getting template categories: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get categories: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to get template categories", exc=e, operation="get_template_categories")
 
 
 @router.get("/scan-import")
@@ -103,11 +97,7 @@ def scan_import_directory(
     try:
         return TemplateImportService().scan_import_directory()
     except Exception as e:
-        logger.error("Failed to scan import directory: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to scan import directory: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to scan import directory", exc=e, operation="scan_import_directory")
 
 
 @router.post("", response_model=TemplateResponse)
@@ -124,21 +114,15 @@ def create_template(
         template_id = template_manager.create_template(template_data)
         if template_id:
             return TemplateResponse(**template_manager.get_template(template_id))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create template",
-        )
+        raise_internal_server_error(log_message="Failed to create template", operation="create_template")
 
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("create_template validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid template")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error creating template: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create template: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to create template", exc=e, operation="create_template")
 
 
 @router.get("/{template_id}", response_model=TemplateResponse)
@@ -158,11 +142,7 @@ def get_template(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error getting template %s: %s", template_id, e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get template: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to get template", exc=e, operation="get_template")
 
 
 @router.get("/name/{template_name}", response_model=TemplateResponse)
@@ -182,11 +162,7 @@ def get_template_by_name(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error getting template by name '%s': %s", template_name, e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get template: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to get template by name", exc=e, operation="get_template_by_name")
 
 
 @router.put("/{template_id}", response_model=TemplateResponse)
@@ -214,21 +190,15 @@ def update_template(
         template_data = template_request.dict(exclude_unset=True)
         if template_manager.update_template(template_id, template_data):
             return TemplateResponse(**template_manager.get_template(template_id))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update template",
-        )
+        raise_internal_server_error(log_message="Failed to update template", operation="update_template")
 
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("update_template validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid template")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error updating template %s: %s", template_id, e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update template: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to update template", exc=e, operation="update_template")
 
 
 @router.delete("/{template_id}")
@@ -245,18 +215,11 @@ def delete_template(
             return {
                 "message": f"Template {template_id} {'deleted' if hard_delete else 'deactivated'} successfully"
             }
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete template",
-        )
+        raise_internal_server_error(log_message="Failed to delete template", operation="delete_template")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error deleting template %s: %s", template_id, e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete template: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to delete template", exc=e, operation="delete_template")
 
 
 @router.get("/{template_id}/content")
@@ -276,11 +239,7 @@ def get_template_content(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error getting template content for %s: %s", template_id, e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get template content: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to get template content", exc=e, operation="get_template_content")
 
 
 @router.get("/{template_id}/versions")
@@ -292,11 +251,7 @@ def get_template_versions(
     try:
         return _get_template_manager().get_template_versions(template_id)
     except Exception as e:
-        logger.error("Error getting template versions for %s: %s", template_id, e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get template versions: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to get template versions", exc=e, operation="get_template_versions")
 
 
 @router.post("/upload")
@@ -332,21 +287,15 @@ async def upload_template_file(
         template_id = template_manager.create_template(template_data)
         if template_id:
             return TemplateResponse(**template_manager.get_template(template_id))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create template from uploaded file",
-        )
+        raise_internal_server_error(log_message="Failed to create template from uploaded file", operation="upload_template")
 
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("upload_template_file validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid template")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error uploading template file: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload template file: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to upload template file", exc=e, operation="upload_template")
 
 
 @router.post("/git/test")
@@ -396,11 +345,7 @@ def sync_templates(
                 message=f"Synced {len(synced)} Git templates",
             )
     except Exception as e:
-        logger.error("Error syncing templates: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to sync templates: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to sync templates", exc=e, operation="sync_templates")
 
 
 @router.post("/import", response_model=TemplateImportResponse)
@@ -456,13 +401,10 @@ def import_templates(
         )
 
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("import_templates validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid template import request")
     except Exception as e:
-        logger.error("Error importing templates: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to import templates: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to import templates", exc=e, operation="import_templates")
 
 
 @router.post("/advanced-render", response_model=AdvancedTemplateRenderResponse)
@@ -487,13 +429,10 @@ async def advanced_render_template(
     except HTTPException:
         raise
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("advanced_render_template validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid template")
     except Exception as e:
-        logger.error("Error in advanced template rendering: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to render template: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to render template", exc=e, operation="advanced_render_template")
 
 
 @router.get("/health")

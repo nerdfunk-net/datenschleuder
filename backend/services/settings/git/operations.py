@@ -7,17 +7,18 @@ for all git operational tasks.
 """
 
 from __future__ import annotations
+
 import logging
 import os
 import shutil
 import time
-from typing import Dict, Any
+from typing import Any, Dict
 
-from git import Repo, GitCommandError
+from git import GitCommandError, Repo
 
-from services.settings.git.paths import repo_path as get_repo_path
+from models.git import CloneResult, SyncResult
 from services.settings.git.env import set_ssl_env
-from models.git import SyncResult, CloneResult
+from services.settings.git.paths import repo_path as get_repo_path
 
 logger = logging.getLogger(__name__)
 
@@ -434,7 +435,7 @@ class GitOperationsService:
 
             # Get list of configuration files (filesystem operation)
             try:
-                for root, dirs, files in os.walk(repo_path):
+                for root, _, files in os.walk(repo_path):
                     # Skip .git directory
                     if ".git" in root:
                         continue

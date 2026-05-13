@@ -17,8 +17,8 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import pkcs12
-from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 from cryptography.x509 import CRLReason, ReasonFlags
+from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 from fastapi import HTTPException
 
 from repositories.pki_repository import PKICARepository, PKICertificateRepository
@@ -74,7 +74,7 @@ class PKIService:
     def create_ca(
         self,
         request,
-        encryption_service: "EncryptionService",
+        encryption_service: EncryptionService,
         created_by: Optional[str] = None,
     ):
         """Create the single root CA. Raises 400 if a CA already exists."""
@@ -171,7 +171,7 @@ class PKIService:
         self,
         ca,
         request,
-        encryption_service: "EncryptionService",
+        encryption_service: EncryptionService,
         created_by: Optional[str] = None,
     ):
         """Issue a certificate signed by the given CA."""
@@ -324,7 +324,7 @@ class PKIService:
         )
 
     def export_ca_pkcs12_with_key(
-        self, ca, encryption_service: "EncryptionService", password: str
+        self, ca, encryption_service: EncryptionService, password: str
     ) -> bytes:
         """Export CA certificate and private key as PKCS#12."""
         key_pem = encryption_service.decrypt(ca.private_key_encrypted)
@@ -347,7 +347,7 @@ class PKIService:
         return (cert.cert_pem + ca.cert_pem).encode()
 
     def export_pkcs12(
-        self, cert, ca, encryption_service: "EncryptionService", password: str
+        self, cert, ca, encryption_service: EncryptionService, password: str
     ) -> bytes:
         """Export cert + key as PKCS#12."""
         key_pem = encryption_service.decrypt(cert.private_key_encrypted)
@@ -370,7 +370,7 @@ class PKIService:
     def export_private_key(
         self,
         cert,
-        encryption_service: "EncryptionService",
+        encryption_service: EncryptionService,
         passphrase: Optional[str] = None,
     ) -> bytes:
         """Export the private key as PEM, optionally encrypted."""
@@ -394,7 +394,7 @@ class PKIService:
         self,
         cert,
         ca,
-        encryption_service: "EncryptionService",
+        encryption_service: EncryptionService,
         nifi_url: str,
         verify_ssl: bool = True,
         check_hostname: bool = True,
@@ -752,7 +752,7 @@ class PKIService:
                     except OSError:
                         pass
 
-    def generate_crl(self, ca, encryption_service: "EncryptionService") -> bytes:
+    def generate_crl(self, ca, encryption_service: EncryptionService) -> bytes:
         """Generate a CRL for all revoked certificates."""
         key_pem = encryption_service.decrypt(ca.private_key_encrypted)
         ca_key = serialization.load_pem_private_key(key_pem.encode(), password=None)

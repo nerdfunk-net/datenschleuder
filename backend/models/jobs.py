@@ -8,10 +8,10 @@ Organized by domain:
   - Job Run Models
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional, Literal, List
 from datetime import datetime
+from typing import List, Literal, Optional
 
+from pydantic import BaseModel, Field
 
 # ============================================================================
 # Job Template Models (from job_templates.py)

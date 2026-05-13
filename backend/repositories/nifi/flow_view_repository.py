@@ -1,6 +1,7 @@
 """Repository for flow view data access."""
 
-from typing import Optional, List
+from typing import List, Optional
+
 from core.database import get_db_session
 from core.models import FlowView
 from repositories.base import BaseRepository

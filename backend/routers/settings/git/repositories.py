@@ -4,20 +4,22 @@ Handles creation, reading, updating, and deletion of Git repository configuratio
 """
 
 from __future__ import annotations
+
 import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from core.auth import require_permission
-from dependencies import get_git_repo_manager, get_git_connection_service
+from core.safe_http_errors import raise_internal_server_error
+from dependencies import get_git_connection_service, get_git_repo_manager
 from models.git_repositories import (
-    GitRepositoryRequest,
-    GitRepositoryResponse,
-    GitRepositoryListResponse,
-    GitRepositoryUpdateRequest,
     GitConnectionTestRequest,
     GitConnectionTestResponse,
+    GitRepositoryListResponse,
+    GitRepositoryRequest,
+    GitRepositoryResponse,
+    GitRepositoryUpdateRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -46,8 +48,7 @@ def get_repositories(
             repositories=repo_responses, total=len(repo_responses)
         )
     except Exception as e:
-        logger.error("Error getting repositories: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise_internal_server_error(log_message="Error getting repositories", exc=e, operation="get_repositories")
 
 
 @router.get("/{repo_id}", response_model=GitRepositoryResponse)
@@ -69,8 +70,7 @@ def get_repository(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error getting repository %s: %s", repo_id, e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise_internal_server_error(log_message="Error getting repository", exc=e, operation="get_repository")
 
 
 @router.get("/{repo_id}/edit")
@@ -90,8 +90,7 @@ def get_repository_for_edit(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error getting repository %s for edit: %s", repo_id, e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise_internal_server_error(log_message="Error getting repository for edit", exc=e, operation="get_repository_edit")
 
 
 @router.post("/", response_model=GitRepositoryResponse)
@@ -111,19 +110,19 @@ def create_repository(
         # Get the created repository
         created_repo = git_repo_manager.get_repository(repo_id)
         if not created_repo:
-            raise HTTPException(
-                status_code=500, detail="Failed to retrieve created repository"
-            )
+            raise_internal_server_error(log_message="Failed to retrieve created repository", operation="create_repository")
 
         # Convert created repository data
         repo_dict = dict(created_repo)
 
         return GitRepositoryResponse(**repo_dict)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning("create_repository validation error: %s", e)
+        raise HTTPException(status_code=400, detail="Invalid repository configuration")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("Error creating repository: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise_internal_server_error(log_message="Error creating repository", exc=e, operation="create_repository")
 
 
 @router.put("/{repo_id}", response_model=GitRepositoryResponse)
@@ -151,14 +150,12 @@ def update_repository(
 
         success = git_repo_manager.update_repository(repo_id, repo_data)
         if not success:
-            raise HTTPException(status_code=500, detail="Failed to update repository")
+            raise_internal_server_error(log_message="Failed to update repository", operation="update_repository")
 
         # Get the updated repository
         updated_repo = git_repo_manager.get_repository(repo_id)
         if not updated_repo:
-            raise HTTPException(
-                status_code=500, detail="Failed to retrieve updated repository"
-            )
+            raise_internal_server_error(log_message="Failed to retrieve updated repository", operation="update_repository")
 
         # Convert updated repository data
         repo_dict = dict(updated_repo)
@@ -167,10 +164,10 @@ def update_repository(
     except HTTPException:
         raise
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning("update_repository validation error: %s", e)
+        raise HTTPException(status_code=400, detail="Invalid repository configuration")
     except Exception as e:
-        logger.error("Error updating repository %s: %s", repo_id, e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise_internal_server_error(log_message="Error updating repository", exc=e, operation="update_repository")
 
 
 @router.delete("/{repo_id}")
@@ -189,15 +186,14 @@ def delete_repository(
 
         success = git_repo_manager.delete_repository(repo_id, hard_delete=hard_delete)
         if not success:
-            raise HTTPException(status_code=500, detail="Failed to delete repository")
+            raise_internal_server_error(log_message="Failed to delete repository", operation="delete_repository")
 
         action = "deleted" if hard_delete else "deactivated"
         return {"message": f"Repository {action} successfully"}
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error deleting repository %s: %s", repo_id, e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise_internal_server_error(log_message="Error deleting repository", exc=e, operation="delete_repository")
 
 
 @router.post("/test-connection", response_model=GitConnectionTestResponse)
@@ -246,5 +242,4 @@ def health_check(
         health = git_repo_manager.health_check()
         return health
     except Exception as e:
-        logger.error("Health check failed: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise_internal_server_error(log_message="Health check failed", exc=e, operation="git_health_check")

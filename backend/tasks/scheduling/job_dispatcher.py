@@ -5,9 +5,10 @@ Orchestrates job execution based on job type.
 Moved from job_tasks.py to improve code organization.
 """
 
-from celery import shared_task
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+from celery import shared_task
 
 logger = logging.getLogger(__name__)
 
@@ -48,18 +49,19 @@ def dispatch_job(
     Returns:
         dict: Job execution results
     """
+    from core.database import SessionLocal
     from services.jobs.job_run_service import JobRunService as _JRS
     from services.jobs.job_template_service import JobTemplateService as _JTS
-
-    job_run_manager = _JRS()
-    job_template_manager = _JTS()
-    from tasks.utils.device_helpers import get_target_devices
     from tasks.execution.base_executor import execute_job_type
+    from tasks.utils.device_helpers import get_target_devices
 
+    job_template_manager = _JTS()
     job_run = None
     template = None
 
+    db = SessionLocal()
     try:
+        job_run_manager = _JRS(db=db)
         logger.info(
             "Dispatching job: %s (type: %s, triggered_by: %s)",
             job_name,
@@ -148,3 +150,5 @@ def dispatch_job(
             "job_name": job_name,
             "job_type": job_type,
         }
+    finally:
+        db.close()

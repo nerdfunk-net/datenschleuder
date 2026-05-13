@@ -1,7 +1,7 @@
 """NiFi process group operations - pure nipyapi logic."""
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 from nipyapi import canvas, versioning
 from nipyapi.nifi import ProcessGroupsApi

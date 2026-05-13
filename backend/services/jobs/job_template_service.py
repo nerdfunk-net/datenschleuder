@@ -4,9 +4,11 @@ Manages job templates for NiFi automation tasks.
 """
 
 from __future__ import annotations
+
 import json
 import logging
 from typing import Any, Dict, List, Optional
+
 from repositories.jobs.job_template_repository import JobTemplateRepository
 
 logger = logging.getLogger(__name__)

@@ -6,11 +6,14 @@ Created in Phase 4 of Celery refactoring to eliminate repetitive try/except bloc
 across the entire codebase.
 """
 
-from functools import wraps
-from fastapi import HTTPException, status
-import logging
 import asyncio
-from typing import Callable, Any
+import logging
+from functools import wraps
+from typing import Any, Callable
+
+from fastapi import HTTPException, status
+
+from core.safe_http_errors import generate_error_id
 
 logger = logging.getLogger(__name__)
 
@@ -81,20 +84,22 @@ def handle_errors(
                     raise
                 except Exception as e:
                     # Log error with full context
-                    logger.error(
-                        "Failed to %s: %s",
-                        operation,
-                        e,
-                        exc_info=True,
-                        extra={
-                            "operation": operation,
-                            "function": func.__name__,
-                            "source_module": func.__module__,
-                            "args": args,
-                            "kwargs": kwargs,
-                        },
-                    )
-                    # Convert to HTTP error
+                    _extra: dict = {
+                        "operation": operation,
+                        "function": func.__name__,
+                        "source_module": func.__module__,
+                        "args": args,
+                        "kwargs": kwargs,
+                    }
+                    if error_status >= 500:
+                        _eid = generate_error_id()
+                        _extra["error_id"] = _eid
+                    logger.error("Failed to %s: %s", operation, e, exc_info=True, extra=_extra)
+                    if error_status >= 500:
+                        raise HTTPException(
+                            status_code=error_status,
+                            detail={"message": f"Failed to {operation}", "error_id": _eid},
+                        )
                     raise HTTPException(
                         status_code=error_status,
                         detail=f"Failed to {operation}: {str(e)}",
@@ -114,20 +119,22 @@ def handle_errors(
                     raise
                 except Exception as e:
                     # Log error with full context
-                    logger.error(
-                        "Failed to %s: %s",
-                        operation,
-                        e,
-                        exc_info=True,
-                        extra={
-                            "operation": operation,
-                            "function": func.__name__,
-                            "source_module": func.__module__,
-                            "args": args,
-                            "kwargs": kwargs,
-                        },
-                    )
-                    # Convert to HTTP error
+                    _extra: dict = {
+                        "operation": operation,
+                        "function": func.__name__,
+                        "source_module": func.__module__,
+                        "args": args,
+                        "kwargs": kwargs,
+                    }
+                    if error_status >= 500:
+                        _eid = generate_error_id()
+                        _extra["error_id"] = _eid
+                    logger.error("Failed to %s: %s", operation, e, exc_info=True, extra=_extra)
+                    if error_status >= 500:
+                        raise HTTPException(
+                            status_code=error_status,
+                            detail={"message": f"Failed to {operation}", "error_id": _eid},
+                        )
                     raise HTTPException(
                         status_code=error_status,
                         detail=f"Failed to {operation}: {str(e)}",
@@ -189,16 +196,17 @@ def handle_not_found(operation: str, resource_name: str = "Resource"):
                         detail=f"{resource_name} not found",
                     )
                 except Exception as e:
+                    _eid = generate_error_id()
                     logger.error(
                         "Failed to %s: %s",
                         operation,
                         e,
                         exc_info=True,
-                        extra={"operation": operation, "function": func.__name__},
+                        extra={"operation": operation, "function": func.__name__, "error_id": _eid},
                     )
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail=f"Failed to {operation}: {str(e)}",
+                        detail={"message": f"Failed to {operation}", "error_id": _eid},
                     )
 
             return async_wrapper
@@ -227,16 +235,17 @@ def handle_not_found(operation: str, resource_name: str = "Resource"):
                         detail=f"{resource_name} not found",
                     )
                 except Exception as e:
+                    _eid = generate_error_id()
                     logger.error(
                         "Failed to %s: %s",
                         operation,
                         e,
                         exc_info=True,
-                        extra={"operation": operation, "function": func.__name__},
+                        extra={"operation": operation, "function": func.__name__, "error_id": _eid},
                     )
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail=f"Failed to {operation}: {str(e)}",
+                        detail={"message": f"Failed to {operation}", "error_id": _eid},
                     )
 
             return sync_wrapper
@@ -291,16 +300,17 @@ def handle_validation_errors(operation: str):
                         detail=f"Validation error: {str(e)}",
                     )
                 except Exception as e:
+                    _eid = generate_error_id()
                     logger.error(
                         "Failed to %s: %s",
                         operation,
                         e,
                         exc_info=True,
-                        extra={"operation": operation, "function": func.__name__},
+                        extra={"operation": operation, "function": func.__name__, "error_id": _eid},
                     )
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail=f"Failed to {operation}: {str(e)}",
+                        detail={"message": f"Failed to {operation}", "error_id": _eid},
                     )
 
             return async_wrapper
@@ -328,16 +338,17 @@ def handle_validation_errors(operation: str):
                         detail=f"Validation error: {str(e)}",
                     )
                 except Exception as e:
+                    _eid = generate_error_id()
                     logger.error(
                         "Failed to %s: %s",
                         operation,
                         e,
                         exc_info=True,
-                        extra={"operation": operation, "function": func.__name__},
+                        extra={"operation": operation, "function": func.__name__, "error_id": _eid},
                     )
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail=f"Failed to {operation}: {str(e)}",
+                        detail={"message": f"Failed to {operation}", "error_id": _eid},
                     )
 
             return sync_wrapper

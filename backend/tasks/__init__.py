@@ -8,16 +8,15 @@ Tasks are organized by function:
 """
 
 # Import scheduling tasks
+# Import periodic tasks
+from .periodic_tasks import (
+    cleanup_celery_data_task,
+    worker_health_check,
+)
 from .scheduling import check_job_schedules_task, dispatch_job
 
 # Import test tasks
-from .test_tasks import test_task, test_progress_task
-
-# Import periodic tasks
-from .periodic_tasks import (
-    worker_health_check,
-    cleanup_celery_data_task,
-)
+from .test_tasks import test_progress_task, test_task
 
 __all__ = [
     # Scheduling tasks

@@ -4,13 +4,15 @@ Handles Git-specific version control functionality.
 """
 
 from __future__ import annotations
+
 import difflib
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from git import InvalidGitRepositoryError, GitCommandError
+from git import GitCommandError, InvalidGitRepositoryError
 
 from core.auth import require_permission
+from core.safe_http_errors import raise_internal_server_error
 from dependencies import get_cache_service
 from services.settings.git.shared_utils import get_git_repo_by_id
 
@@ -36,16 +38,13 @@ def get_branches(
             )
 
         return branches
-    except (InvalidGitRepositoryError, GitCommandError) as e:
+    except (InvalidGitRepositoryError, GitCommandError):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Git repository not found or invalid: {str(e)}",
+            detail="Git repository not found or invalid",
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Git branches error: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Git branches error", exc=e, operation="get_branches")
 
 
 @router.get("/commits/{branch_name}")
@@ -106,10 +105,7 @@ def get_commits(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get commits: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to get commits", exc=e, operation="get_commits")
 
 
 @router.post("/diff")
@@ -256,7 +252,4 @@ def compare_commits(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to compare commits: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to compare commits", exc=e, operation="compare_commits")

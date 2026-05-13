@@ -353,10 +353,9 @@ def get_flow_process_groups(flow_id: int) -> dict:
     5. Build the expected full path = configured_parent + hierarchy[1..N] values
     6. Match by exact path comparison, return NiFi UI links
     """
-    from services.nifi.operations import process_groups as pg_ops
-    from services.nifi.nifi_context import nifi_connection_scope
-
     from services.nifi.hierarchy_service import get_deployment_settings
+    from services.nifi.nifi_context import nifi_connection_scope
+    from services.nifi.operations import process_groups as pg_ops
 
     flow = get_flow(flow_id)
     if flow is None:

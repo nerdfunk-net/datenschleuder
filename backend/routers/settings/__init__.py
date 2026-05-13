@@ -11,13 +11,13 @@ This package contains routers for:
 """
 
 # Import all settings routers
-from .common import router as common_router
 from .cache import router as cache_router
+from .common import router as common_router
 from .credentials import router as credentials_router
-from .templates import router as templates_router
-from .rbac import router as rbac_router
 from .git import router as git_router
+from .rbac import router as rbac_router
 from .redis import router as redis_router
+from .templates import router as templates_router
 
 # Export all routers
 __all__ = [

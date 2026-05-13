@@ -15,11 +15,11 @@ from models.nifi import (
     ReadStoreResponse,
     UploadStoreResponse,
 )
+from services.cert_manager.cert_parser import parse_p12_file, parse_pem_file
+from services.settings.git.paths import repo_path
 from services.settings.git_repository_service import (
     GitRepositoryService as GitRepositoryManager,
 )
-from services.settings.git.paths import repo_path
-from services.cert_manager.cert_parser import parse_p12_file, parse_pem_file
 
 logger = logging.getLogger(__name__)
 
@@ -181,9 +181,10 @@ async def upload_store(
     except HTTPException:
         raise
     except Exception as exc:
+        logger.warning("Failed to parse uploaded certificate file: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to parse uploaded file: {exc}",
+            detail="Failed to parse uploaded file",
         ) from exc
 
     # Commit and push

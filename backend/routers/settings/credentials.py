@@ -1,13 +1,17 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import logging
 from typing import List, Optional
 
-from core.auth import require_permission, get_current_username
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from core.auth import get_current_username, require_permission
 from models.credentials import CredentialCreate, CredentialUpdate
 from services.settings.credentials_service import (
     CredentialsService as _CredentialsService,
 )
+
+logger = logging.getLogger(__name__)
 
 cred_mgr = _CredentialsService()
 
@@ -78,7 +82,8 @@ def create_credential(payload: CredentialCreate) -> dict:
             ssh_keyfile_path=payload.ssh_keyfile_path,
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning("create_credential failed: %s", e)
+        raise HTTPException(status_code=400, detail="Invalid credential")
 
 
 @router.put(
@@ -101,10 +106,11 @@ def update_credential(cred_id: int, payload: CredentialUpdate) -> dict:
             ssh_passphrase=payload.ssh_passphrase,
             ssh_keyfile_path=payload.ssh_keyfile_path,
         )
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Credential not found")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning("update_credential failed: %s", e)
+        raise HTTPException(status_code=400, detail="Invalid credential")
 
 
 @router.delete(
@@ -116,7 +122,8 @@ def delete_credential(cred_id: int) -> dict:
         cred_mgr.delete_credential(cred_id)
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning("delete_credential failed: %s", e)
+        raise HTTPException(status_code=400, detail="Invalid credential")
 
 
 @router.get(
@@ -159,7 +166,8 @@ def get_credential_password(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning("get_credential_password failed: %s", e)
+        raise HTTPException(status_code=400, detail="Invalid credential")
 
 
 @router.get(
@@ -211,7 +219,8 @@ def get_credential_ssh_key(
         }
     except HTTPException:
         raise
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Credential not found")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning("get_credential_ssh_key failed: %s", e)
+        raise HTTPException(status_code=400, detail="Invalid credential")

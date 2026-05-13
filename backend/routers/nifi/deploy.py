@@ -1,9 +1,11 @@
 """NiFi deployment endpoints."""
 
 import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_permission
+from core.safe_http_errors import raise_internal_server_error
 from models.nifi import DeploymentRequest, DeploymentResponse
 from services.nifi import deploy_service
 
@@ -23,13 +25,14 @@ def deploy_flow(
         result = deploy_service.deploy_flow(instance_id, deployment.model_dump())
         return DeploymentResponse(**result)
     except ValueError as e:
+        logger.warning("deploy_flow validation error: %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            detail="Invalid deployment configuration",
         )
     except Exception as e:
-        logger.error("Deployment failed: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to deploy flow: %s" % str(e),
+        raise_internal_server_error(
+            log_message="Failed to deploy flow",
+            exc=e,
+            operation="deploy_flow",
         )

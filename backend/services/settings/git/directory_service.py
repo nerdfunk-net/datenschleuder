@@ -139,7 +139,7 @@ class GitDirectoryService:
 
         dirs.sort(key=lambda x: x[0].lower())
         children = []
-        for dir_name, dir_full_path, dir_rel_path in dirs:
+        for _, dir_full_path, dir_rel_path in dirs:
             subtree = self._build_tree(dir_full_path, dir_rel_path)
             if subtree is not None:
                 children.append(subtree)

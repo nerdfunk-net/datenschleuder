@@ -4,11 +4,13 @@ Authentication router for login and token management.
 
 import logging
 from datetime import timedelta
-from fastapi import APIRouter, HTTPException, status, Depends, Request
-from models.auth import UserLogin, LoginResponse
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+
 from core.auth import create_access_token, get_api_key_user
-from services.auth.login_service import get_user_with_rbac_safe, build_user_response
 from limiter import limiter
+from models.auth import LoginResponse, UserLogin
+from services.auth.login_service import build_user_response, get_user_with_rbac_safe
 
 logger = logging.getLogger(__name__)
 
@@ -47,22 +49,13 @@ def login(request: Request, user_data: UserLogin):
                 expires_delta=access_token_expires,
             )
 
-            # Log successful login to audit log
-            from repositories.audit_log_repository import audit_log_repo
+            from services.audit.audit_service import record_login_success
 
-            audit_log_repo.create_log(
+            record_login_success(
                 username=user["username"],
                 user_id=user["id"],
-                event_type="login",
-                message=f"User '{user['username']}' logged in",
-                resource_type="authentication",
-                resource_id=str(user["id"]),
-                resource_name=user["username"],
-                severity="info",
-                extra_data={
-                    "authentication_method": "password",
-                    "roles": response_user["roles"],
-                },
+                authentication_method="password",
+                extra_data={"roles": response_user["roles"]},
             )
 
             return LoginResponse(
@@ -91,9 +84,10 @@ def refresh_token(request: Request):
     verify the token signature. This prevents race conditions where a token
     expires just before the refresh call.
     """
+    import jwt as pyjwt
+
     from config import settings
     from services.auth.user_management import get_user_by_username
-    import jwt as pyjwt
 
     # Extract Authorization header
     auth_header = request.headers.get("authorization") or request.headers.get(
@@ -203,21 +197,12 @@ def api_key_login(user_info: dict = Depends(get_api_key_user)):
             expires_delta=access_token_expires,
         )
 
-        # Log API key login to audit log
-        from repositories.audit_log_repository import audit_log_repo
+        from services.audit.audit_service import record_login_success
 
-        audit_log_repo.create_log(
+        record_login_success(
             username=user_info["username"],
             user_id=user_info["user_id"],
-            event_type="login",
-            message=f"User '{user_info['username']}' logged in",
-            resource_type="authentication",
-            resource_id=str(user_info["user_id"]),
-            resource_name=user_info["username"],
-            severity="info",
-            extra_data={
-                "authentication_method": "api_key",
-            },
+            authentication_method="api_key",
         )
 
         return LoginResponse(
@@ -249,8 +234,9 @@ def logout(request: Request):
     It logs the logout event to the audit log for tracking purposes.
     The actual token invalidation happens client-side by removing the token.
     """
-    from config import settings
     import jwt as pyjwt
+
+    from config import settings
 
     # Try to get user info from token if available
     try:
@@ -271,18 +257,9 @@ def logout(request: Request):
             user_id = payload.get("user_id")
 
             if username:
-                from repositories.audit_log_repository import audit_log_repo
+                from services.audit.audit_service import record_logout
 
-                audit_log_repo.create_log(
-                    username=username,
-                    user_id=user_id,
-                    event_type="logout",
-                    message=f"User '{username}' logged out",
-                    resource_type="authentication",
-                    resource_id=str(user_id),
-                    resource_name=username,
-                    severity="info",
-                )
+                record_logout(username=username, user_id=user_id)
     except Exception as e:
         # If we can't get user info, log generic logout
         logger.warning("Logout called but could not extract user info: %s", e)

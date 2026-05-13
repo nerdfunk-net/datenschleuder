@@ -14,6 +14,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from core.auth import require_role, verify_token
+from core.safe_http_errors import raise_internal_server_error
 from models.rbac import (
     BulkPermissionAssignment,
     BulkRoleAssignment,
@@ -36,7 +37,7 @@ from models.rbac import (
     UserRoleAssignment,
     UserUpdate,
 )
-from services.auth.rbac_helpers import verify_user_access, check_permission_with_source
+from services.auth.rbac_helpers import check_permission_with_source, verify_user_access
 from services.auth.rbac_service import RBACService as _RBACService
 
 rbac = _RBACService()
@@ -73,7 +74,8 @@ def create_permission(
         )
         return created
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("create_permission validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid permission")
 
 
 @router.get("/permissions/{permission_id}", response_model=Permission)
@@ -94,8 +96,8 @@ def delete_permission(
     """Delete a permission (admin only)."""
     try:
         rbac.delete_permission(permission_id)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Permission not found")
 
 
 # ============================================================================
@@ -119,7 +121,8 @@ def create_role(role: RoleCreate, current_user: dict = Depends(require_role("adm
         )
         return created
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("create_role validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role")
 
 
 @router.get("/roles/{role_id}", response_model=RoleWithPermissions)
@@ -153,8 +156,8 @@ def update_role(
             role_id=role_id, name=role_update.name, description=role_update.description
         )
         return updated
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
 
 
 @router.delete("/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -163,7 +166,8 @@ def delete_role(role_id: int, current_user: dict = Depends(require_role("admin")
     try:
         rbac.delete_role(role_id)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("delete_role validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role assignment")
 
 
 @router.get("/roles/{role_id}/permissions", response_model=List[PermissionWithGrant])
@@ -355,11 +359,7 @@ def assign_permission_to_user(
             user_id, assignment.permission_id, assignment.granted
         )
     except Exception as e:
-        logger.error("Error assigning permission to user: %s", str(e), exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to assign permission: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to assign permission to user", exc=e, operation="assign_permission_to_user")
 
 
 @router.delete(
@@ -442,13 +442,10 @@ def create_user(
         user_with_rbac = rbac.get_user_with_rbac(user["id"])
         return user_with_rbac
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("create_user validation error: %s", e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user data")
     except Exception as e:
-        logger.error("Error creating user: %s", str(e), exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create user: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to create user", exc=e, operation="create_user")
 
 
 @router.get("/users", response_model=UserListResponse)

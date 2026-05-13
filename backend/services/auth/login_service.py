@@ -7,6 +7,7 @@ present across the login, token-refresh, and OIDC-callback endpoints.
 """
 
 from __future__ import annotations
+
 import logging
 from typing import Optional
 

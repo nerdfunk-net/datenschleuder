@@ -1,7 +1,8 @@
 """Git models: GitRepository."""
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Index
+from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String, Text
 from sqlalchemy.sql import func
+
 from core.database import Base
 
 

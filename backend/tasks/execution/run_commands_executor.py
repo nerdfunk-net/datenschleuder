@@ -7,7 +7,7 @@ in the dispatcher for forward compatibility but always returns an informative er
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

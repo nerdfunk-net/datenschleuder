@@ -1,6 +1,7 @@
 """Agent models: DatenschleuderAgentCommand."""
 
-from sqlalchemy import Column, ForeignKey, Integer, String, Text, DateTime, Index
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
+
 from core.database import Base
 
 

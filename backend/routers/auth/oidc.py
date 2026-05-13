@@ -3,23 +3,27 @@ OIDC authentication router for OpenID Connect integration with multiple provider
 """
 
 from __future__ import annotations
+
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Union
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from config import settings
+from core.auth import create_access_token, verify_admin_token
+from core.safe_http_errors import raise_internal_server_error
+from dependencies import get_oidc_config_service, get_oidc_service
 from models.auth import (
+    ApprovalPendingResponse,
     LoginResponse,
     OIDCCallbackRequest,
-    OIDCProvidersResponse,
     OIDCProvider,
-    ApprovalPendingResponse,
+    OIDCProvidersResponse,
     OIDCTestLoginRequest,
 )
-from core.auth import create_access_token, verify_admin_token
-from dependencies import get_oidc_service, get_oidc_config_service
-from services.auth.login_service import get_user_with_rbac_safe, build_user_response
-from config import settings
+from services.auth.login_service import build_user_response, get_user_with_rbac_safe
 
 logger = logging.getLogger(__name__)
 
@@ -283,24 +287,14 @@ async def oidc_callback(
             provider_id,
         )
 
-        # Log successful OIDC login to audit log
-        from repositories.audit_log_repository import audit_log_repo
+        from services.audit.audit_service import record_oidc_login_success
 
-        audit_log_repo.create_log(
+        record_oidc_login_success(
             username=user["username"],
             user_id=user["id"],
-            event_type="login",
-            message=f"User '{user['username']}' logged in via OIDC",
-            resource_type="authentication",
-            resource_id=str(user["id"]),
-            resource_name=user["username"],
-            severity="info",
-            extra_data={
-                "authentication_method": "oidc",
-                "oidc_provider": provider_id,
-                "roles": response_user["roles"],
-                "is_new_user": is_new_user,
-            },
+            provider_id=provider_id,
+            roles=response_user["roles"],
+            is_new_user=is_new_user,
         )
 
         return LoginResponse(
@@ -497,8 +491,4 @@ async def get_oidc_debug_info(
         }
 
     except Exception as e:
-        logger.error("Failed to get OIDC debug info: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve OIDC debug information: {str(e)}",
-        )
+        raise_internal_server_error(log_message="Failed to retrieve OIDC debug information", exc=e, operation="get_oidc_debug")

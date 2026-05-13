@@ -4,14 +4,16 @@ Manages database-backed settings for Git, Cache, and Celery configurations.
 """
 
 from __future__ import annotations
-import logging
+
 import json
-from dataclasses import dataclass, asdict, field
+import logging
+from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
+
 from repositories.settings.settings_repository import (
-    GitSettingRepository,
     CacheSettingRepository,
     CelerySettingRepository,
+    GitSettingRepository,
     SettingsMetadataRepository,
 )
 

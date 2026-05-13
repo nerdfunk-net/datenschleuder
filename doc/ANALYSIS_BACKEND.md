@@ -1,201 +1,110 @@
-# Backend Code Analysis
+# Backend analysis — CLAUDE.md standards and Python practices
 
-**Date:** 2026-04-24  
-**Scope:** `/backend/` — full Python codebase  
-**Standard:** CLAUDE.md architectural requirements
+**Scope:** `backend/` Python service (FastAPI, SQLAlchemy, Celery).  
+**Reference:** `CLAUDE.md` (architectural standards, security rules, naming, database policy).  
+**Date:** 2026-05-13.
 
----
+## Executive summary
 
-## Summary
-
-The codebase is in good architectural shape overall. The layered pattern (Router → Service → Repository → Model) is consistently applied across ~95% of files. No SQLite, no f-string logging, no true God Objects. Four priority issues require attention, plus a scattered Pydantic model problem.
-
-**Effort estimate:** 2–3 days for Priority 1 & 2 items.
+The backend largely follows the documented **Model → Pydantic → Repository → Service → Router** flow for persistence-heavy domains (jobs, settings, NiFi, auth data). **PostgreSQL**, **Alembic-style versioned migrations** under `backend/migrations/`, and **JWT plus `require_permission`** are in active use. Gaps are concentrated in **consistent error handling for server faults**, **documentation vs. code drift** (referenced helpers and guard scripts), **session lifecycle patterns** (global sessions in repositories vs. request-scoped `Depends(get_db)`), and **tooling** (no declared Ruff/Mypy in `backend/pyproject.toml`).
 
 ---
 
-## Codebase Statistics
+## 1. CLAUDE.md architectural standard
 
-| Metric | Value |
-|---|---|
-| Total Python files | 183 |
-| Total lines | ~44,200 |
-| Files over 400 lines | 22 |
-| Registered routers | 32 |
-| Repositories | 43 |
+### 1.1 Layered backend (Model → Repository → Service → Router)
 
----
+| Expectation | Observation |
+|-------------|---------------|
+| SQLAlchemy in `core/models/{domain}.py` | **Met.** Domain modules and `core/models/__init__.py` re-export models as documented. |
+| Pydantic in `models/{domain}.py` | **Met** for major areas (`models/auth.py`, `models/jobs.py`, NiFi, settings, etc.). |
+| Repository in `repositories/` | **Mostly met.** Repositories exist for jobs, auth, settings, NiFi, agent, PKI, audit. **Not every conceptual domain** may have a dedicated repository file; layout uses subpackages (`repositories/auth/`, `repositories/jobs/`) rather than only flat `{domain}_repository.py` — consistent with snake_case and maintainability. |
+| Service in `services/` | **Met** for core flows. NiFi and settings are decomposed into submodules (aligned with CLAUDE.md Nautobot-style guidance for complex integrations). |
+| Thin routers | **Mostly met.** Routers generally call services or small facades. **Exceptions:** `routers/auth/auth.py` calls `audit_log_repo.create_log` directly inside the login handler (repository from router, skipping a dedicated audit *service* for that path). `routers/tools.py` and similar admin utilities orchestrate managers/helpers directly — acceptable for tooling but not the strict “router → service only” line. |
+| `main.py` registers routers | **Met.** `backend/main.py` includes modular routers. |
 
-## Compliant Areas
+### 1.2 Repository layer and database access
 
-### Architecture
-- Router → Service → Repository → SQLAlchemy chain is followed in the vast majority of files.
-- `/backend/repositories/base.py` provides a well-typed `BaseRepository[T]` with generic CRUD.
-- Specialized repositories per domain: `auth/`, `jobs/`, `nifi/`, `settings/`.
-- `main.py` uses a clean lifespan pattern with `service_factory.build_*()` for initialization.
+| Expectation | Observation |
+|-------------|---------------|
+| Prefer ORM/Core; `text()` only in repositories per `doc/refactoring/REFACTORING_RAW_SQL.md` | **Largely met** for application code. `rg` shows `sqlalchemy.text` / `from sqlalchemy import text` in **migrations** and **`core/database.py`** `check_connection()` (`SELECT 1`), which CLAUDE.md explicitly exempts. No `text()` matches surfaced under `tasks/`. |
+| No `text()` from routers, services, or Celery tasks | **No violations found** in those layers via quick static search. |
+| Never bypass repository layer | **Partial.** Persistence usually goes through repositories, but **routers sometimes import repositories** (e.g. audit on login). Some **services** are thin and **repositories open their own session** via `get_db_session()` (see below) instead of receiving a session from above — functionally valid, but not the strict “all DB access only through repository *and* single session per unit of work from the request” interpretation. |
 
-### Database
-- PostgreSQL exclusively — no SQLite anywhere.
-- Connection via SQLAlchemy with pool_size=5, max_overflow=10, pool_recycle=3600.
-- No raw DDL in production paths (except NiFi dynamic tables, see below).
+### 1.3 Session handling: `get_db` vs `get_db_session`
 
-### Logging
-- Zero f-string logging found. All calls use parameterized format:
-  ```python
-  logger.info("NiFi instance %d unreachable (attempt %d/%d): %s", id, n, max, err)
-  ```
+- **`Depends(get_db)`** appears in **`routers/agent.py`** only (among routers searched): session is injected and passed into `AgentService(db)`.
+- Many repositories (e.g. `repositories/jobs/job_run_repository.py`) call **`get_db_session()`** internally and close in `finally`. That pattern **decouples** the stack from FastAPI’s request-scoped session and can make **multi-step transactions** that span several repository calls harder to enforce as one atomic unit unless handled explicitly in one repository method.
 
-### Core Models
-- `/backend/core/models/` is split into focused per-domain files (`auth.py`, `jobs.py`, `nifi.py`, etc.), totalling ~1,300 lines across 11 files. Each file is well within size limits.
+**Verdict:** Aligned with the *spirit* of “data access in repositories,” with nuance on **transaction boundaries** and **testability** versus strict layered injection.
 
-### Service Cohesion
-- Large services (`git/service.py` at 792 lines, `nifi_flow_service.py` at 602 lines) are large but focused — single domain, cohesive responsibility. Not God Objects.
+### 1.4 Security standard: 5xx responses
 
----
+CLAUDE.md requires: for server errors, **do not** expose raw exception text in `HTTPException(detail=…)`; use **`core.safe_http_errors.raise_internal_server_error`** (client sees sanitized payload; correlate via logs).
 
-## Issues Found
+**Finding:** There is **no** `safe_http_errors` module (or `raise_internal_server_error`) under `backend/core/` at the time of this analysis. Instead, **many** routers use `HTTPException(status_code=500, detail=str(e))` or `detail=str(exc)` (non-exhaustive examples: `routers/jobs/runs.py`, `routers/agent.py`, `routers/settings/git/repositories.py`, `routers/settings/git/operations.py`, `core/error_handlers.py`). Some 4xx paths also use `detail=str(e)`, which leaks validation or internal wording to clients depending on the exception type.
 
-### Priority 1 — Critical (Repository Pattern Violations)
+**Verdict:** **Standard not implemented** as written in CLAUDE.md; this is the largest **doc vs. code** gap for backend security UX.
 
-#### 1. Raw SQL in `job_run_service.py`
+### 1.5 Router guard scripts
 
-**File:** `/backend/services/jobs/job_run_service.py` ~line 126  
-**Issue:** `get_dashboard_stats()` executes raw SQL with `session.execute(text(...))` instead of using `JobRunRepository`.
+CLAUDE.md lists scripts such as `python scripts/check_http_500_leaks.py` from `backend/`. Those paths were **not** present in the workspace snapshot used for this review (no `check_http_500_leaks.py` found under the repo root search). Either they live elsewhere, are optional, or the doc is ahead of the tree — worth reconciling so onboarding matches reality.
 
-```python
-# Current — bypasses repository
-job_stats = session.execute(text("""
-    SELECT COUNT(*) as total,
-    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed, ...
-"""))
-```
+### 1.6 Nautobot / external API pattern
 
-**Fix:** Add `get_dashboard_statistics()` to `JobRunRepository` using SQLAlchemy ORM aggregations (`func.count`, `func.sum`, `case`), then call that from the service.
+CLAUDE.md describes a **resolver/manager** layout under `services/nautobot/` for external APIs. That pattern is **documented for Nautobot**; NiFi and similar integrations follow an analogous **service submodule** style. **Consistent** with the “external client ≠ local repository” exception.
 
 ---
 
-#### 2. Direct DB access in `settings_service.py`
+## 2. Python best practices
 
-**File:** `/backend/services/settings/settings_service.py` ~line 280  
-**Issue:** `reset_to_defaults()` calls `session.query(GitSetting).delete()` and similar direct ORM calls, bypassing the repository layer.
+### 2.1 Strengths
 
-**Fix:** Delegate to `GitSettingRepository.delete_all()`, `CacheSettingRepository.delete_all()`, `CelerySettingRepository.delete_all()`. These methods may need to be added to the respective repositories.
+- **Modern FastAPI usage:** dependencies for auth, Pydantic response models, modular routers.
+- **Structured logging in many places:** e.g. `logger.error("…%s", e, exc_info=True)` and parameterized messages in reviewed services (e.g. `job_run_service.py`), which aligns with CLAUDE.md’s “avoid f-strings in logging” goal.
+- **`from __future__ import annotations`** used in entrypoints and several modules — good for forward references and consistency when adopted widely.
+- **Pytest:** `backend/pyproject.toml` configures markers, asyncio mode, and coverage — solid baseline for tests.
 
----
+### 2.2 Gaps and risks
 
-#### 3. Duplicate DB access in `flow_view_service.py`
+| Topic | Notes |
+|-------|--------|
+| **Static typing discipline** | Mixed strictness; `BaseRepository` uses a parameter name `id` (shadows builtin). No project-level **Mypy** (or Pyright) config was found in `backend/pyproject.toml`. |
+| **Lint/format** | No **Ruff** / **Black** config in that `pyproject.toml` fragment — team consistency may rely on editor rules or CI elsewhere. |
+| **Coverage scope** | `[tool.pytest.ini_options]` coverage includes `services`, `models`, `tasks`, `utils` but **omits** `routers`, `repositories`, and `core` from `--cov=…`, which under-measures the layers where auth and HTTP contracts live. |
+| **Sync vs async endpoints** | Mix of `def` and `async def` routes is normal in FastAPI but worth monitoring for blocking I/O on the event loop where async is used. |
+| **Exception handling** | Broad `except Exception` plus `detail=str(e)` on 500 responses is an **information disclosure** and **inconsistent API** concern (see section 1.4). |
+| **Service construction** | Patterns like module-level `job_run_manager = _JobRunService()` in `routers/jobs/runs.py` are simple but **global mutable service instances** can complicate testing and lifecycle compared to factories or `Depends()`. |
 
-**File:** `/backend/services/nifi/flow_view_service.py` ~line 75  
-**Issue:** `_unset_all_defaults()` and `_unset_all_defaults_except()` access the DB directly. `FlowViewRepository` already has a `set_default()` method at line 39–51 that covers this. The service duplicates that logic.
+### 2.3 Celery / asyncio
 
-**Fix:** Remove the private methods from the service; call the existing repository method instead.
-
----
-
-#### 4. Raw SQL in `install_service.py` and `hierarchy_service.py`
-
-**Files:**
-- `/backend/services/nifi/install_service.py` ~line 33 — `conn.execute(text("SELECT * FROM nifi_flows"))`
-- `/backend/services/nifi/hierarchy_service.py` ~line 71, 92 — `DROP TABLE IF EXISTS nifi_flows`, `SELECT COUNT(*)`
-
-**Note on hierarchy_service:** The DDL operations (CREATE/DROP TABLE) are schema management for a dynamic NiFi table, which is a borderline case. The SELECT COUNT(*) should still go through the repository.
-
-**Fix for install_service:** Replace with `NifiFlowRepository.get_all()`.  
-**Fix for hierarchy_service:** Move DDL operations to a dedicated `NifiFlowSchemaRepository` or a migration helper; replace SELECT with `NifiFlowRepository.count()`.
+`start_celery.py` documents pitfalls around **`asyncio.run()`** in forked workers. Repository search did not show widespread `asyncio.run()` in application Python beyond comments — **good** relative to the documented Celery constraint.
 
 ---
 
-### Priority 2 — Medium (Code Quality)
+## 3. Overall verdict
 
-#### 5. Pydantic models scattered across router files
-
-**Issue:** 27 Pydantic request/response models are defined inline in router files instead of `/backend/models/`. This makes them hard to discover, reuse, or test independently.
-
-**Affected files:**
-
-| File | Models defined |
-|---|---|
-| `/backend/routers/jobs/celery_api.py` | 9 (TestTaskRequest, TaskResponse, etc.) |
-| `/backend/routers/certificates.py` | 4 (CertificateInfo, ScanResponse, etc.) |
-| `/backend/routers/nifi/certificates.py` | 5 (CertificatesResponse, ReadStoreRequest, etc.) |
-| `/backend/routers/auth/profile.py` | 3 (PersonalCredentialData, ProfileResponse, etc.) |
-| `/backend/routers/settings/git/files.py` | 2 — `WriteFileRequest` defined **twice** (lines 131 and 401) |
-| `/backend/routers/nifi/install.py` | 2 (PathStatus, CheckPathResponse) |
-| `/backend/routers/tools.py` | 1 (CertificateEntry) |
-| `/backend/services/nifi/certificate_manager.py` | 1 (CertificateConfig) |
-
-**Duplicate model:** `WriteFileRequest` is defined twice in `git/files.py` — one definition is dead code.
-
-**Fix:** Move models to the appropriate file under `/backend/models/` (e.g., `models/jobs.py`, `models/nifi.py`, `models/auth.py`). Update imports. The duplicate `WriteFileRequest` should be removed.
+| Area | Alignment |
+|------|-----------|
+| **Layered architecture (persistence domains)** | **Strong** — repositories and services are the norm; routers are mostly thin. |
+| **Models, migrations, PostgreSQL** | **Strong** — matches CLAUDE.md. |
+| **Raw SQL / `text()` policy** | **Strong** in app code; migrations and health check exempt as allowed. |
+| **Sanitized 5xx errors (`safe_http_errors`)** | **Not met** — module absent; many raw `str(e)` 500 responses remain. |
+| **Strict “never touch repository from router”** | **Partial** — few but real exceptions (audit on login). |
+| **Python ecosystem rigor (typing + linters in-repo)** | **Moderate** — tests exist; typing and Ruff/Mypy not evident in `backend/pyproject.toml`. |
 
 ---
 
-### Priority 3 — Low (Maintainability)
+## 4. Recommended next steps (priority)
 
-#### 6. Router files with embedded helper logic
-
-**Files:**
-- `/backend/routers/nifi/operations.py` (944 lines) — contains `_execute_with_retry()`, `_get_instance()` helpers. These are not business logic per se, but they inflate the router file significantly.
-- `/backend/routers/jobs/celery_api.py` (582 lines) — large partly due to the 9 inline Pydantic models (see issue 5).
-- `/backend/routers/settings/rbac.py` (619 lines) — large but delegates correctly to service.
-
-**Fix:** After moving inline models out (issue 5), `celery_api.py` will shrink naturally. For `nifi/operations.py`, consider extracting `_execute_with_retry` and `_get_instance` to a `nifi_router_helpers.py` module.
+1. **Implement** `core.safe_http_errors` (or equivalent) and **migrate** 500 paths (and sensitive 502/504) to sanitized responses; keep full trace in logs. This brings the codebase in line with CLAUDE.md and reduces accidental data leaks.
+2. **Reconcile CLAUDE.md** with the actual location (or creation) of **router guard scripts** (`check_http_500_leaks`, etc.).
+3. **Decide on session strategy:** either push `Session` from `Depends(get_db)` through services into repositories for request-scoped work, or document the **`get_db_session()` per call** pattern and its transaction rules explicitly.
+4. **Expand coverage** to include `routers` and `repositories` (at least for auth and job execution paths).
+5. Add **Ruff** + optional **Mypy/Pyright** in `backend/pyproject.toml` (or repo root) to enforce the standards already described in CLAUDE.md.
 
 ---
 
-#### 7. `main.py` size
+## 5. Method note
 
-**File:** `/backend/main.py` (468 lines)  
-**Issue:** Borderline large. Contains router imports, middleware, lifespan, and startup logic.  
-**Fix (optional):** Extract startup/initialization logic into `/backend/core/startup.py` to keep `main.py` focused on the ASGI app wiring.
-
----
-
-## Files Over 400 Lines
-
-| File | Lines | Status |
-|---|---|---|
-| `/backend/routers/nifi/operations.py` | 944 | Refactor (issue 6) |
-| `/backend/services/settings/git/service.py` | 792 | Acceptable — cohesive domain |
-| `/backend/scripts/convert_fstring_logging.py` | 771 | Utility script — exempt |
-| `/backend/models/nifi.py` | 706 | Acceptable — Pydantic models |
-| `/backend/routers/settings/rbac.py` | 619 | Acceptable — delegates correctly |
-| `/backend/services/nifi/nifi_flow_service.py` | 602 | Acceptable — cohesive domain |
-| `/backend/services/settings/git/debug_service.py` | 584 | Acceptable |
-| `/backend/routers/jobs/celery_api.py` | 582 | Refactor (issue 5 shrinks it) |
-| `/backend/tools/seed_rbac.py` | 552 | Utility — exempt |
-| `/backend/routers/settings/git/files.py` | 550 | Refactor (issue 5 + duplicate model) |
-| `/backend/routers/auth/oidc.py` | 504 | Acceptable — complex OIDC flow |
-| `/backend/repositories/jobs/job_run_repository.py` | 488 | Acceptable |
-| `/backend/routers/settings/templates.py` | 482 | Acceptable |
-| `/backend/services/nifi/operations/process_groups.py` | 470 | Acceptable |
-| `/backend/main.py` | 468 | Low priority (issue 7) |
-| `/backend/services/settings/cache.py` | 467 | Acceptable — cohesive domain |
-| `/backend/services/settings/git/operations.py` | 456 | Acceptable |
-| `/backend/routers/settings/git/operations.py` | 435 | Acceptable |
-| `/backend/tasks/execution/export_flows_executor.py` | 430 | Acceptable |
-| `/backend/services/settings/git/cache.py` | 427 | Acceptable |
-| `/backend/services/pki_service.py` | 422 | Acceptable |
-
----
-
-## Refactoring Checklist
-
-### Priority 1 (do first)
-
-- [ ] `job_run_service.py` — extract raw SQL to `JobRunRepository.get_dashboard_statistics()`
-- [ ] `settings_service.py` — replace direct ORM calls in `reset_to_defaults()` with repository delegates
-- [ ] `flow_view_service.py` — remove `_unset_all_defaults*()` methods; use `FlowViewRepository.set_default()`
-- [ ] `install_service.py` — replace raw SELECT with `NifiFlowRepository.get_all()`
-- [ ] `hierarchy_service.py` — move DDL to schema helper; replace COUNT with `NifiFlowRepository.count()`
-
-### Priority 2 (next sprint)
-
-- [ ] Move 27 scattered Pydantic models from router files to `/backend/models/`
-- [ ] Remove duplicate `WriteFileRequest` in `git/files.py`
-- [ ] Update all affected imports after model moves
-
-### Priority 3 (backlog)
-
-- [ ] Extract helper functions from `nifi/operations.py` to reduce router file size
-- [ ] Consider splitting `main.py` startup logic into `core/startup.py`
+Findings combine: reading `CLAUDE.md`, `backend/main.py`, `backend/core/database.py`, `backend/repositories/base.py`, representative routers and services, `backend/core/models/__init__.py`, and repository-wide searches for `get_db`, `text(`, `HTTPException`, and `safe_http_errors`. This is a **static** review, not a full security audit or performance profile.
