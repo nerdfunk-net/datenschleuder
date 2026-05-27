@@ -292,19 +292,6 @@ export function FlowDialog({
     name: 'hierarchy_values',
   })
 
-  // Debug: Log form value changes
-  useEffect(() => {
-    const topAttr = hierarchy[0]
-    if (!topAttr) return
-    
-    console.log('[FlowDialog] Form values changed:', {
-      hierarchyValues,
-      topAttrName: topAttr.name,
-      srcValue: hierarchyValues?.[topAttr.name]?.source,
-      destValue: hierarchyValues?.[topAttr.name]?.destination,
-    })
-  }, [hierarchyValues, hierarchy])
-
   // Compute instance ID for source via cluster primary member
   const srcInstanceId = useMemo(() => {
     if (!hierarchyValues || !clusters.length || !hierarchy.length) return null

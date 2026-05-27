@@ -70,8 +70,6 @@ export function useFlowStatusCheck(flows: Flow[]): UseFlowStatusCheckReturn {
           `nifi/instances/${instanceId}/ops/process-groups/all-paths`,
         )
 
-        console.log('🔍 [DEBUG] All paths response:', allPathsResponse)
-
         const pathToIdMap = new Map<string, string>()
         const idToPathMap = new Map<string, string>()
         allPathsResponse.process_groups.forEach((pg) => {
@@ -80,17 +78,10 @@ export function useFlowStatusCheck(flows: Flow[]): UseFlowStatusCheckReturn {
           idToPathMap.set(pg.id, pathString)
         })
 
-        console.log('🗺️ [DEBUG] Path to ID map:', Object.fromEntries(pathToIdMap))
-        console.log('🗺️ [DEBUG] ID to Path map:', Object.fromEntries(idToPathMap))
-
         const deploymentPaths = settingsResponse.paths
         const hierarchyConfig = hierarchyResponse.hierarchy.sort((a, b) => a.order - b.order)
 
         const clusterDeploymentPath = deploymentPaths[clusterId] ?? deploymentPaths[clusterId.toString()]
-
-        console.log('⚙️ [DEBUG] Deployment paths:', deploymentPaths)
-        console.log('📋 [DEBUG] Hierarchy config:', hierarchyConfig)
-        console.log('🎯 [DEBUG] Cluster deployment path:', clusterDeploymentPath)
 
         if (!clusterDeploymentPath) {
           setCheckError(
@@ -99,9 +90,6 @@ export function useFlowStatusCheck(flows: Flow[]): UseFlowStatusCheckReturn {
           return
         }
 
-        console.log('🔍 [DEBUG] Source path object:', clusterDeploymentPath.source_path)
-        console.log('🔍 [DEBUG] Dest path object:', clusterDeploymentPath.dest_path)
-
         const newStatuses: Record<string, ProcessGroupStatus> = {}
 
         const checkPart = async (flow: Flow, flowType: FlowType) => {
@@ -109,9 +97,6 @@ export function useFlowStatusCheck(flows: Flow[]): UseFlowStatusCheckReturn {
             flowType === 'source'
               ? clusterDeploymentPath.source_path
               : clusterDeploymentPath.dest_path
-
-          console.log(`\n🔄 [DEBUG] Checking flow #${flow.id} (${flowType})`)
-          console.log(`   Path config:`, pathConfig)
 
           const storedId = pathConfig.id
           let basePath = idToPathMap.get(storedId)
@@ -128,8 +113,6 @@ export function useFlowStatusCheck(flows: Flow[]): UseFlowStatusCheckReturn {
             }
           }
 
-          console.log(`   Resolved basePath: "${basePath}"`)
-
           const hierarchyParts: string[] = []
           const sourceOrDest = flowType === 'source' ? 'source' : 'destination'
 
@@ -144,17 +127,12 @@ export function useFlowStatusCheck(flows: Flow[]): UseFlowStatusCheckReturn {
             if (attrValue) hierarchyParts.push(attrValue)
           }
 
-          console.log(`   Hierarchy parts:`, hierarchyParts)
-
           const expectedPath =
             hierarchyParts.length > 0
               ? `${basePath}/${hierarchyParts.join('/')}`
               : basePath
 
-          console.log(`   Expected path: "${expectedPath}"`)
-
           const processGroupId = pathToIdMap.get(expectedPath)
-          console.log(`   Found process group ID: ${processGroupId || 'NOT FOUND'}`)
 
           const flowKey = getFlowItemKey(flow.id, flowType)
 
@@ -197,9 +175,6 @@ export function useFlowStatusCheck(flows: Flow[]): UseFlowStatusCheckReturn {
           await checkPart(flow, 'source')
           await checkPart(flow, 'destination')
         }
-
-        console.log('\n✅ [DEBUG] Final flow statuses:', newStatuses)
-        console.log(`📊 [DEBUG] Total statuses collected: ${Object.keys(newStatuses).length}`)
 
         setFlowStatuses(newStatuses)
       } catch (err: unknown) {

@@ -118,14 +118,6 @@ export function useQuickDeploy({
       setDeployingFlows((prev) => ({ ...prev, [key]: true }))
 
       try {
-        console.log('[QuickDeploy] ═══════════════════════════════════════════════════')
-        console.log('[QuickDeploy] Starting deployment for flow:', {
-          flowId: flow.id,
-          flowName: flow.name,
-          target,
-          hierarchyValues: flow.hierarchy_values,
-        })
-
         // Check if deployment settings are loaded
         if (!deploymentSettings) {
           console.error('[QuickDeploy] ERROR: Deployment settings not loaded')
@@ -136,8 +128,6 @@ export function useQuickDeploy({
           })
           return
         }
-
-        console.log('[QuickDeploy] Deployment settings:', deploymentSettings)
 
         // Resolve the deployment config (instance, template, registry info)
         const configs = buildDeploymentConfigs(
@@ -150,7 +140,6 @@ export function useQuickDeploy({
         )
 
         const config = configs[0]
-        console.log('[QuickDeploy] Deployment config:', config)
 
         if (!config) {
           toast({
@@ -213,16 +202,10 @@ export function useQuickDeploy({
         const owningCluster = clusters.find(c =>
           c.members.some(m => m.instance_id === config.instanceId)
         )
-        console.log('[QuickDeploy] Owning cluster for instance', config.instanceId, ':', owningCluster?.id, owningCluster?.hierarchy_value)
-
         const clusterPaths = owningCluster
           ? deploymentSettings.paths[owningCluster.id]
           : undefined
-        console.log('[QuickDeploy] Cluster paths for cluster', owningCluster?.id, ':', clusterPaths)
-
         const savedPath = target === 'source' ? clusterPaths?.source_path : clusterPaths?.dest_path
-        console.log('[QuickDeploy] Selected', target, 'path:', savedPath)
-
         if (!savedPath) {
           console.error('[QuickDeploy] ERROR: No saved path found for', target)
           const clusterLabel = owningCluster
@@ -240,48 +223,28 @@ export function useQuickDeploy({
         let parentProcessGroupPath: string | null = null
 
         if (savedPath.raw_path) {
-          console.log('[QuickDeploy] ✅ Using raw_path (preferred method)')
-          console.log('[QuickDeploy] raw_path value:', savedPath.raw_path)
-          console.log('[QuickDeploy] Hierarchy attributes:', hierAttrs)
-          
           // ✅ Preferred path: build full nested path using raw_path (e.g. "/From net1")
           // + middle hierarchy attribute values (skip first=DC and last=CN/leaf)
           const baseParts = savedPath.raw_path.split('/').filter(s => s.trim())
-          console.log('[QuickDeploy] Base parts after split:', baseParts)
-          
+
           const middleParts: string[] = []
-          
+
           // Loop through middle hierarchy levels (skip first [DC] and last [CN])
-          console.log('[QuickDeploy] Extracting middle hierarchy parts...')
-          console.log('[QuickDeploy] Hierarchy length:', hierAttrs.length, '(will process indices 1 to', hierAttrs.length - 2, ')')
-          
           for (let i = 1; i < hierAttrs.length - 1; i++) {
             const attr = hierAttrs[i]
-            console.log(`[QuickDeploy] Processing hierarchy[${i}]:`, attr)
             if (!attr) {
               console.warn(`[QuickDeploy] WARNING: hierarchy[${i}] is undefined/null`)
               continue
             }
             const values = flow.hierarchy_values?.[attr.name]
-            console.log(`[QuickDeploy]   - Flow values for ${attr.name}:`, values)
             const value = target === 'source' ? values?.source : values?.destination
-            console.log(`[QuickDeploy]   - Selected ${target} value:`, value)
             if (value) {
               middleParts.push(value)
-              console.log(`[QuickDeploy]   - ✅ Added "${value}" to middleParts`)
-            } else {
-              console.log(`[QuickDeploy]   - ⚠️  No value found, skipping`)
             }
           }
-          
+
           // Build full path: base + hierarchy values
           parentProcessGroupPath = [...baseParts, ...middleParts].join('/')
-          
-          console.log('[QuickDeploy] ═══ PATH CONSTRUCTION RESULT ═══')
-          console.log('[QuickDeploy] Base parts:', baseParts)
-          console.log('[QuickDeploy] Middle parts:', middleParts)
-          console.log('[QuickDeploy] Final path:', parentProcessGroupPath)
-          console.log('[QuickDeploy] ════════════════════════════════')
         } else {
           // ❌ CRITICAL: raw_path missing (old settings).
           // This would deploy into the base group without hierarchy nesting.
@@ -320,11 +283,6 @@ export function useQuickDeploy({
             (target === 'source' ? flow.src_connection_param : flow.dest_connection_param) ||
             undefined,
         }
-
-        console.log('[QuickDeploy] ═══ FINAL DEPLOYMENT REQUEST ═══')
-        console.log('[QuickDeploy] Instance ID:', config.instanceId)
-        console.log('[QuickDeploy] Request payload:', JSON.stringify(request, null, 2))
-        console.log('[QuickDeploy] ════════════════════════════════')
 
         await deployAndHandle({ ...config, processGroupName }, request)
       } finally {

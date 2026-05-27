@@ -150,12 +150,6 @@ export function DeploymentWizard() {
   // Step 3: Build deployment configs when entering step 3
   useEffect(() => {
     if (currentStepIndex === 2 && deploymentConfigs.length === 0) {
-      console.log('[DeploymentWizard] Building deployment configs')
-      console.log('[DeploymentWizard] Clusters available:', clusters.length, clusters)
-      console.log('[DeploymentWizard] Hierarchy attributes:', hierarchyAttributes)
-      console.log('[DeploymentWizard] Selected flows:', selectedFlowIds)
-      console.log('[DeploymentWizard] Deployment targets:', deploymentTargets)
-
       const configs = buildDeploymentConfigs(
         flows,
         selectedFlowIds,
@@ -164,7 +158,6 @@ export function DeploymentWizard() {
         registryFlows,
         hierarchyAttributes
       )
-      console.log('[DeploymentWizard] Built configs:', configs.length, configs)
       setDeploymentConfigs(configs)
     }
   }, [currentStepIndex, deploymentConfigs.length, flows, selectedFlowIds, deploymentTargets, clusters, registryFlows, hierarchyAttributes])
@@ -181,7 +174,6 @@ export function DeploymentWizard() {
     {
       const loadPaths = async () => {
         setIsLoadingPaths(true)
-        console.log('[DeploymentWizard] Loading process group paths')
 
         const uniqueInstanceIds = Array.from(
           new Set(deploymentConfigs.map((c) => c.instanceId).filter((id): id is number => id !== null))
@@ -252,7 +244,6 @@ export function DeploymentWizard() {
         )
 
         setIsLoadingPaths(false)
-        console.log('[DeploymentWizard] Finished loading paths')
       }
 
       loadPaths()
@@ -282,19 +273,14 @@ export function DeploymentWizard() {
     {
       const loadVersions = async () => {
         setIsLoadingVersions(true)
-        console.log('[DeploymentWizard] Loading flow versions')
 
         const updatedConfigs = await Promise.all(
           deploymentConfigs.map(async (config) => {
             if (config.instanceId && config.registryId && config.bucketId && config.flowIdRegistry) {
               try {
-                console.log(
-                  `[DeploymentWizard] Loading versions for ${config.flowName} (${config.target}): instance=${config.instanceId}, registry=${config.registryId}, bucket=${config.bucketId}, flow=${config.flowIdRegistry}`
-                )
                 const data = await apiCall(
                   `nifi/instances/${config.instanceId}/ops/registries/${config.registryId}/buckets/${config.bucketId}/flows/${config.flowIdRegistry}/versions`
                 ) as { versions?: FlowVersion[] }
-                console.log(`[DeploymentWizard] Loaded ${data.versions?.length || 0} versions for ${config.flowName}`)
                 return { ...config, availableVersions: data.versions || [] }
               } catch (error) {
                 console.error(`Failed to load versions for ${config.flowName} (${config.target}):`, error)
@@ -310,7 +296,6 @@ export function DeploymentWizard() {
 
         setDeploymentConfigs(updatedConfigs)
         setIsLoadingVersions(false)
-        console.log('[DeploymentWizard] Finished loading versions')
       }
 
       loadVersions()
@@ -328,7 +313,6 @@ export function DeploymentWizard() {
 
   // Step 4: Update deployment settings
   const handleUpdateSettings = useCallback((updatedSettings: DeploymentSettings) => {
-    console.log('[DeploymentWizard] Settings updated:', updatedSettings)
     setLocalSettings(updatedSettings)
     saveSettings.mutate(updatedSettings)
   }, [saveSettings])
@@ -336,7 +320,6 @@ export function DeploymentWizard() {
   // Step 5: Deploy all flows
   const handleDeploy = useCallback(async () => {
     setIsDeploying(true)
-    console.log('[DeploymentWizard] Starting deployment')
 
     const sortedConfigs = sortDeploymentConfigs(deploymentConfigs)
     const results: DeploymentResults = {
@@ -359,8 +342,6 @@ export function DeploymentWizard() {
       }
 
       try {
-        console.log(`[DeploymentWizard] Deploying ${config.flowName} to ${config.hierarchyValue}`)
-
         const deploymentRequest = {
           template_id: config.templateId,
           bucket_id: config.bucketId,
@@ -380,7 +361,6 @@ export function DeploymentWizard() {
         await new Promise((resolve, reject) => {
           deployFlow.mutate({ instanceId: config.instanceId!, request: deploymentRequest }, {
             onSuccess: (response) => {
-              console.log(`[DeploymentWizard] Successfully deployed ${config.flowName}`)
               results.successful.push({
                 config,
                 success: true,
@@ -490,7 +470,6 @@ export function DeploymentWizard() {
       }
     }
 
-    console.log('[DeploymentWizard] Deployment complete:', results)
     setDeploymentResults(results)
     setShowResultsDialog(true)
     setIsDeploying(false)

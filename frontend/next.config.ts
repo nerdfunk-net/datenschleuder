@@ -21,12 +21,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: process.env.DOCKER_BUILD === "true",
   },
 
-  eslint: {
-    // Allow builds to complete even with ESLint warnings
-    // Warnings are still shown but won't block the build
-    ignoreDuringBuilds: true,
-  },
-
   // Air-gapped environment optimizations
   images: {
     // Disable external image optimization for air-gapped environments

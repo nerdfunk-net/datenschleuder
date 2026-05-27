@@ -1,6 +1,5 @@
 'use client'
 
-import React from 'react'
 import { useAuthStore } from '@/lib/auth-store'
 import { useSessionManager } from '@/hooks/use-session-manager'
 import { Badge } from '@/components/ui/badge'
