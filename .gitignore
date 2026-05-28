@@ -180,7 +180,7 @@ cython_debug/
 frontend/.env.local
 /frontend/.next
 /frontend/node_modules
-frontend/next-anv.d.t
+/frontend/next-env.d.ts
 data/settings/cockpit_settings.db
 backend/data/cache/nautobot_stats.json
 /docker/wheelhouse
